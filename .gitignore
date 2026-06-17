@@ -1,0 +1,41 @@
+# 本地笔记与 Obsidian 工作区
+.obsidian/
+2026-06-16.md
+*.canvas
+*.base
+
+# Agent 会议/记忆文件（本地笔记，不提交）
+MEMORY.md
+memory/
+.claude/
+.codex/
+
+# 外部 skill/plugin 仓库本体（本地使用，不纳入主仓）
+skills/superpowers/
+skills/sliver-code-skill/
+
+# Node
+node_modules/
+dist/
+dist*/
+dist_*/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+.tmp/
+server/.tmp/
+
+# 数据库与本地数据
+server/data/
+*.db
+*.db-journal
+
+# 环境变量（含真实密钥）
+.env
+
+# 构建产物
+*.tsbuildinfo
