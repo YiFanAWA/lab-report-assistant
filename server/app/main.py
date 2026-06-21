@@ -9,8 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.core.errors import AppError
-from app.api.routers import health, projects, requirements
+from app.core.errors import AppError, ErrorResponse
+from app.api.routers import health, projects, requirements, sources
 
 app = FastAPI(
     title="实验报告助手 API",
@@ -28,19 +28,32 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(projects.router)
 app.include_router(requirements.router)
+app.include_router(sources.router)
+
+
+NOT_FOUND_CODES = {
+    "PROJECT_NOT_FOUND",
+    "REQUIREMENT_SOURCE_NOT_FOUND",
+    "REQUIREMENT_PLAN_NOT_FOUND",
+    "SOURCE_RECORD_NOT_FOUND",
+    "PARSED_DOCUMENT_NOT_FOUND",
+    "EVIDENCE_CARD_NOT_FOUND",
+}
+
+PAYLOAD_TOO_LARGE_CODES = {
+    "SOURCE_FILE_TOO_LARGE",
+    "SOURCE_CONTENT_TOO_LARGE",
+}
 
 
 @app.exception_handler(AppError)
 async def handle_app_error(request: Request, exc: AppError):
-    from app.core.errors import ErrorResponse
-    not_found_codes = {
-        "PROJECT_NOT_FOUND",
-        "REQUIREMENT_SOURCE_NOT_FOUND",
-        "REQUIREMENT_PLAN_NOT_FOUND",
-    }
-    status = 404 if exc.code in not_found_codes else 400
-    if exc.code == "REQUIREMENT_FILE_TOO_LARGE":
+    if exc.code in PAYLOAD_TOO_LARGE_CODES:
         status = 413
+    elif exc.code in NOT_FOUND_CODES:
+        status = 404
+    else:
+        status = 400
     return JSONResponse(
         status_code=status,
         content=ErrorResponse.from_app_error(exc).model_dump(),
@@ -49,8 +62,6 @@ async def handle_app_error(request: Request, exc: AppError):
 
 @app.exception_handler(RequestValidationError)
 async def handle_request_validation_error(request: Request, exc: RequestValidationError):
-    from app.core.errors import ErrorResponse
-
     field = None
     if exc.errors():
         loc = exc.errors()[0].get("loc", ())

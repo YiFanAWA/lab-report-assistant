@@ -1,6 +1,6 @@
 # 实验报告助手｜实施计划
 
-> **给后续 agent 的要求：** SPEC 0001 第一开发切片已由项目负责人确认。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；下一切片必须先编写并确认“公开资料与证据工作流”SPEC。
+> **给后续 agent 的要求：** SPEC 0001、SPEC 0002、SPEC 0003 已确认收口。SPEC 0003 干净收口分支只包含公开资料与证据工作流，明确排除 Skill、Orchestrator、feasibility、Alembic 0004 和相关测试。下一切片尚未批准，在新 SPEC 确认前不得开发新功能。
 
 **目标：** 构建“实验报告助手”的第一版 Web MVP 闭环：项目创建、要求拆解、证据工作流、数据分析执行、大纲确认、Word/PPT 生成。
 
@@ -12,7 +12,7 @@
 
 ## 执行门禁
 
-代码阶段已由项目负责人批准启动，SPEC 0001 第一开发切片已完成命令、API 和前后端代理验收，并已由项目负责人确认。SPEC 0002 实验要求输入与结构化任务单已完成实现、复核验收并由项目负责人确认收口，当前暂停在下一切片 SPEC 编写前。
+代码阶段已由项目负责人批准启动。SPEC 0001、SPEC 0002、SPEC 0003 均已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 的 API 上传合同、来源解析、证据编辑确认、刷新保持、状态推进、前端路由和 Browser 下游真实交互已有证据；项目负责人于 2026-06-22 接受分段证据并确认收口。下一切片必须重新经过 SPEC 与批准门禁。
 
 ## 规划文件归属
 
@@ -76,7 +76,7 @@
 - [x] 定义 `ProjectStatus` 和项目创建/列表/详情最小合同。
 - [x] 定义 `RequirementPlan`、`ReplicationLevel`。
 - [x] 定义最小 `RequirementSource` 和 `ChangeRecord`。
-- [ ] 定义 `SourceRecord`、`EvidenceCard`、`DatasetVersion`。
+- [x] 定义 `SourceRecord`、`EvidenceCard`。
 - [ ] 定义 `AnalysisPlan`、`CodeTask`、`ExecutionRun`。
 - [ ] 定义 `Outline`、`Deliverable`。
 - [ ] 为每个合同写 schema 或类型测试。
@@ -110,13 +110,15 @@
 
 **文件：** 代码阶段确认后创建。
 
-- [ ] 支持公开 URL 资料登记。
-- [ ] 支持本地 PDF、Word、TXT、CSV、Excel 文件登记。
-- [ ] 保存采集状态和原始文件位置。
-- [ ] 解析公开网页、公开 PDF 和文本资料。
-- [ ] 通过 LLM Gateway 生成证据卡片候选。
-- [ ] 保存证据来源位置和用户确认状态。
-- [ ] 对登录、验证码、付费限制返回结构化拒绝原因。
+**执行规格：** [specs/0003-public-sources-and-evidence-workflow.md](specs/0003-public-sources-and-evidence-workflow.md)
+
+- [x] 支持公开 URL 资料登记与安全校验（URL 协议、DNS、重定向 SSRF、内网、超时和大小上限）。
+- [x] 支持本地 PDF、DOCX、TXT、CSV、Excel 文件登记。
+- [x] 保存采集状态和原始文件位置。
+- [x] 解析公开网页、PDF、DOCX 和 TXT 文本并保存位置映射。
+- [x] 通过 Evidence Draft Provider 生成证据卡片候选。
+- [x] 保存证据来源位置和用户确认状态。
+- [x] 对 HTTP 401/403 登录或访问限制返回 `SOURCE_URL_ACCESS_BLOCKED`；不绕过验证码或付费墙，也不承诺识别所有返回 200 的软墙。
 
 ## 任务 6：数据集工作区
 

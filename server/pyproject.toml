@@ -2,6 +2,7 @@
 name = "lab-report-assistant"
 version = "0.1.0"
 description = "实验报告助手 API"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.100.0",
@@ -11,6 +12,7 @@ dependencies = [
   "uvicorn>=0.20.0",
   "python-docx>=1.0.0",
   "python-multipart>=0.0.5",
+  "pypdf>=6.13.2,<7.0.0",
 ]
 
 [project.optional-dependencies]

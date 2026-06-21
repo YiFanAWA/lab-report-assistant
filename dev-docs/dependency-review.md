@@ -154,6 +154,7 @@ apps/web/
 | `openai` | `2.41.1` | PyPI | DeepSeek OpenAI 兼容接口客户端 |
 | `python-docx` | `1.2.0` | PyPI | SPEC 0002 简单 Word 要求文件正文提取 |
 | `python-multipart` | `0.0.32` | PyPI | SPEC 0002 FastAPI `multipart/form-data` 文件上传 |
+| `pypdf` | `6.13.2` | PyPI | SPEC 0003 可复制文本 PDF 的页级解析与位置映射 |
 
 后端目录规范：
 
@@ -200,7 +201,7 @@ server/
 - Alembic 使用 `pyproject` 或等价官方模板方向，迁移文件不得手写绕过迁移系统。
 - Worker 独立于 HTTP 请求进程，但复用同一套核心模块和数据库合同。
 
-SPEC 0002 当前实际启用的新增后端依赖为 `python-docx` 与 `python-multipart`。`python-docx` 安装时引入传递依赖 `lxml 6.1.1`。真实 DeepSeek 调用和 `openai` 客户端仍未接入本切片，后续接入前需重新复核配置、错误处理和无密钥降级行为。
+SPEC 0002 当前实际启用的新增后端依赖为 `python-docx` 与 `python-multipart`，`python-docx` 安装时引入传递依赖 `lxml 6.1.1`。SPEC 0003 第一阶段新增并实际启用 `pypdf 6.13.2`，只用于可复制文本 PDF 的页级解析，不做 OCR。真实 DeepSeek 调用和 `openai` 客户端仍未接入本切片，后续接入前需重新复核配置、错误处理和无密钥降级行为。
 
 ## 6. 数据分析与交付物依赖复核
 

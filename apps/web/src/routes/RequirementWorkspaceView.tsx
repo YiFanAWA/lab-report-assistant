@@ -17,6 +17,8 @@ function statusLabel(s: string) {
     DRAFT: "草稿",
     REQUIREMENT_PARSED: "要求已解析",
     REQUIREMENT_CONFIRMED: "需求已确认",
+    SOURCES_COLLECTED: "资料已收集",
+    EVIDENCE_CONFIRMED: "证据已确认",
     COMPLETED: "已完成",
   };
   return m[s] ?? s;
@@ -346,6 +348,23 @@ export function RequirementWorkspaceView() {
             </div>
           )}
         </section>
+      )}
+
+      {plan?.status === "CONFIRMED" && (
+        <Link
+          to={`/projects/${pid}/sources`}
+          style={{
+            display: "inline-block",
+            marginTop: "1rem",
+            padding: "0.55rem 0.9rem",
+            background: "#2563eb",
+            color: "#fff",
+            borderRadius: "0.375rem",
+            textDecoration: "none",
+          }}
+        >
+          进入公开资料与证据工作区
+        </Link>
       )}
     </div>
   );
