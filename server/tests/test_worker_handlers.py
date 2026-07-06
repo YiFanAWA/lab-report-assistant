@@ -1,0 +1,643 @@
+"""Worker 处理器测试。
+
+mock fetch_url 和 get_evidence_card_provider，避免真实网络和真实模型调用。
+覆盖 handle_fetch_url、handle_parse_document、handle_generate_evidence 的
+成功与失败路径，以及异常时调用 mark_failed 的错误处理。
+"""
+
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.infrastructure.database.engine import Base
+from app.core.errors import AppError
+from app.infrastructure.fetchers.http_fetcher import FetchResult, FetchError
+from app.modules.projects import service as project_service
+from app.modules.projects.status import ProjectStatus
+from app.modules.projects.contracts import ProjectCreateRequest
+from app.modules.requirements import service as req_service
+from app.modules.requirements.contracts import (
+    TextSourceRequest,
+    GeneratePlanRequest,
+)
+from app.modules.llm.local_rule_provider import LocalRuleRequirementDraftProvider
+from app.modules.sources import service as sources_service
+from app.modules.sources.models import Source, ParsedDocument, EvidenceCard
+from app.modules.sources.status import (
+    SourceKind,
+    SourceStatus,
+    EvidenceCardStatus,
+)
+from app.modules.jobs import service as job_service
+from app.modules.jobs.status import JobType, JobStatus
+from worker import handlers as worker_handlers
+
+
+TEST_DB = "sqlite:///:memory:"
+
+
+@pytest.fixture
+def db(monkeypatch, tmp_path):
+    """内存 SQLite + 受控 PROJECT_DATA_ROOT。"""
+    monkeypatch.setenv("PROJECT_DATA_ROOT", str(tmp_path / "projects"))
+    engine = create_engine(TEST_DB, connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
+    Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture
+def provider():
+    return LocalRuleRequirementDraftProvider()
+
+
+@pytest.fixture
+def confirmed_project_id(db, provider):
+    """创建 REQUIREMENT_CONFIRMED 状态的项目。"""
+    project = project_service.create_project(
+        db, ProjectCreateRequest(name="胃病数据分析", topic="胃病数据分析")
+    )
+    src = req_service.add_text_source(
+        db, project.id,
+        TextSourceRequest(title="需求", text="完成数据清洗、统计分析和可视化"),
+    )
+    req_service.generate_plan(
+        db, project.id, GeneratePlanRequest(source_id=src.id), provider
+    )
+    plan = req_service.get_current_plan(db, project.id)
+    req_service.confirm_plan(db, project.id, plan.id)
+    return project.id
+
+
+def _make_pending_source(db, project_id: str, url: str = "https://example.com/a.html") -> Source:
+    """构造一个 PENDING 状态的 URL 来源。"""
+    source = Source(
+        id="src_worker_test",
+        project_id=project_id,
+        source_kind=SourceKind.URL.value,
+        title="Worker 测试来源",
+        url=url,
+        status=SourceStatus.PENDING.value,
+    )
+    db.add(source)
+    db.commit()
+    return source
+
+
+def _make_fetched_html_source(
+    db, project_id: str,
+    content: bytes,
+    content_type: str = "text/html",
+) -> tuple[Source, str]:
+    """构造一个 FETCHED 状态的 HTML 来源，写入真实文件供 parse_document 使用。"""
+    from app.core.config import settings
+    source_id = "src_worker_fetched"
+    source = Source(
+        id=source_id,
+        project_id=project_id,
+        source_kind=SourceKind.URL.value,
+        title="已采集 HTML 来源",
+        url="https://example.com/a.html",
+        status=SourceStatus.FETCHED.value,
+        content_type=content_type,
+        content_hash=hashlib.sha256(content).hexdigest(),
+    )
+    db.add(source)
+    db.commit()
+
+    # 写入文件到受控工作区
+    dest_dir = settings.project_data_root / project_id / "sources" / source_id
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    filename = "raw.pdf" if "pdf" in content_type.lower() else "raw.html"
+    dest_path = dest_dir / filename
+    dest_path.write_bytes(content)
+    source.file_path = str(dest_path)
+    db.commit()
+    return source, str(dest_path)
+
+
+# --- handle_fetch_url ---
+
+
+class TestHandleFetchUrl:
+    """采集 URL 处理器测试。"""
+
+    def test_html_success_path(
+        self, db, confirmed_project_id, monkeypatch
+    ):
+        """HTML 成功路径：fetch_url 返回 200 text/html，Source 变 FETCHED，
+        自动创建 PARSE_DOCUMENT 任务。"""
+        source = _make_pending_source(db, confirmed_project_id)
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.FETCH_URL.value,
+            {"source_id": source.id, "url": source.url},
+        )
+        db.commit()
+
+        # mock fetch_url 返回 HTML
+        html = "<html><head><title>测试页</title></head><body><p>这是公开网页的正文内容。</p></body></html>".encode("utf-8")
+        captured_calls = []
+
+        def fake_fetch_url(url, timeout_seconds=30, max_size_bytes=10485760):
+            captured_calls.append({
+                "url": url, "timeout": timeout_seconds, "max_size": max_size_bytes,
+            })
+            return FetchResult(
+                content=html,
+                content_type="text/html; charset=utf-8",
+                status_code=200,
+                url=url,
+            )
+
+        monkeypatch.setattr(worker_handlers, "fetch_url", fake_fetch_url)
+
+        result = worker_handlers.handle_fetch_url(db, job)
+
+        # 验证 Source 状态
+        db.refresh(source)
+        assert source.status == SourceStatus.FETCHED.value
+        assert source.content_type == "text/html; charset=utf-8"
+        assert source.content_hash == hashlib.sha256(html).hexdigest()
+        assert source.fetched_at is not None
+        assert source.file_path is not None
+        assert Path(source.file_path).exists()
+
+        # 验证 fetch_url 被正确参数调用
+        assert captured_calls[0]["url"] == source.url
+
+        # 验证自动创建了 PARSE_DOCUMENT 任务
+        from app.modules.jobs.models import BackgroundJob
+        parse_jobs = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.project_id == confirmed_project_id,
+                BackgroundJob.job_type == JobType.PARSE_DOCUMENT.value,
+            )
+            .all()
+        )
+        assert len(parse_jobs) == 1
+        assert source.id in parse_jobs[0].input_json
+
+        # 验证返回值
+        assert "file_path" in result
+        assert result["content_type"] == "text/html; charset=utf-8"
+
+    def test_restricted_resource_marks_source_failed(
+        self, db, confirmed_project_id, monkeypatch
+    ):
+        """受限资源返回 SOURCE_ACCESS_RESTRICTED，Source 变 FAILED。"""
+        source = _make_pending_source(db, confirmed_project_id)
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.FETCH_URL.value,
+            {"source_id": source.id, "url": source.url},
+        )
+        db.commit()
+
+        def fake_fetch_url(url, timeout_seconds=30, max_size_bytes=10485760):
+            raise FetchError("SOURCE_ACCESS_RESTRICTED", "来源需要登录")
+
+        monkeypatch.setattr(worker_handlers, "fetch_url", fake_fetch_url)
+
+        with pytest.raises(FetchError) as exc_info:
+            worker_handlers.handle_fetch_url(db, job)
+        assert exc_info.value.code == "SOURCE_ACCESS_RESTRICTED"
+
+        # Source 应被标记为 FAILED
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "SOURCE_ACCESS_RESTRICTED"
+
+    def test_timeout_marks_source_failed(
+        self, db, confirmed_project_id, monkeypatch
+    ):
+        """超时返回 FETCH_TIMEOUT，Source 变 FAILED。"""
+        source = _make_pending_source(db, confirmed_project_id)
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.FETCH_URL.value,
+            {"source_id": source.id, "url": source.url},
+        )
+        db.commit()
+
+        def fake_fetch_url(url, timeout_seconds=30, max_size_bytes=10485760):
+            raise FetchError("FETCH_TIMEOUT", "采集超时")
+
+        monkeypatch.setattr(worker_handlers, "fetch_url", fake_fetch_url)
+
+        with pytest.raises(FetchError):
+            worker_handlers.handle_fetch_url(db, job)
+
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "FETCH_TIMEOUT"
+
+
+# --- handle_parse_document ---
+
+
+class TestHandleParseDocument:
+    """解析文档处理器测试。"""
+
+    def test_html_success_path(self, db, confirmed_project_id):
+        """HTML 成功路径：创建 ParsedDocument，Source 变 PARSED。"""
+        html = """
+        <html>
+        <head><title>解析测试页</title>
+        <meta name="description" content="测试页面元数据">
+        </head>
+        <body>
+            <h1>研究背景</h1>
+            <p>本节介绍胃病数据分析的研究背景与研究意义，覆盖常见统计分析流程。</p>
+            <p>方法部分：采用描述性统计和可视化方法分析数据并生成图表。</p>
+        </body>
+        </html>
+        """.encode("utf-8")
+        source, file_path = _make_fetched_html_source(
+            db, confirmed_project_id, html, content_type="text/html"
+        )
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        result = worker_handlers.handle_parse_document(db, job)
+
+        # 验证返回值
+        assert "parsed_document_id" in result
+        assert result["text_length"] > 0
+
+        # 验证 Source 状态
+        db.refresh(source)
+        assert source.status == SourceStatus.PARSED.value
+        assert source.parsed_at is not None
+
+        # 验证 ParsedDocument 已创建
+        pd = (
+            db.query(ParsedDocument)
+            .filter(ParsedDocument.source_id == source.id)
+            .first()
+        )
+        assert pd is not None
+        assert pd.title == "解析测试页"
+        assert "研究背景" in pd.parsed_text
+        assert "采用描述性统计" in pd.parsed_text
+        # 元数据中应包含 description
+        assert "测试页面元数据" in (pd.metadata_json or "")
+
+    def test_pdf_success_path(self, db, confirmed_project_id):
+        """PDF 成功路径：提取文本，Source 变 PARSED。"""
+        # 用 pypdf 构造一个带文本的 PDF
+        from pypdf import PdfWriter
+        from pypdf.generic import (
+            DecodedStreamObject,
+            DictionaryObject,
+            NameObject,
+        )
+        import io as _io
+
+        w = PdfWriter()
+        page = w.add_blank_page(width=612, height=792)
+        content_stream = DecodedStreamObject()
+        # 文本需超过 50 字符以通过 PARSE_TEXT_EMPTY 阈值
+        content_stream.set_data(
+            b"BT /F1 12 Tf 72 720 Td (Hello PDF parser test with long enough content for threshold) Tj ET"
+        )
+        content_obj = w._add_object(content_stream)
+        font = DictionaryObject()
+        font[NameObject("/Type")] = NameObject("/Font")
+        font[NameObject("/Subtype")] = NameObject("/Type1")
+        font[NameObject("/BaseFont")] = NameObject("/Helvetica")
+        font_obj = w._add_object(font)
+        resources = DictionaryObject()
+        font_dict = DictionaryObject()
+        font_dict[NameObject("/F1")] = font_obj
+        resources[NameObject("/Font")] = font_dict
+        page[NameObject("/Contents")] = content_obj
+        page[NameObject("/Resources")] = resources
+        buf = _io.BytesIO()
+        w.write(buf)
+        pdf_bytes = buf.getvalue()
+
+        source, _ = _make_fetched_html_source(
+            db, confirmed_project_id, pdf_bytes, content_type="application/pdf"
+        )
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        result = worker_handlers.handle_parse_document(db, job)
+
+        db.refresh(source)
+        assert source.status == SourceStatus.PARSED.value
+
+        pd = (
+            db.query(ParsedDocument)
+            .filter(ParsedDocument.source_id == source.id)
+            .first()
+        )
+        assert pd is not None
+        # PDF 文本应被提取
+        assert "Hello" in pd.parsed_text or "hello" in pd.parsed_text.lower()
+
+    def test_empty_text_returns_parse_text_empty(self, db, confirmed_project_id):
+        """解析后文本为空（<50 字符）返回 PARSE_TEXT_EMPTY。"""
+        # 构造一个正文非常短的 HTML
+        html = "<html><head><title>T</title></head><body><p>短</p></body></html>".encode("utf-8")
+        source, _ = _make_fetched_html_source(
+            db, confirmed_project_id, html, content_type="text/html"
+        )
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_parse_document(db, job)
+        assert exc_info.value.code == "PARSE_TEXT_EMPTY"
+
+        # Source 应被标记为 FAILED
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "PARSE_TEXT_EMPTY"
+
+    def test_dynamic_page_returns_unsupported_dynamic(
+        self, db, confirmed_project_id
+    ):
+        """检测到动态网页返回 SOURCE_UNSUPPORTED_DYNAMIC。"""
+        # script 标签 > 5 且正文 < 100 字符
+        scripts = b"<script></script>" * 6
+        html = b"<html><body>" + scripts + b"<p>short</p></body></html>"
+        source, _ = _make_fetched_html_source(
+            db, confirmed_project_id, html, content_type="text/html"
+        )
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        with pytest.raises(FetchError) as exc_info:
+            worker_handlers.handle_parse_document(db, job)
+        assert exc_info.value.code == "SOURCE_UNSUPPORTED_DYNAMIC"
+
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "SOURCE_UNSUPPORTED_DYNAMIC"
+
+
+# --- handle_generate_evidence ---
+
+
+class TestHandleGenerateEvidence:
+    """生成证据卡片处理器测试。"""
+
+    def test_generates_evidence_card_drafts(self, db, confirmed_project_id, monkeypatch):
+        """使用 FakeEvidenceCardProvider 成功生成 3 张候选卡片。"""
+        # 构造一个 PARSED 来源和 ParsedDocument
+        source = Source(
+            id="src_worker_evidence",
+            project_id=confirmed_project_id,
+            source_kind=SourceKind.URL.value,
+            title="已解析来源",
+            url="https://example.com/a.html",
+            status=SourceStatus.PARSED.value,
+            content_type="text/html",
+            content_hash="hash_worker_ev_001",
+        )
+        db.add(source)
+        pd = ParsedDocument(
+            id="pd_worker_ev_001",
+            source_id=source.id,
+            project_id=confirmed_project_id,
+            title="测试文档",
+            parsed_text="背景：本节介绍研究背景。方法：采用统计方法。结果：分析显示相关。",
+        )
+        db.add(pd)
+        db.commit()
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.GENERATE_EVIDENCE.value,
+            {"source_id": source.id, "parsed_document_id": pd.id},
+        )
+        db.commit()
+
+        # mock get_evidence_card_provider 返回 FakeEvidenceCardProvider
+        from app.modules.llm.evidence_card_provider import FakeEvidenceCardProvider
+
+        fake_provider = FakeEvidenceCardProvider()
+        monkeypatch.setattr(
+            worker_handlers, "get_evidence_card_provider",
+            lambda: fake_provider,
+        )
+
+        result = worker_handlers.handle_generate_evidence(db, job)
+
+        # 验证返回值
+        assert result["card_count"] == 3
+
+        # 验证 3 张 CANDIDATE 卡片已创建
+        cards = (
+            db.query(EvidenceCard)
+            .filter(EvidenceCard.source_id == source.id)
+            .all()
+        )
+        assert len(cards) == 3
+        for card in cards:
+            assert card.status == EvidenceCardStatus.CANDIDATE.value
+            assert card.candidate_source == "LOCAL_RULE"
+            assert card.parsed_document_id == pd.id
+
+    def test_missing_parsed_document_raises(self, db, confirmed_project_id, monkeypatch):
+        """找不到 ParsedDocument 时抛 PARSE_TEXT_EMPTY 并标记任务失败。"""
+        source = Source(
+            id="src_worker_no_pd",
+            project_id=confirmed_project_id,
+            source_kind=SourceKind.URL.value,
+            title="无 PD 来源",
+            url="https://example.com/a.html",
+            status=SourceStatus.PARSED.value,
+        )
+        db.add(source)
+        db.commit()
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.GENERATE_EVIDENCE.value,
+            {"source_id": source.id, "parsed_document_id": "pd_missing"},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_generate_evidence(db, job)
+        assert exc_info.value.code == "PARSE_TEXT_EMPTY"
+
+    def test_uses_local_rule_provider_label(self, db, confirmed_project_id, monkeypatch):
+        """生成的卡片 candidate_source 标记为 LOCAL_RULE，不伪装为 MODEL。"""
+        source = Source(
+            id="src_worker_label",
+            project_id=confirmed_project_id,
+            source_kind=SourceKind.URL.value,
+            title="标签测试",
+            url="https://example.com/a.html",
+            status=SourceStatus.PARSED.value,
+        )
+        db.add(source)
+        pd = ParsedDocument(
+            id="pd_worker_label",
+            source_id=source.id,
+            project_id=confirmed_project_id,
+            title="x",
+            parsed_text="测试文本内容。",
+        )
+        db.add(pd)
+        db.commit()
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.GENERATE_EVIDENCE.value,
+            {"source_id": source.id, "parsed_document_id": pd.id},
+        )
+        db.commit()
+
+        from app.modules.llm.evidence_card_provider import FakeEvidenceCardProvider
+        monkeypatch.setattr(
+            worker_handlers, "get_evidence_card_provider",
+            lambda: FakeEvidenceCardProvider(),
+        )
+
+        worker_handlers.handle_generate_evidence(db, job)
+
+        cards = (
+            db.query(EvidenceCard)
+            .filter(EvidenceCard.source_id == source.id)
+            .all()
+        )
+        for card in cards:
+            assert card.candidate_source == "LOCAL_RULE"
+            assert card.candidate_source != "MODEL"
+
+
+# --- HANDLERS 注册表 ---
+
+
+class TestHandlersRegistry:
+    """HANDLERS 注册表测试。"""
+
+    def test_handlers_registry_maps_all_job_types(self):
+        """HANDLERS 包含三种 job_type 的映射。"""
+        assert worker_handlers.HANDLERS[JobType.FETCH_URL.value] is worker_handlers.handle_fetch_url
+        assert worker_handlers.HANDLERS[JobType.PARSE_DOCUMENT.value] is worker_handlers.handle_parse_document
+        assert worker_handlers.HANDLERS[JobType.GENERATE_EVIDENCE.value] is worker_handlers.handle_generate_evidence
+
+
+# --- 错误处理 ---
+
+
+class TestWorkerErrorHandling:
+    """Worker 错误处理测试。"""
+
+    def test_fetch_url_generic_exception_marks_source_failed(
+        self, db, confirmed_project_id, monkeypatch
+    ):
+        """fetch_url 抛通用异常时 Source 标记为 FAILED（FETCH_FAILED）。"""
+        source = _make_pending_source(db, confirmed_project_id)
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.FETCH_URL.value,
+            {"source_id": source.id, "url": source.url},
+        )
+        db.commit()
+
+        def fake_fetch_url(url, timeout_seconds=30, max_size_bytes=10485760):
+            raise RuntimeError("unexpected error")
+
+        monkeypatch.setattr(worker_handlers, "fetch_url", fake_fetch_url)
+
+        with pytest.raises(FetchError) as exc_info:
+            worker_handlers.handle_fetch_url(db, job)
+        assert exc_info.value.code == "FETCH_FAILED"
+
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "FETCH_FAILED"
+
+    def test_parse_document_missing_file_marks_source_failed(
+        self, db, confirmed_project_id
+    ):
+        """来源关联文件不存在时 Source 标记为 FAILED（PARSE_FAILED）。"""
+        source = Source(
+            id="src_worker_missing_file",
+            project_id=confirmed_project_id,
+            source_kind=SourceKind.URL.value,
+            title="无文件来源",
+            url="https://example.com/a.html",
+            status=SourceStatus.FETCHED.value,
+            content_type="text/html",
+            file_path="/tmp/nonexistent_file.html",
+        )
+        db.add(source)
+        db.commit()
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_parse_document(db, job)
+        assert exc_info.value.code == "PARSE_FAILED"
+
+        db.refresh(source)
+        assert source.status == SourceStatus.FAILED.value
+        assert source.error_code == "PARSE_FAILED"
+
+    def test_parse_document_no_file_path_marks_source_failed(
+        self, db, confirmed_project_id
+    ):
+        """来源未关联 file_path 时 Source 标记为 FAILED。"""
+        source = Source(
+            id="src_worker_no_path",
+            project_id=confirmed_project_id,
+            source_kind=SourceKind.URL.value,
+            title="无路径来源",
+            url="https://example.com/a.html",
+            status=SourceStatus.FETCHED.value,
+            content_type="text/html",
+            file_path=None,
+        )
+        db.add(source)
+        db.commit()
+
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.PARSE_DOCUMENT.value,
+            {"source_id": source.id},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_parse_document(db, job)
+        assert exc_info.value.code == "PARSE_FAILED"
+
+    def test_invalid_job_input_raises(self, db, confirmed_project_id):
+        """任务缺少 source_id 时抛 JOB_INPUT_INVALID。"""
+        job = job_service.create_job(
+            db, confirmed_project_id, JobType.FETCH_URL.value,
+            {"url": "https://example.com"},  # 缺 source_id
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_fetch_url(db, job)
+        assert exc_info.value.code == "JOB_INPUT_INVALID"

@@ -202,6 +202,17 @@ server/
 
 SPEC 0002 当前实际启用的新增后端依赖为 `python-docx` 与 `python-multipart`。`python-docx` 安装时引入传递依赖 `lxml 6.1.1`。真实 DeepSeek 调用和 `openai` 客户端仍未接入本切片，后续接入前需重新复核配置、错误处理和无密钥降级行为。
 
+SPEC 0003 实际启用的新增后端依赖：
+
+| 依赖 | 复核版本 | 实际安装版本 | 来源 | 用途 |
+| --- | --- | --- | --- | --- |
+| `httpx` | `0.28.1` | `0.28.1` | PyPI | HTTP 采集适配器 |
+| `pypdf` | `6.13.2` | `6.14.2` | PyPI | PDF 文档解析 |
+| `beautifulsoup4` | `4.15.0` | `4.15.0` | PyPI | HTML 文档解析 |
+| `lxml` | `6.1.1` | `6.1.1` | PyPI（SPEC 0002 已作为传递依赖安装） | beautifulsoup4 解析器 |
+
+`playwright` 未在 SPEC 0003 安装，符合本切片边界。真实 DeepSeek 调用继续推迟到后续切片。
+
 ## 6. 数据分析与交付物依赖复核
 
 | 依赖 | 复核版本 | 来源 | 用途 |

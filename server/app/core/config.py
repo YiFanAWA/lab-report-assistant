@@ -42,5 +42,49 @@ class Settings:
     def deepseek_api_key(self) -> str:
         return os.getenv("DEEPSEEK_API_KEY", "")
 
+    @property
+    def source_fetch_timeout_seconds(self) -> int:
+        raw = os.getenv("SOURCE_FETCH_TIMEOUT_SECONDS", "30")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 30
+
+    @property
+    def source_fetch_max_size_bytes(self) -> int:
+        raw = os.getenv("SOURCE_FETCH_MAX_SIZE_BYTES", str(10 * 1024 * 1024))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 10 * 1024 * 1024
+
+    @property
+    def job_max_retries(self) -> int:
+        raw = os.getenv("JOB_MAX_RETRIES", "2")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 2
+
+    @property
+    def job_retry_backoff_seconds(self) -> int:
+        raw = os.getenv("JOB_RETRY_BACKOFF_SECONDS", "5")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 5
+
+    @property
+    def worker_poll_interval_seconds(self) -> float:
+        raw = os.getenv("WORKER_POLL_INTERVAL_SECONDS", "1")
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return 1.0
+
+    @property
+    def evidence_card_provider(self) -> str:
+        return os.getenv("EVIDENCE_CARD_PROVIDER", "local_rule")
+
 
 settings = Settings()

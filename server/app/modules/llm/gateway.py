@@ -17,3 +17,18 @@ def get_provider():
         code="REQUIREMENT_DRAFT_PROVIDER_UNAVAILABLE",
         message=f"未知的任务单草案提供者：{provider_name}",
     )
+
+
+def get_evidence_card_provider():
+    """返回当前激活的证据卡片候选提供者。"""
+    provider_name = getattr(settings, "evidence_card_provider", "local_rule")
+    if provider_name == "local_rule" or provider_name is None:
+        from app.modules.llm.evidence_card_provider import LocalRuleEvidenceCardProvider
+        return LocalRuleEvidenceCardProvider()
+    if provider_name == "fake":
+        from app.modules.llm.evidence_card_provider import FakeEvidenceCardProvider
+        return FakeEvidenceCardProvider()
+    raise AppError(
+        code="EVIDENCE_PROVIDER_UNAVAILABLE",
+        message=f"未知的证据卡片提供者：{provider_name}",
+    )

@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：SPEC 0002 实验要求输入与结构化任务单已完成实现、复核验收并由项目负责人确认收口  
+> 状态：SPEC 0003 公开资料与证据工作流已完成实现、端到端验收，待项目负责人确认收口  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动，当前待确认收口切片为 SPEC 0002。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0002 已用 Vite 页面可访问和 `/api` 代理主链路联通作为替代证据，未完成真实浏览器点击截图验收。  
+> 当前限制：代码阶段已正式启动。SPEC 0003 已完成端到端验收（含主链路、错误分支、STALE 传播）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0003 已用 Vite 页面可访问、`/api` 代理主链路联通、`curl` 端到端验证作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -105,6 +105,7 @@
 - 代码阶段批准记录已创建，项目负责人已要求开始执行。
 - 上一切片 SPEC 0001 的代码结构、后端测试、数据库迁移、前端构建和前后端代理验收已通过；当前待确认收口切片为 SPEC 0002。
 - SPEC 0002 的需求来源、结构化任务单、L0-L3、编辑确认、状态推进和最小变更记录已通过当前命令/API/代理验收，并已由项目负责人确认收口。
+- SPEC 0003 的来源登记、后台任务、Worker、采集与解析、证据卡片、确认拒绝、状态推进和 STALE 传播已通过当前命令/API/代理/curl 端到端验收，待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -150,6 +151,18 @@
 | 2026-06-17 | SPEC 0002 前端类型检查复核 | `apps/web` 下运行 `npm.cmd run lint`，结果为 TypeScript 检查通过 | 通过 |
 | 2026-06-17 | SPEC 0002 前端构建复核 | 宿主权限下运行 `apps/web` 的 `npm.cmd run build`，结果为 Vite 构建通过；沙箱内仍会因 Windows ACL 无法读取 `vite.config.ts` | 通过 |
 | 2026-06-17 | SPEC 0002 项目负责人确认 | 项目负责人要求“当前项目SPEC2做好了吗，审查一下，然后进行git”，本轮复核未发现阻断问题，按确认收口进入 git 版本控制 | 通过 |
+| 2026-07-06 | SPEC 0003 启动 | 创建 `dev-docs/specs/0003-sources-and-evidence-workflow.md`，限定公开 URL/PDF 来源、后台任务、Worker、证据卡片工作流 | 通过 |
+| 2026-07-06 | SPEC 0003 依赖安装 | `server` 下安装 `httpx 0.28.1`、`pypdf 6.14.2`、`beautifulsoup4 4.15.0`、`lxml 6.1.1`（lxml 已作为 SPEC 0002 `python-docx` 传递依赖安装，本切片作为 beautifulsoup4 解析器显式使用） | 通过 |
+| 2026-07-06 | SPEC 0003 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 `153 passed, 1 warning`；原 26 + 新增 127 测试；warning 仍为第三方 `fastapi.testclient` 对 `httpx` 的弃用提示 | 通过 |
+| 2026-07-06 | SPEC 0003 数据库迁移 | 使用全新临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 `0003`，新增 4 张表和 6 个索引 | 通过 |
+| 2026-07-06 | SPEC 0003 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过 | 通过 |
+| 2026-07-06 | SPEC 0003 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，生成 `dist/` | 通过 |
+| 2026-07-06 | SPEC 0003 前后端代理验收 | 同时启动后端 `8001`、Worker 进程和 Vite `5173`，验证页面 `200`、`id="root"`、`/api` 代理可用 | 通过 |
+| 2026-07-06 | SPEC 0003 端到端主链路 | 通过 curl 顺序调用：创建项目 → 添加文本要求 → 生成任务单 → 确认任务单（`REQUIREMENT_CONFIRMED`）→ 登记 `https://example.com/` → Worker `FETCH_URL`+`PARSE_DOCUMENT` → `PARSED` → 触发生成证据卡片 → Worker `GENERATE_EVIDENCE` → 1 张 `CANDIDATE` → 确认卡片 → `EVIDENCE_CONFIRMED` | 通过 |
+| 2026-07-06 | SPEC 0003 非公开 URL 验证 | `localhost`、`127.0.0.1`、`192.168.1.1` 返回 `SOURCE_URL_NOT_PUBLIC`；`file://`、`ftp://` 返回 `SOURCE_URL_SCHEME_UNSUPPORTED` | 通过 |
+| 2026-07-06 | SPEC 0003 受限 URL 验证 | `http://jigsaw.w3.org/HTTP/Basic/`（返回 401）最终 `Source.status=FAILED, error_code=SOURCE_ACCESS_RESTRICTED`；`Job.retry_count=2, status=FAILED`；单元测试 4 个受限资源场景全部通过 | 通过 |
+| 2026-07-06 | SPEC 0003 STALE 传播验证 | 登记第二个 URL → 等待 `PARSED` → 触发生成 10 张 `CANDIDATE` 卡片 → DELETE 来源 → 10 张卡片全部变为 `STALE` | 通过 |
+| 2026-07-06 | SPEC 0003 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 Vite 页面可访问、`/api` 代理主链路联通、`curl` 端到端验证作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

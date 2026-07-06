@@ -1,0 +1,17 @@
+"""后台任务侧枚举。"""
+
+from enum import Enum
+
+
+class JobType(str, Enum):
+    FETCH_URL = "FETCH_URL"
+    PARSE_DOCUMENT = "PARSE_DOCUMENT"
+    GENERATE_EVIDENCE = "GENERATE_EVIDENCE"
+
+
+class JobStatus(str, Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
