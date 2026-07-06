@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：SPEC 0003 公开资料与证据工作流已完成实现、端到端验收，待项目负责人确认收口  
+> 状态：SPEC 0004 数据集工作区已完成实现、端到端验收，待项目负责人确认收口  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。SPEC 0003 已完成端到端验收（含主链路、错误分支、STALE 传播）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0003 已用 Vite 页面可访问、`/api` 代理主链路联通、`curl` 端到端验证作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。SPEC 0004 已完成端到端验收（含主链路、错误分支、STALE 传播）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0004 已用 curl 端到端验证作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -105,7 +105,8 @@
 - 代码阶段批准记录已创建，项目负责人已要求开始执行。
 - 上一切片 SPEC 0001 的代码结构、后端测试、数据库迁移、前端构建和前后端代理验收已通过；当前待确认收口切片为 SPEC 0002。
 - SPEC 0002 的需求来源、结构化任务单、L0-L3、编辑确认、状态推进和最小变更记录已通过当前命令/API/代理验收，并已由项目负责人确认收口。
-- SPEC 0003 的来源登记、后台任务、Worker、采集与解析、证据卡片、确认拒绝、状态推进和 STALE 传播已通过当前命令/API/代理/curl 端到端验收，待项目负责人确认收口。
+- SPEC 0003 的来源登记、后台任务、Worker、采集与解析、证据卡片、确认拒绝、状态推进和 STALE 传播已通过当前命令/API/代理/curl 端到端验收，并已由项目负责人确认收口。
+- SPEC 0004 的数据集上传、字段概览、质量评分、分析方案候选、用户确认、状态推进和 STALE 传播已通过当前命令/API/curl 端到端验收，待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -163,6 +164,18 @@
 | 2026-07-06 | SPEC 0003 受限 URL 验证 | `http://jigsaw.w3.org/HTTP/Basic/`（返回 401）最终 `Source.status=FAILED, error_code=SOURCE_ACCESS_RESTRICTED`；`Job.retry_count=2, status=FAILED`；单元测试 4 个受限资源场景全部通过 | 通过 |
 | 2026-07-06 | SPEC 0003 STALE 传播验证 | 登记第二个 URL → 等待 `PARSED` → 触发生成 10 张 `CANDIDATE` 卡片 → DELETE 来源 → 10 张卡片全部变为 `STALE` | 通过 |
 | 2026-07-06 | SPEC 0003 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 Vite 页面可访问、`/api` 代理主链路联通、`curl` 端到端验证作为替代证据 | 未执行 |
+| 2026-07-06 | SPEC 0004 启动 | 创建 `dev-docs/specs/0004-dataset-workspace.md`，限定数据集上传与解析、字段概览、分析方案候选、用户确认状态 | 通过 |
+| 2026-07-06 | SPEC 0004 依赖安装 | `server` 下安装 `pandas 3.0.3`、`numpy 2.5.1`（pandas 3.0.3 传递依赖升级，复核版本 `2.4.6`）、`openpyxl 3.1.5` | 通过 |
+| 2026-07-06 | SPEC 0004 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 `375 passed, 21 warnings`；原 153 + 新增 222 测试；warnings 包含第三方 `fastapi.testclient` 弃用提示（已知非阻断）和 pandas datetime 推断 UserWarning（新增非阻断债务） | 通过 |
+| 2026-07-06 | SPEC 0004 数据库迁移 | 使用全新临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 `0004`，新增 3 张表（datasets、dataset_versions、analysis_plans）和 5 个索引 | 通过 |
+| 2026-07-06 | SPEC 0004 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过 | 通过 |
+| 2026-07-06 | SPEC 0004 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，106 模块转换，生成 `dist/`（347.19 kB，gzip 99.84 kB） | 通过 |
+| 2026-07-06 | SPEC 0004 API 端点注册 | 启动后端验证 OpenAPI schema，36 个 paths 中包含 8 个 datasets 路径和 6 个 analysis 路径，15 个新端点全部注册 | 通过 |
+| 2026-07-06 | SPEC 0004 Worker handler 注册 | 验证 `worker/handlers.py` HANDLERS 映射包含 5 个 handler：FETCH_URL、PARSE_DOCUMENT、GENERATE_EVIDENCE、PARSE_DATASET、GENERATE_ANALYSIS_PLAN | 通过 |
+| 2026-07-06 | SPEC 0004 端到端主链路 | 通过 curl 顺序调用：创建 EVIDENCE_CONFIRMED 项目 → 上传 `胃病数据集_教学实验版.xlsx` → Worker `PARSE_DATASET`（9 行 2 列，quality_score=100.0）→ `/datasets/complete`（DATASET_READY）→ `/analysis/generate` → Worker `GENERATE_ANALYSIS_PLAN`（cleaning=2/analysis=1/chart=2）→ `/analysis/{id}/confirm`（CONFIRMED）→ `/analysis/complete`（ANALYSIS_CONFIRMED） | 通过 |
+| 2026-07-06 | SPEC 0004 错误分支验证 | 6 个错误分支全部通过：上传到 DRAFT 项目（PROJECT_EVIDENCE_NOT_CONFIRMED）、上传 .txt 文件（DATASET_FILE_UNSUPPORTED）、确认不存在的 plan_id（ANALYSIS_PLAN_NOT_FOUND）、拒绝已 CONFIRMED 方案（ANALYSIS_PLAN_NOT_CONFIRMABLE）、GET 不存在的 dataset（DATASET_NOT_FOUND）、上传到不存在的 project（PROJECT_NOT_FOUND） | 通过 |
+| 2026-07-06 | SPEC 0004 STALE 传播验证 | 重新上传（reupload）创建 v2，旧版本 v1 变 SUPERSEDED，旧 CONFIRMED 方案变 STALE，已 STALE 方案保持 STALE（无重复标记），新自动生成方案为 CANDIDATE，项目状态保持 ANALYSIS_CONFIRMED（无回退） | 通过 |
+| 2026-07-06 | SPEC 0004 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 curl 端到端验证、6 个错误分支、STALE 传播作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

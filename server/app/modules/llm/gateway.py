@@ -32,3 +32,18 @@ def get_evidence_card_provider():
         code="EVIDENCE_PROVIDER_UNAVAILABLE",
         message=f"未知的证据卡片提供者：{provider_name}",
     )
+
+
+def get_analysis_plan_provider():
+    """返回当前激活的分析方案候选提供者。"""
+    provider_name = getattr(settings, "analysis_plan_provider", "local_rule")
+    if provider_name == "local_rule" or provider_name is None:
+        from app.modules.llm.analysis_plan_provider import LocalRuleAnalysisPlanProvider
+        return LocalRuleAnalysisPlanProvider()
+    if provider_name == "fake":
+        from app.modules.llm.analysis_plan_provider import FakeAnalysisPlanProvider
+        return FakeAnalysisPlanProvider()
+    raise AppError(
+        code="ANALYSIS_PLAN_PROVIDER_UNAVAILABLE",
+        message=f"未知的分析方案提供者：{provider_name}",
+    )

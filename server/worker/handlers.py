@@ -15,9 +15,15 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.infrastructure.fetchers.http_fetcher import fetch_url, FetchError
 from app.infrastructure.parsers import html_parser, pdf_parser
+from app.infrastructure.parsers.dataset_parser import (
+    parse_dataset,
+    DatasetParseError,
+    profile_to_dict,
+    profile_from_dict,
+)
 from app.modules.jobs import service as job_service
 from app.modules.jobs.status import JobType
-from app.modules.llm.gateway import get_evidence_card_provider
+from app.modules.llm.gateway import get_evidence_card_provider, get_analysis_plan_provider
 from app.modules.sources import service as sources_service
 
 
@@ -200,8 +206,140 @@ def handle_generate_evidence(db: Session, job) -> dict:
     return {"card_count": len(drafts)}
 
 
+def handle_parse_dataset(db: Session, job) -> dict:
+    """解析数据集文件，生成字段概览和质量检查结果。
+
+    解析成功后自动触发 GENERATE_ANALYSIS_PLAN 任务。
+    """
+    data = _parse_input(job)
+    dataset_id = data.get("dataset_id")
+    version_id = data.get("version_id")
+    file_extension = data.get("file_extension", "")
+    if not dataset_id or not version_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 dataset_id 或 version_id")
+
+    from app.modules.datasets import service as dataset_service
+
+    version = dataset_service.get_version_by_id(db, version_id)
+    file_path = version.file_path
+    if not file_path:
+        dataset_service.mark_dataset_failed(
+            db, version_id, "DATASET_PARSE_FAILED", "版本未关联文件")
+        db.commit()
+        raise AppError(code="DATASET_PARSE_FAILED", message="版本未关联文件")
+
+    path = Path(file_path)
+    if not path.exists():
+        dataset_service.mark_dataset_failed(
+            db, version_id, "DATASET_PARSE_FAILED",
+            f"文件不存在：{file_path}")
+        db.commit()
+        raise AppError(code="DATASET_PARSE_FAILED",
+                       message=f"文件不存在：{file_path}")
+
+    # 标记为 PARSING
+    dataset_service.mark_dataset_parsing(db, version_id)
+    db.flush()
+
+    try:
+        result = parse_dataset(file_path, file_extension)
+    except DatasetParseError as err:
+        dataset_service.mark_dataset_failed(
+            db, version_id, err.code, err.message)
+        db.commit()
+        raise
+    except Exception as exc:
+        dataset_service.mark_dataset_failed(
+            db, version_id, "DATASET_PARSE_FAILED", str(exc))
+        db.commit()
+        raise AppError(code="DATASET_PARSE_FAILED",
+                       message=f"解析失败：{exc}") from exc
+
+    # 序列化 profile 并写入 DatasetVersion
+    profile_dict = profile_to_dict(result.profile)
+    _, dataset = dataset_service.mark_dataset_parsed(
+        db,
+        version_id=version_id,
+        profile_data=profile_dict,
+        row_count=result.profile.row_count,
+        column_count=result.profile.column_count,
+    )
+
+    # 自动触发分析方案生成
+    job_id = dataset_service.trigger_analysis_plan_generation(
+        db,
+        project_id=job.project_id,
+        dataset_id=dataset_id,
+        version_id=version_id,
+    )
+
+    db.commit()
+    return {
+        "row_count": result.profile.row_count,
+        "column_count": result.profile.column_count,
+        "quality_score": result.profile.quality_score,
+        "analysis_plan_job_id": job_id,
+    }
+
+
+def handle_generate_analysis_plan(db: Session, job) -> dict:
+    """基于已解析数据集生成分析方案候选。
+
+    调用 AnalysisPlanDraftProvider 生成 cleaning/analysis/chart plan 候选，
+    保存为 AnalysisPlan，并推进 project.status 到 ANALYSIS_PLANNED。
+    """
+    data = _parse_input(job)
+    dataset_id = data.get("dataset_id")
+    dataset_version_id = data.get("dataset_version_id")
+    if not dataset_id or not dataset_version_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 dataset_id 或 dataset_version_id")
+
+    from app.modules.datasets import service as dataset_service
+    from app.modules.analysis import service as analysis_service
+
+    version = dataset_service.get_version_by_id(db, dataset_version_id)
+    if not version.profile_json:
+        raise AppError(code="DATASET_NOT_PARSED",
+                       message="数据集版本未解析，无 profile 数据")
+
+    try:
+        profile_data = json.loads(version.profile_json)
+    except json.JSONDecodeError as exc:
+        raise AppError(code="DATASET_PARSE_FAILED",
+                       message=f"profile_json 解析失败：{exc}") from exc
+
+    profile = profile_from_dict(profile_data)
+
+    provider = get_analysis_plan_provider()
+    draft = provider.generate(profile)
+
+    plan = analysis_service.save_analysis_plan_draft(
+        db,
+        project_id=job.project_id,
+        dataset_id=dataset_id,
+        dataset_version_id=dataset_version_id,
+        draft=draft,
+        candidate_source=provider.source_label(),
+    )
+
+    # 推进项目状态到 ANALYSIS_PLANNED
+    analysis_service.advance_project_to_planned(db, job.project_id)
+
+    db.commit()
+    return {
+        "plan_id": plan.id,
+        "cleaning_plan_count": len(draft.cleaning_plan),
+        "analysis_plan_count": len(draft.analysis_plan),
+        "chart_plan_count": len(draft.chart_plan),
+    }
+
+
 HANDLERS: dict[str, Callable] = {
     JobType.FETCH_URL.value: handle_fetch_url,
     JobType.PARSE_DOCUMENT.value: handle_parse_document,
     JobType.GENERATE_EVIDENCE.value: handle_generate_evidence,
+    JobType.PARSE_DATASET.value: handle_parse_dataset,
+    JobType.GENERATE_ANALYSIS_PLAN.value: handle_generate_analysis_plan,
 }

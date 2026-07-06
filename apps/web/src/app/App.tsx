@@ -5,6 +5,8 @@ import { ProjectDetailView } from "../routes/ProjectDetailView";
 import { RequirementWorkspaceView } from "../routes/RequirementWorkspaceView";
 import { SourcesWorkspaceView } from "../routes/SourcesWorkspaceView";
 import { EvidenceWorkspaceView } from "../routes/EvidenceWorkspaceView";
+import { DatasetWorkspaceView } from "../routes/DatasetWorkspaceView";
+import { AnalysisWorkspaceView } from "../routes/AnalysisWorkspaceView";
 
 export function App() {
   const navigate = useNavigate();
@@ -26,6 +28,8 @@ export function App() {
       <Route path="projects/:projectId/requirements" element={<RequirementWorkspaceView />} />
       <Route path="projects/:projectId/sources" element={<SourcesWorkspaceView />} />
       <Route path="projects/:projectId/evidence" element={<EvidenceWorkspaceView />} />
+      <Route path="projects/:projectId/datasets" element={<DatasetWorkspaceView />} />
+      <Route path="projects/:projectId/analysis" element={<AnalysisWorkspaceView />} />
     </Routes>
   );
 }

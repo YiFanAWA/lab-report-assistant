@@ -9,6 +9,7 @@ MEMORY.md
 memory/
 .claude/
 .codex/
+.trae/
 
 # 外部 skill/plugin 仓库本体（本地使用，不纳入主仓）
 skills/superpowers/

@@ -1,6 +1,11 @@
 /** 后台任务类型 — 与后端 JobResponse 一致（snake_case）。 */
 
-export type JobType = "FETCH_URL" | "PARSE_DOCUMENT" | "GENERATE_EVIDENCE";
+export type JobType =
+  | "FETCH_URL"
+  | "PARSE_DOCUMENT"
+  | "GENERATE_EVIDENCE"
+  | "PARSE_DATASET"
+  | "GENERATE_ANALYSIS_PLAN";
 
 export type JobStatus =
   | "PENDING"
@@ -34,5 +39,10 @@ export interface JobListResponse {
 
 /** 生成证据卡片响应。 */
 export interface GenerateEvidenceResponse {
+  job_id: string;
+}
+
+/** 触发生成分析方案候选响应。 */
+export interface GenerateAnalysisResponse {
   job_id: string;
 }

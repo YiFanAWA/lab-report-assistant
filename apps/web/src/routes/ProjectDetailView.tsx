@@ -9,6 +9,9 @@ function statusLabel(s: string) {
     REQUIREMENT_CONFIRMED: "需求已确认",
     SOURCES_COLLECTED: "来源已收集",
     EVIDENCE_CONFIRMED: "证据已确认",
+    DATASET_READY: "数据集已就绪",
+    ANALYSIS_PLANNED: "分析方案已生成",
+    ANALYSIS_CONFIRMED: "分析方案已确认",
     COMPLETED: "已完成",
   };
   return m[s] ?? s;
@@ -21,6 +24,9 @@ const ORDERED_STATUSES = [
   "REQUIREMENT_CONFIRMED",
   "SOURCES_COLLECTED",
   "EVIDENCE_CONFIRMED",
+  "DATASET_READY",
+  "ANALYSIS_PLANNED",
+  "ANALYSIS_CONFIRMED",
   "COMPLETED",
 ];
 
@@ -75,6 +81,8 @@ export function ProjectDetailView() {
   const showRequirementEntry = true;
   const showSourcesEntry = isAtOrAfter(project.status, "REQUIREMENT_CONFIRMED");
   const showEvidenceEntry = isAtOrAfter(project.status, "REQUIREMENT_CONFIRMED");
+  const showDatasetsEntry = isAtOrAfter(project.status, "EVIDENCE_CONFIRMED");
+  const showAnalysisEntry = isAtOrAfter(project.status, "DATASET_READY");
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -109,6 +117,22 @@ export function ProjectDetailView() {
         <div style={{ marginTop: "0.5rem" }}>
           <Link to={`/projects/${project.id}/evidence`} style={secondaryLinkStyle}>
             进入证据卡片工作区
+          </Link>
+        </div>
+      )}
+
+      {showDatasetsEntry && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Link to={`/projects/${project.id}/datasets`} style={secondaryLinkStyle}>
+            进入数据集工作区
+          </Link>
+        </div>
+      )}
+
+      {showAnalysisEntry && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Link to={`/projects/${project.id}/analysis`} style={secondaryLinkStyle}>
+            进入分析方案工作区
           </Link>
         </div>
       )}

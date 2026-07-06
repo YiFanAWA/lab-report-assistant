@@ -86,5 +86,17 @@ class Settings:
     def evidence_card_provider(self) -> str:
         return os.getenv("EVIDENCE_CARD_PROVIDER", "local_rule")
 
+    @property
+    def dataset_max_size_bytes(self) -> int:
+        raw = os.getenv("DATASET_MAX_SIZE_BYTES", str(50 * 1024 * 1024))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 50 * 1024 * 1024
+
+    @property
+    def analysis_plan_provider(self) -> str:
+        return os.getenv("ANALYSIS_PLAN_PROVIDER", "local_rule")
+
 
 settings = Settings()

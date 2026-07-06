@@ -1,0 +1,22 @@
+"""分析方案侧枚举。"""
+
+from enum import Enum
+
+
+class AnalysisPlanStatus(str, Enum):
+    """分析方案状态。"""
+
+    CANDIDATE = "CANDIDATE"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
+    STALE = "STALE"
+
+
+class AnalysisChangeType(str, Enum):
+    """分析方案相关变更记录类型。"""
+
+    ANALYSIS_PLAN_GENERATED = "ANALYSIS_PLAN_GENERATED"
+    ANALYSIS_PLAN_UPDATED = "ANALYSIS_PLAN_UPDATED"
+    ANALYSIS_PLAN_CONFIRMED = "ANALYSIS_PLAN_CONFIRMED"
+    ANALYSIS_PLAN_REJECTED = "ANALYSIS_PLAN_REJECTED"
+    ANALYSIS_COMPLETED = "ANALYSIS_COMPLETED"

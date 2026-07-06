@@ -10,7 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.errors import AppError
-from app.api.routers import health, projects, requirements, sources, evidence, jobs
+from app.api.routers import (
+    health, projects, requirements, sources, evidence, jobs,
+    datasets, analysis,
+)
 
 app = FastAPI(
     title="实验报告助手 API",
@@ -31,6 +34,8 @@ app.include_router(requirements.router)
 app.include_router(sources.router)
 app.include_router(evidence.router)
 app.include_router(jobs.router)
+app.include_router(datasets.router)
+app.include_router(analysis.router)
 
 
 @app.exception_handler(AppError)
@@ -43,13 +48,18 @@ async def handle_app_error(request: Request, exc: AppError):
         "SOURCE_NOT_FOUND",
         "EVIDENCE_CARD_NOT_FOUND",
         "JOB_NOT_FOUND",
+        "DATASET_NOT_FOUND",
+        "DATASET_VERSION_NOT_FOUND",
+        "ANALYSIS_PLAN_NOT_FOUND",
     }
     forbidden_codes = {
         "SOURCE_ACCESS_RESTRICTED",
+        "DATASET_ACCESS_RESTRICTED",
     }
     too_large_codes = {
         "REQUIREMENT_FILE_TOO_LARGE",
         "SOURCE_FILE_TOO_LARGE",
+        "DATASET_FILE_TOO_LARGE",
     }
     if exc.code in not_found_codes:
         status = 404

@@ -5,8 +5,8 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：SPEC 0003 公开资料与证据工作流已完成实现、端到端验收，待项目负责人确认收口
-- 下一阶段入口：在项目负责人确认收口前，不得进入下一切片实现；收口后可编写并确认“数据集工作区”SPEC（V0.3 第一部分）
+- 状态：SPEC 0004 数据集工作区已完成实现、端到端验收，待项目负责人确认收口
+- 下一阶段入口：在项目负责人确认收口前，不得进入下一切片实现；收口后可编写并确认"受控 Python 执行"SPEC（V0.3 第二部分，SPEC 0005）
 
 ## 工程入口
 
@@ -28,6 +28,7 @@
 - [specs/0001-project-workspace-and-scaffold.md](specs/0001-project-workspace-and-scaffold.md)：第一开发切片 SPEC，限定脚手架与项目工作区最小闭环。
 - [specs/0002-requirement-input-and-task-plan.md](specs/0002-requirement-input-and-task-plan.md)：第二开发切片 SPEC，限定实验要求输入、结构化任务单和 L0-L3 判断。
 - [specs/0003-sources-and-evidence-workflow.md](specs/0003-sources-and-evidence-workflow.md)：第三开发切片 SPEC，限定公开 URL 与 PDF 来源、后台任务、证据卡片工作流。
+- [specs/0004-dataset-workspace.md](specs/0004-dataset-workspace.md)：第四开发切片 SPEC，限定数据集上传与解析、字段概览、分析方案候选、用户确认状态。
 - [decisions/0001-lock-project-charter.md](decisions/0001-lock-project-charter.md)：锁定立项文档为后续工作依据的决策记录。
 - [decisions/0002-enter-architecture-planning.md](decisions/0002-enter-architecture-planning.md)：进入架构与开发计划阶段的决策记录。
 - [decisions/0003-document-language.md](decisions/0003-document-language.md)：项目自有文档必须使用中文的决策记录。
@@ -42,6 +43,7 @@
 - [decisions/0012-lock-git-remote.md](decisions/0012-lock-git-remote.md)：锁定当前项目远程仓库为 GitHub 上的 `YiFanAWA/lab-report-assistant`。
 - [decisions/0013-confirm-spec-0002-acceptance.md](decisions/0013-confirm-spec-0002-acceptance.md)：确认 SPEC 0002 第二开发切片复核验收通过并进入版本控制收口。
 - [decisions/0014-start-spec-0003-sources-and-evidence.md](decisions/0014-start-spec-0003-sources-and-evidence.md)：启动 SPEC 0003 公开资料与证据工作流切片的决策记录。
+- [decisions/0015-start-spec-0004-dataset-workspace.md](decisions/0015-start-spec-0004-dataset-workspace.md)：启动 SPEC 0004 数据集工作区切片的决策记录。
 
 ## 变更规则
 
