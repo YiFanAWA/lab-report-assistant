@@ -223,6 +223,23 @@ SPEC 0004 实际启用的新增后端依赖：
 
 `scipy`、`scikit-learn`、`matplotlib`、`playwright` 未在 SPEC 0004 安装，符合本切片边界（推迟到 SPEC 0005 Python 执行切片）。真实 DeepSeek 调用继续推迟到后续切片。
 
+### SPEC 0005 计划启用的新增后端依赖
+
+本切片计划安装以下运行时依赖，实际安装版本以 SPEC 0005 验收时记录为准：
+
+| 依赖 | 复核版本 | 计划安装版本 | 来源 | 用途 |
+| --- | --- | --- | --- | --- |
+| `scipy` | `1.17.1` | 待定 | PyPI | 统计检验（执行环境 import 白名单） |
+| `scikit-learn` | `1.9.0` | 待定 | PyPI | 基础建模（执行环境 import 白名单） |
+| `matplotlib` | `3.11.0` | 待定 | PyPI | 图表生成（agg backend，执行环境 import 白名单） |
+
+约束：
+
+- 上述依赖作为受控执行环境的 import 白名单成员，由应用托管，普通用户不手动安装。
+- `playwright` 不在 SPEC 0005 安装，继续推迟到后续需要动态网页渲染的切片。
+- 真实 DeepSeek 调用继续推迟到后续切片，本切片继续使用本地规则提供者 `LocalRuleCodeTaskProvider`。
+- 执行环境严格限制 import 白名单为 `pandas`、`numpy`、`matplotlib`、`scipy.stats`、`sklearn`、`openpyxl`，禁止 `os`、`subprocess`、`socket` 等。
+
 ## 6. 数据分析与交付物依赖复核
 
 | 依赖 | 复核版本 | 来源 | 用途 |
