@@ -190,6 +190,20 @@
 | 2026-07-07 | SPEC 0005 STALE 传播验证 | AnalysisPlan 重新确认 → 关联 CodeTask 变 STALE；CodeTask 编辑 → 关联 ExecutionRun 变 STALE；端到端 API 测试覆盖两条传播链 | 通过 |
 | 2026-07-07 | SPEC 0005 产物下载验证 | API 测试覆盖 CSV（text/csv）和 PNG（image/png）产物下载；不存在的产物返回 EXECUTION_ARTIFACT_NOT_FOUND；路径穿越防护已实现 | 通过 |
 | 2026-07-07 | SPEC 0005 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（33 个测试覆盖 11 个端点的成功/失败/状态机路径）作为替代证据 | 未执行 |
+| 2026-07-22 | SPEC 0006 依赖安装 | `server` 下安装 `python-pptx==1.0.2`，传递依赖 `XlsxWriter 3.2.9`；`python-docx 1.2.0` 复用 SPEC 0002 安装 | 通过 |
+| 2026-07-22 | SPEC 0006 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 `569 passed, 21 warnings`；原 456 + 新增 113 测试（outline_provider 21 + renderers 18 + outlines_service 40 + outlines_api 21 + outline_worker_handlers 13）；warnings 仍为第三方 `fastapi.testclient` 弃用提示和 pandas datetime 推断 UserWarning（已知非阻断） | 通过 |
+| 2026-07-22 | SPEC 0006 数据库迁移 | 使用全新临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 `0006`，新增 3 张表（outlines、deliverables、deliverable_versions）和索引 | 通过 |
+| 2026-07-22 | SPEC 0006 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过 | 通过 |
+| 2026-07-22 | SPEC 0006 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，106 模块转换，生成 `dist/`（347.19 kB，gzip 99.84 kB） | 通过 |
+| 2026-07-22 | SPEC 0006 API 端点注册 | 新增 `outlines.py`（7 端点）和 `deliverables.py`（4 端点），共 11 个新端点；扩展 `main.py` 错误码映射（not_found_codes += OUTLINE_NOT_FOUND/DELIVERABLE_NOT_FOUND/DELIVERABLE_VERSION_NOT_FOUND） | 通过 |
+| 2026-07-22 | SPEC 0006 Worker handler 注册 | 验证 `worker/handlers.py` HANDLERS 映射新增 3 个 handler：GENERATE_OUTLINE、GENERATE_WORD、GENERATE_PPT，共 10 个 handler | 通过 |
+| 2026-07-22 | SPEC 0006 状态机推进验证 | API 测试覆盖：CANDIDATE→CONFIRMED（confirm）、CANDIDATE→REJECTED（reject）、CONFIRMED 编辑→CANDIDATE（code_version 递增）、CONFIRMED→触发 Word/PPT 生成（GENERATING）、Word+PPT 均 SUCCEEDED→COMPLETED（complete）、无成功交付物时 complete 返回 PROJECT_NO_SUCCESSFUL_DELIVERABLE | 通过 |
+| 2026-07-22 | SPEC 0006 STALE 传播验证 | ExecutionRun 重新执行 → Outline STALE；Outline 编辑 → Deliverable STALE；Outline 重新确认 → 旧 Deliverable STALE；端到端 service 测试覆盖三条传播链 | 通过 |
+| 2026-07-22 | SPEC 0006 交付物下载验证 | API 测试覆盖 Word（.docx）和 PPT（.pptx）下载；非 SUCCEEDED 版本返回 DELIVERABLE_NOT_DOWNLOADABLE；路径穿越防护已实现（`../../../../etc/passwd` 被拦截） | 通过 |
+| 2026-07-22 | SPEC 0006 渲染器验证 | WordRenderer 成功生成 .docx 文件（可被 python-docx 重新打开、CSV 表格嵌入为 Word 表格、PNG 图片嵌入为 inline shape）；PptRenderer 成功生成 .pptx 文件（可被 python-pptx 重新打开、PNG 嵌入为图片 shape） | 通过 |
+| 2026-07-22 | SPEC 0006 bug 修复 | `outline_provider.py` 中 `LocalRuleOutlineProvider.generate` 误用 Python 内置 `type` 替代局部变量 `ftype`，已在测试阶段发现并修复 | 通过 |
+| 2026-07-22 | SPEC 0006 handler bug 修复 | `worker/handlers.py` 中 `_gather_outline_context` 缺少 `from app.modules.analysis.models import AnalysisPlan` 导入，导致查询分析方案时 NameError，已在测试阶段发现并修复 | 通过 |
+| 2026-07-22 | SPEC 0006 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（21 个测试覆盖 11 个端点）、Worker handler 测试（13 个测试）和渲染器测试（18 个测试验证真实文件生成）作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

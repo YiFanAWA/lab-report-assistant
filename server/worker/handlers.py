@@ -28,6 +28,7 @@ from app.modules.llm.gateway import (
     get_evidence_card_provider,
     get_analysis_plan_provider,
     get_code_task_provider,
+    get_outline_provider,
 )
 from app.modules.sources import service as sources_service
 
@@ -529,6 +530,469 @@ def handle_execute_code_task(db: Session, job) -> dict:
         }
 
 
+def _gather_outline_context(db: Session, project_id: str) -> dict:
+    """聚合大纲生成所需的上下文。
+
+    从各 owner 服务查询已确认内容：
+    - requirements: 已确认任务单
+    - sources: 已确认证据卡片
+    - datasets: 数据集字段概览
+    - analysis: 已确认分析方案
+    - execution: 成功的执行记录和产物
+    """
+    from app.modules.requirements import service as req_service
+    from app.modules.requirements.models import RequirementPlan
+    from app.modules.requirements.status import PlanStatus
+    from app.modules.sources.models import EvidenceCard
+    from app.modules.sources.status import EvidenceCardStatus
+    from app.modules.datasets import service as dataset_service
+    from app.modules.datasets.models import Dataset, DatasetVersion
+    from app.modules.datasets.status import DatasetStatus
+    from app.modules.analysis import service as analysis_service
+    from app.modules.analysis.models import AnalysisPlan
+    from app.modules.analysis.status import AnalysisPlanStatus
+    from app.modules.execution.models import ExecutionRun, ExecutionArtifact
+    from app.modules.execution.status import ExecutionRunStatus
+    from app.modules.projects.models import Project
+
+    context: dict = {}
+
+    # 项目信息
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project:
+        context["project"] = {
+            "id": project.id,
+            "name": project.name,
+            "topic": project.topic,
+        }
+
+    # 已确认任务单
+    plan = (
+        db.query(RequirementPlan)
+        .filter(
+            RequirementPlan.project_id == project_id,
+            RequirementPlan.status == PlanStatus.CONFIRMED.value,
+        )
+        .order_by(RequirementPlan.confirmed_at.desc())
+        .first()
+    )
+    if plan:
+        import json as _json
+        try:
+            payload = _json.loads(plan.payload_json)
+        except Exception:
+            payload = {}
+        context["requirements"] = {
+            "plan_id": plan.id,
+            "payload": payload,
+        }
+
+    # 已确认证据卡片
+    cards = (
+        db.query(EvidenceCard)
+        .filter(
+            EvidenceCard.project_id == project_id,
+            EvidenceCard.status == EvidenceCardStatus.CONFIRMED.value,
+        )
+        .all()
+    )
+    context["evidence_cards"] = [
+        {
+            "id": c.id,
+            "claim": c.claim if hasattr(c, "claim") else "",
+            "summary": getattr(c, "summary", "") or getattr(c, "claim", ""),
+        }
+        for c in cards
+    ]
+
+    # 数据集字段概览（取最新已解析版本）
+    dataset = (
+        db.query(Dataset)
+        .filter(Dataset.project_id == project_id)
+        .order_by(Dataset.created_at.desc())
+        .first()
+    )
+    if dataset:
+        version = (
+            db.query(DatasetVersion)
+            .filter(DatasetVersion.dataset_id == dataset.id)
+            .order_by(DatasetVersion.version.desc())
+            .first()
+        )
+        if version and version.profile_json:
+            import json as _json
+            try:
+                profile = _json.loads(version.profile_json)
+            except Exception:
+                profile = {}
+            context["dataset"] = {
+                "dataset_id": dataset.id,
+                "version_id": version.id,
+                "row_count": version.row_count,
+                "column_count": version.column_count,
+                "profile": profile,
+            }
+
+    # 已确认分析方案
+    analysis_plan = (
+        db.query(AnalysisPlan)
+        .filter(
+            AnalysisPlan.project_id == project_id,
+            AnalysisPlan.status == AnalysisPlanStatus.CONFIRMED.value,
+        )
+        .order_by(AnalysisPlan.confirmed_at.desc())
+        .first()
+    )
+    if analysis_plan:
+        import json as _json
+        try:
+            cleaning_plan = _json.loads(analysis_plan.cleaning_plan) if analysis_plan.cleaning_plan else []
+            analysis_plan_items = _json.loads(analysis_plan.analysis_plan) if analysis_plan.analysis_plan else []
+            chart_plan = _json.loads(analysis_plan.chart_plan) if analysis_plan.chart_plan else []
+        except Exception:
+            cleaning_plan, analysis_plan_items, chart_plan = [], [], []
+        context["analysis_plan"] = {
+            "plan_id": analysis_plan.id,
+            "cleaning_plan": cleaning_plan,
+            "analysis_plan": analysis_plan_items,
+            "chart_plan": chart_plan,
+        }
+
+    # 成功的执行记录和产物
+    runs = (
+        db.query(ExecutionRun)
+        .filter(
+            ExecutionRun.project_id == project_id,
+            ExecutionRun.status == ExecutionRunStatus.SUCCEEDED.value,
+        )
+        .order_by(ExecutionRun.created_at.desc())
+        .all()
+    )
+    executions = []
+    for run in runs:
+        artifacts = (
+            db.query(ExecutionArtifact)
+            .filter(ExecutionArtifact.execution_run_id == run.id)
+            .all()
+        )
+        executions.append({
+            "run_id": run.id,
+            "stdout": run.stdout or "",
+            "stderr": run.stderr or "",
+            "artifacts": [
+                {
+                    "name": a.name,
+                    "artifact_type": a.artifact_type,
+                    "file_path": a.file_path,
+                    "execution_run_id": run.id,
+                }
+                for a in artifacts
+            ],
+        })
+    context["executions"] = executions
+
+    return context
+
+
+def handle_generate_outline(db: Session, job) -> dict:
+    """基于已确认的实验要求、证据、数据集、分析方案和执行结果生成大纲候选。
+
+    调用 OutlineDraftProvider 拼装大纲章节，保存为 Outline（status=CANDIDATE）。
+    """
+    data = _parse_input(job)
+    project_id = data.get("project_id") or job.project_id
+    if not project_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 project_id")
+
+    from app.modules.outlines import service as outline_service
+    from app.modules.execution.models import ExecutionRun
+    from app.modules.execution.status import ExecutionRunStatus
+
+    # 前置条件：至少一个成功的执行记录
+    succeeded_count = (
+        db.query(ExecutionRun)
+        .filter(
+            ExecutionRun.project_id == project_id,
+            ExecutionRun.status == ExecutionRunStatus.SUCCEEDED.value,
+        )
+        .count()
+    )
+    if succeeded_count == 0:
+        raise AppError(code="OUTLINE_NOT_GENERATABLE",
+                       message="没有成功的执行记录，无法生成大纲")
+
+    # 聚合上下文
+    context = _gather_outline_context(db, project_id)
+
+    provider = get_outline_provider()
+    draft = provider.generate(context)
+
+    # 转换为 dict 列表保存
+    sections_data = [
+        {
+            "id": s.id,
+            "title": s.title,
+            "content": s.content,
+            "source_type": s.source_type,
+            "source_ids": s.source_ids,
+        }
+        for s in draft.sections
+    ]
+
+    outline = outline_service.save_outline_draft(
+        db,
+        project_id=project_id,
+        sections=sections_data,
+        candidate_source=provider.source_label(),
+    )
+
+    db.commit()
+    return {
+        "outline_id": outline.id,
+        "section_count": len(draft.sections),
+    }
+
+
+def _gather_execution_artifacts_for_render(
+    db: Session, project_id: str
+) -> list[dict]:
+    """收集项目下所有成功执行记录的产物（绝对路径）。"""
+    from app.modules.execution.models import ExecutionRun, ExecutionArtifact
+    from app.modules.execution.status import ExecutionRunStatus
+
+    runs = (
+        db.query(ExecutionRun)
+        .filter(
+            ExecutionRun.project_id == project_id,
+            ExecutionRun.status == ExecutionRunStatus.SUCCEEDED.value,
+        )
+        .order_by(ExecutionRun.created_at.desc())
+        .all()
+    )
+    artifacts = []
+    for run in runs:
+        arts = (
+            db.query(ExecutionArtifact)
+            .filter(ExecutionArtifact.execution_run_id == run.id)
+            .all()
+        )
+        for a in arts:
+            # 构造产物绝对路径
+            base_dir = (settings.project_data_root / project_id
+                        / "executions" / run.id)
+            abs_path = str((base_dir / a.file_path).resolve())
+            artifacts.append({
+                "name": a.name,
+                "artifact_type": a.artifact_type,
+                "file_path": abs_path,
+                "execution_run_id": run.id,
+            })
+    return artifacts
+
+
+def handle_generate_word(db: Session, job) -> dict:
+    """从已确认大纲生成 Word 文档。
+
+    调用 WordRenderer 渲染 .docx 文件，保存为 DeliverableVersion（status=SUCCEEDED）。
+    """
+    data = _parse_input(job)
+    outline_id = data.get("outline_id")
+    deliverable_id = data.get("deliverable_id")
+    if not outline_id or not deliverable_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 outline_id 或 deliverable_id")
+
+    from app.modules.outlines import service as outline_service
+    from app.modules.outlines.status import DeliverableType
+    from app.modules.projects import service as project_service
+    from app.infrastructure.renderers.word_renderer import WordRenderer
+
+    outline = outline_service.get_outline_by_project(
+        db, job.project_id, outline_id)
+    if outline.status != "CONFIRMED":
+        raise AppError(code="DELIVERABLE_NOT_GENERATABLE",
+                       message="大纲未确认，无法生成 Word")
+
+    # 创建版本并标记为 RUNNING
+    _, version = outline_service.create_deliverable_version(
+        db, job.project_id, deliverable_id)
+    outline_service.mark_deliverable_version_running(db, version.id)
+    db.flush()
+
+    started_at = _now()
+    try:
+        import json as _json
+        sections = _json.loads(outline.sections_json)
+        project = project_service.get_project(db, job.project_id)
+        artifacts = _gather_execution_artifacts_for_render(db, job.project_id)
+
+        # 输出路径：project_data_root / project_id / deliverables / deliverable_id / word_v{version}.docx
+        output_dir = (settings.project_data_root / job.project_id
+                      / "deliverables" / deliverable_id)
+        output_path = output_dir / f"word_v{version.version}.docx"
+
+        renderer = WordRenderer()
+        renderer.render(
+            project_name=project.name,
+            project_topic=project.topic,
+            outline_sections=sections,
+            execution_artifacts=artifacts,
+            output_path=str(output_path),
+        )
+
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        file_size = output_path.stat().st_size if output_path.exists() else 0
+
+        outline_service.mark_deliverable_version_succeeded(
+            db,
+            version_id=version.id,
+            file_path=f"word_v{version.version}.docx",
+            file_size_bytes=file_size,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        return {
+            "deliverable_id": deliverable_id,
+            "version_id": version.id,
+            "version": version.version,
+            "file_size_bytes": file_size,
+            "duration_seconds": duration,
+        }
+    except AppError as err:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code=err.code,
+            error_message=err.message,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise
+    except Exception as exc:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code="WORD_RENDER_FAILED",
+            error_message=str(exc),
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise AppError(code="WORD_RENDER_FAILED",
+                       message=f"Word 生成失败：{exc}") from exc
+
+
+def handle_generate_ppt(db: Session, job) -> dict:
+    """从同一份已确认大纲生成 PPT 文档。
+
+    调用 PptRenderer 渲染 .pptx 文件，保存为 DeliverableVersion（status=SUCCEEDED）。
+    """
+    data = _parse_input(job)
+    outline_id = data.get("outline_id")
+    deliverable_id = data.get("deliverable_id")
+    if not outline_id or not deliverable_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 outline_id 或 deliverable_id")
+
+    from app.modules.outlines import service as outline_service
+    from app.modules.projects import service as project_service
+    from app.infrastructure.renderers.ppt_renderer import PptRenderer
+
+    outline = outline_service.get_outline_by_project(
+        db, job.project_id, outline_id)
+    if outline.status != "CONFIRMED":
+        raise AppError(code="DELIVERABLE_NOT_GENERATABLE",
+                       message="大纲未确认，无法生成 PPT")
+
+    # 创建版本并标记为 RUNNING
+    _, version = outline_service.create_deliverable_version(
+        db, job.project_id, deliverable_id)
+    outline_service.mark_deliverable_version_running(db, version.id)
+    db.flush()
+
+    started_at = _now()
+    try:
+        import json as _json
+        sections = _json.loads(outline.sections_json)
+        project = project_service.get_project(db, job.project_id)
+        artifacts = _gather_execution_artifacts_for_render(db, job.project_id)
+
+        output_dir = (settings.project_data_root / job.project_id
+                      / "deliverables" / deliverable_id)
+        output_path = output_dir / f"ppt_v{version.version}.pptx"
+
+        renderer = PptRenderer()
+        renderer.render(
+            project_name=project.name,
+            project_topic=project.topic,
+            outline_sections=sections,
+            execution_artifacts=artifacts,
+            output_path=str(output_path),
+        )
+
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        file_size = output_path.stat().st_size if output_path.exists() else 0
+
+        outline_service.mark_deliverable_version_succeeded(
+            db,
+            version_id=version.id,
+            file_path=f"ppt_v{version.version}.pptx",
+            file_size_bytes=file_size,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        return {
+            "deliverable_id": deliverable_id,
+            "version_id": version.id,
+            "version": version.version,
+            "file_size_bytes": file_size,
+            "duration_seconds": duration,
+        }
+    except AppError as err:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code=err.code,
+            error_message=err.message,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise
+    except Exception as exc:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code="PPT_RENDER_FAILED",
+            error_message=str(exc),
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise AppError(code="PPT_RENDER_FAILED",
+                       message=f"PPT 生成失败：{exc}") from exc
+
+
 HANDLERS: dict[str, Callable] = {
     JobType.FETCH_URL.value: handle_fetch_url,
     JobType.PARSE_DOCUMENT.value: handle_parse_document,
@@ -537,4 +1001,7 @@ HANDLERS: dict[str, Callable] = {
     JobType.GENERATE_ANALYSIS_PLAN.value: handle_generate_analysis_plan,
     JobType.GENERATE_CODE_TASK.value: handle_generate_code_task,
     JobType.EXECUTE_CODE_TASK.value: handle_execute_code_task,
+    JobType.GENERATE_OUTLINE.value: handle_generate_outline,
+    JobType.GENERATE_WORD.value: handle_generate_word,
+    JobType.GENERATE_PPT.value: handle_generate_ppt,
 }

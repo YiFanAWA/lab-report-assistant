@@ -374,6 +374,10 @@ def execute_code_task(
             message="只能执行已确认代码",
         )
 
+    # STALE 传播：重新执行 → 关联 Outline 变 STALE
+    from app.modules.outlines import service as outline_service
+    outline_service.mark_outlines_stale(db, project_id)
+
     job = job_service.create_job(
         db,
         project_id=project_id,

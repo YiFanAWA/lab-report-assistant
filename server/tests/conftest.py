@@ -24,3 +24,8 @@ from app.modules.execution.models import (  # noqa: F401
     ExecutionRun,
     ExecutionArtifact,
 )
+from app.modules.outlines.models import (  # noqa: F401
+    Outline,
+    Deliverable,
+    DeliverableVersion,
+)

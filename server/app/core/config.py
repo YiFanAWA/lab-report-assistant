@@ -126,5 +126,28 @@ class Settings:
         except (TypeError, ValueError):
             return 10 * 1024 * 1024
 
+    @property
+    def outline_provider(self) -> str:
+        return os.getenv("OUTLINE_PROVIDER", "local_rule")
+
+    @property
+    def word_template_path(self) -> str:
+        """Word 模板路径（可选，留空使用默认模板）。"""
+        return os.getenv("WORD_TEMPLATE_PATH", "")
+
+    @property
+    def ppt_template_path(self) -> str:
+        """PPT 母版路径（可选，留空使用默认母版）。"""
+        return os.getenv("PPT_TEMPLATE_PATH", "")
+
+    @property
+    def deliverable_max_size_bytes(self) -> int:
+        """交付物文件大小上限（默认 50MB）。"""
+        raw = os.getenv("DELIVERABLE_MAX_SIZE_BYTES", str(50 * 1024 * 1024))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 50 * 1024 * 1024
+
 
 settings = Settings()

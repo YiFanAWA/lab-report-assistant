@@ -13,6 +13,7 @@ from app.core.errors import AppError
 from app.api.routers import (
     health, projects, requirements, sources, evidence, jobs,
     datasets, analysis, code_tasks, execution_runs,
+    outlines, deliverables,
 )
 
 app = FastAPI(
@@ -38,6 +39,8 @@ app.include_router(datasets.router)
 app.include_router(analysis.router)
 app.include_router(code_tasks.router)
 app.include_router(execution_runs.router)
+app.include_router(outlines.router)
+app.include_router(deliverables.router)
 
 
 @app.exception_handler(AppError)
@@ -56,6 +59,9 @@ async def handle_app_error(request: Request, exc: AppError):
         "CODE_TASK_NOT_FOUND",
         "EXECUTION_RUN_NOT_FOUND",
         "EXECUTION_ARTIFACT_NOT_FOUND",
+        "OUTLINE_NOT_FOUND",
+        "DELIVERABLE_NOT_FOUND",
+        "DELIVERABLE_VERSION_NOT_FOUND",
     }
     forbidden_codes = {
         "SOURCE_ACCESS_RESTRICTED",

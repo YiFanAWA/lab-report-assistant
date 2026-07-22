@@ -5,6 +5,131 @@
 
 ---
 
+## SPEC 0006 大纲与交付物（V0.4 里程碑）
+
+**完成日期：** 2026-07-22  
+**切片编号：** SPEC 0006  
+**里程碑：** V0.4 大纲与交付物（Word/PPT 生成闭环）  
+**决策记录：** [0017-start-spec-0006-outline-and-deliverables.md](decisions/0017-start-spec-0006-outline-and-deliverables.md)  
+**SPEC 文档：** [0006-outline-and-deliverables.md](specs/0006-outline-and-deliverables.md)
+
+### 一、切片目标
+
+为已确认执行结果的实验项目生成统一实验大纲候选，用户确认后从同一份已确认大纲渲染 Word 和 PPT 交付物文件，建立"执行结果 → 统一大纲 → Word/PPT 交付物"的完整闭环，推进项目状态到 COMPLETED。
+
+### 二、范围决策
+
+| 决策项 | 选择 | 理由 |
+| --- | --- | --- |
+| 统一大纲 | Outline 作为 Word/PPT 的唯一中间锚点 | 确保同一份已确认大纲生成两份交付物，不各自从模型临时上下文生成 |
+| 章节来源标记 | sections_json 存储每章节 source_type 和 source_ids | 追溯链可从 Word/PPT 章节回溯到 requirement/evidence/dataset/analysis/execution |
+| LLM 接入 | 本地规则提供者 `LocalRuleOutlineProvider` | 真实 DeepSeek 推迟到后续切片 |
+| Word 渲染 | python-docx 1.2.0 原生 API（复用 SPEC 0002 依赖） | 不引入外部模板引擎 |
+| PPT 渲染 | python-pptx 1.0.2 母版驱动 | 不引入外部 PPT 模板引擎 |
+| 版本管理 | 每次生成创建新版本，旧版本保留，失败不覆盖成功 | 追溯和回滚能力 |
+| STALE 传播 | ExecutionRun 重新执行 → Outline STALE；Outline 编辑/重新确认 → Deliverable STALE | 保持状态一致性 |
+
+### 三、核心变更
+
+#### 新增 owner 模块：outlines
+
+- `server/app/modules/outlines/status.py`：OutlineStatus、DeliverableStatus、DeliverableType、DeliverableVersionStatus、OutlineChangeType、DeliverableChangeType 枚举。
+- `server/app/modules/outlines/models.py`：Outline、Deliverable、DeliverableVersion ORM 实体。
+- `server/app/modules/outlines/contracts.py`：OutlineSection、UpdateOutlineRequest、各响应 schema。
+- `server/app/modules/outlines/service.py`：大纲生成触发、查询、编辑、确认、拒绝、Word/PPT 生成触发、完成项目、STALE 传播、Worker 调用方法。
+
+#### 新增 LLM 提供者
+
+- `server/app/modules/llm/outline_provider.py`：OutlineDraftProvider ABC、LocalRuleOutlineProvider（从 5 个 owner 聚合上下文生成 6 个章节）、FakeOutlineProvider。
+
+#### 新增渲染器基础设施
+
+- `server/app/infrastructure/renderers/word_renderer.py`：WordRenderer（封面、章节、CSV 表格嵌入、PNG 图片嵌入、附录产物索引）。
+- `server/app/infrastructure/renderers/ppt_renderer.py`：PptRenderer（标题页、课题与问题、方法与数据、关键图表、主要发现、总结页）。
+
+#### 新增 API 路由
+
+- `server/app/api/routers/outlines.py`：7 个端点（generate、list、detail、update、confirm、reject、word/ppt generate）。
+- `server/app/api/routers/deliverables.py`：4 个端点（list、versions、download、complete）。
+
+#### 数据库迁移
+
+- `server/alembic/versions/0006_create_outline_and_deliverable_tables.py`：创建 outlines、deliverables、deliverable_versions 三张表及索引。
+
+#### 扩展现有模块
+
+- `server/app/modules/jobs/status.py`：JobType 新增 GENERATE_OUTLINE、GENERATE_WORD、GENERATE_PPT。
+- `server/app/modules/llm/gateway.py`：新增 get_outline_provider() 工厂方法。
+- `server/app/core/config.py`：Settings 新增 outline_provider、word_template_path、ppt_template_path、deliverable_max_size_bytes。
+- `server/app/modules/execution/service.py`：execute_code_task 新增 STALE 传播到 Outline。
+- `server/app/main.py`：注册 outlines 和 deliverables 路由，新增 not_found_codes。
+- `server/tests/conftest.py`：注册 Outline、Deliverable、DeliverableVersion ORM 模型。
+- `server/worker/handlers.py`：新增 _gather_outline_context（聚合 5 个 owner 上下文）、handle_generate_outline、_gather_execution_artifacts_for_render、handle_generate_word、handle_generate_ppt。
+
+### 四、状态机推进
+
+```
+RESULT_CONFIRMED → 生成大纲候选（保持 RESULT_CONFIRMED）
+  → 确认大纲 → OUTLINE_CONFIRMED
+  → 触发 Word/PPT 生成 → GENERATING
+  → 生成完成（Word+PPT 均 SUCCEEDED）→ COMPLETED
+```
+
+STALE 传播链：
+- ExecutionRun 重新执行 → Outline STALE
+- Outline 编辑 → Deliverable STALE
+- Outline 重新确认 → 旧 Deliverable STALE
+
+### 五、测试覆盖
+
+新增 4 个测试文件，共 113 个测试：
+
+| 测试文件 | 测试数 | 覆盖内容 |
+| --- | --- | --- |
+| test_outline_provider.py | 21 | LocalRuleOutlineProvider 章节生成、source_type 标记、空上下文回退、_truncate、FakeOutlineProvider 确定性 |
+| test_renderers.py | 18 | WordRenderer（docx 生成、可重开、CSV 表格嵌入、PNG 图片嵌入、附录）、PptRenderer（pptx 生成、可重开、标题页、内容页、图表页、总结页） |
+| test_outlines_service.py | 40 | generate_outline、list/get、update（版本递增、STALE 传播）、confirm、reject、generate_word/ppt、下载校验（路径穿越防护）、complete_project、mark_outlines_stale、Worker 方法（版本递增、失败不覆盖成功） |
+| test_outlines_api.py | 21 | 11 个 API 端点的成功/失败/状态机路径 |
+| test_outline_worker_handlers.py | 13 | handle_generate_outline（成功、缺输入、无执行记录、重新生成 STALE）、handle_generate_word（成功、文件生成、状态推进、多版本）、handle_generate_ppt（成功）、HANDLERS 注册表 |
+
+### 六、实际安装依赖
+
+| 依赖 | 实际安装版本 | 用途 |
+| --- | --- | --- |
+| python-pptx | 1.0.2 | PPT 生成（从已确认大纲渲染 .pptx 文件） |
+| XlsxWriter | 3.2.9 | python-pptx 传递依赖 |
+
+### 七、验收证据
+
+- 后端测试：`python -m pytest` → 569 passed, 21 warnings（原 456 + 新增 113）
+- 数据库迁移：`python -m alembic upgrade head` → 成功迁移到 0006，创建 3 张表
+- 前端类型检查：`npm run lint` → tsc --noEmit 通过
+- 前端构建：`npm run build` → Vite 构建通过，106 模块转换
+
+### 八、非阻断债务
+
+1. **fastapi.testclient httpx 弃用提示**：第三方弃用警告，自 SPEC 0002 起持续保留。
+2. **pandas datetime 推断 UserWarning**：自 SPEC 0004 起持续保留。
+3. **浏览器点击截图验收未执行**：当前会话未暴露可调用的 in-app Browser 工具，以 API 测试套件（21 个测试覆盖 11 个端点）和 Worker handler 测试（13 个测试）作为替代证据。
+4. **outline_provider 字段类型 bug 修复**：LocalRuleOutlineProvider.generate 中 `f"  - {name}（{type}）：样例 {sample}"` 误用 Python 内置 `type` 替代局部变量 `ftype`，已在测试前修复为 `{ftype}`。
+
+### 九、文件变更统计
+
+- **新增文件：** 15 个（outlines 模块 5 + renderers 3 + API 路由 2 + 迁移 1 + provider 1 + 测试 4，不含 __init__）
+- **修改文件：** 7 个（jobs/status.py、gateway.py、config.py、execution/service.py、main.py、conftest.py、worker/handlers.py）
+- **测试新增：** 113 个（原 456 → 569）
+
+### 十、明确不做的内容
+
+- 不接入真实 DeepSeek API（继续本地规则提供者）
+- 不做前端 UI 变更（前端工作台接线推迟到后续切片）
+- 不引入外部 Word/PPT 模板引擎
+- 不做交付物版本对比（diff）
+- 不做大纲自动确认（必须用户手动确认）
+- 不做交付物在线预览（只支持下载）
+
+---
+
 ## SPEC 0005 受控 Python 执行（V0.3 里程碑第二部分）
 
 **完成日期：** 2026-07-07  

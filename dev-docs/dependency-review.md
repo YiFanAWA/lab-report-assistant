@@ -242,6 +242,24 @@ SPEC 0004 实际启用的新增后端依赖：
 - 执行环境严格限制 import 白名单为 `pandas`、`numpy`、`matplotlib`、`scipy.stats`、`sklearn`、`openpyxl`，禁止 `os`、`subprocess`、`socket`、`ssl`、`http.client`、`urllib`、`requests` 等，并通过 AST 校验拦截 `__import__()` 和 `importlib.import_module()` 动态导入。
 - 内存监控使用 psutil 进程树总 RSS（解决 Windows venv launcher 导致的子进程内存遗漏问题），0.5s 轮询，超限 kill 整个进程树并标记 EXECUTION_MEMORY_LIMIT。
 
+### SPEC 0006 计划启用的新增后端依赖
+
+本切片计划安装以下运行时依赖，实际安装版本以 SPEC 0006 验收时记录为准：
+
+| 依赖 | 复核版本 | 计划安装版本 | 来源 | 用途 |
+| --- | --- | --- | --- | --- |
+| `python-pptx` | `1.0.2` | `1.0.2` | PyPI | PPT 生成（从已确认大纲渲染 `.pptx` 文件） |
+
+约束：
+
+- `python-docx` `1.2.0` 已在 SPEC 0002 阶段安装，本切片复用，不重复安装。
+- `python-pptx` `1.0.2` 在 SPEC 0006 阶段安装，传递依赖 `XlsxWriter 3.2.9`、`lxml 6.1.1`、`Pillow 12.3.0`、`typing-extensions 4.16.0` 复用现有环境。
+- Word/PPT 生成依赖只能消费结构化大纲模型，不直接消费模型临时对话。
+- 真实 DeepSeek 调用继续推迟到后续切片，本切片继续使用本地规则提供者 `LocalRuleOutlineProvider`。
+- Word 渲染使用 python-docx 原生 API 构建，不引入外部模板引擎。
+- PPT 渲染使用 python-pptx 母版驱动，不引入外部 PPT 模板引擎。
+- 交付物文件大小上限 50MB，超限返回错误。
+
 ## 6. 数据分析与交付物依赖复核
 
 | 依赖 | 复核版本 | 实际安装版本 | 来源 | 用途 |
@@ -254,7 +272,8 @@ SPEC 0004 实际启用的新增后端依赖：
 | `psutil` | — | `7.2.2` | PyPI | 进程树内存监控（SPEC 0005 新增，用于受控执行环境软监控） |
 | `openpyxl` | `3.1.5` | `3.1.5` | PyPI | Excel 读取 |
 | `python-docx` | `1.2.0` | `1.2.0` | PyPI | Word 生成 |
-| `python-pptx` | `1.0.2` | 未安装 | PyPI | PPT 生成（推迟到 SPEC 0006/0007） |
+| `python-pptx` | `1.0.2` | `1.0.2` | PyPI | PPT 生成（SPEC 0006 安装） |
+| `XlsxWriter` | — | `3.2.9` | PyPI | python-pptx 传递依赖（SPEC 0006 安装） |
 | `pypdf` | `6.13.2` | `6.14.2` | PyPI | PDF 文本读取 |
 | `beautifulsoup4` | `4.15.0` | `4.15.0` | PyPI | HTML 解析 |
 | `playwright` | `1.60.0` | 未安装 | PyPI | 动态网页后备渲染（推迟到后续切片） |

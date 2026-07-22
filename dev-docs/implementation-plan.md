@@ -1,6 +1,6 @@
 # 实验报告助手｜实施计划
 
-> **给后续 agent 的要求：** SPEC 0001 第一开发切片已由项目负责人确认。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 公开资料与证据工作流已完成实现与端到端验收并由项目负责人确认收口。SPEC 0004 数据集工作区已完成实现、端到端验收并由项目负责人确认收口。SPEC 0005 受控 Python 执行 SPEC 文档已编写完成，待项目负责人确认后进入实现；下一切片（SPEC 0006 大纲与交付物）必须等 SPEC 0005 实现完成后才能编写。
+> **给后续 agent 的要求：** SPEC 0001 第一开发切片已由项目负责人确认。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 公开资料与证据工作流已完成实现与端到端验收并由项目负责人确认收口。SPEC 0004 数据集工作区已完成实现与端到端验收并由项目负责人确认收口。SPEC 0005 受控 Python 执行已完成实现与端到端验收并由项目负责人确认收口；下一切片 SPEC 0006 大纲与交付物 SPEC 文档已编写完成，待项目负责人确认后进入实现。
 
 **目标：** 构建“实验报告助手”的第一版 Web MVP 闭环：项目创建、要求拆解、证据工作流、数据分析执行、大纲确认、Word/PPT 生成。
 
@@ -144,23 +144,27 @@
 
 ## 任务 8：大纲核心
 
-**文件：** 代码阶段确认后创建。
+**文件：** `server/app/modules/outlines/`、`server/app/modules/llm/outline_provider.py`、`server/app/api/routers/outlines.py`、`server/worker/handlers.py`、`server/alembic/versions/0006_create_outline_and_deliverable_tables.py`。
 
-- [ ] 根据任务单、证据卡片、数据概览、分析方案和执行结果生成统一大纲。
-- [ ] 标记每个大纲段落的来源类型。
-- [ ] 支持用户确认或修改大纲。
-- [ ] 修改要求或分析结果后，标记大纲失效。
+**对应 SPEC：** [specs/0006-outline-and-deliverables.md](specs/0006-outline-and-deliverables.md)，实现已完成，待项目负责人确认收口。
+
+- [x] 根据任务单、证据卡片、数据概览、分析方案和执行结果生成统一大纲。
+- [x] 标记每个大纲段落的来源类型。
+- [x] 支持用户确认或修改大纲。
+- [x] 修改要求或分析结果后，标记大纲失效。
 
 ## 任务 9：Word 与 PPT 交付物
 
-**文件：** 代码阶段确认后创建。
+**文件：** `server/app/infrastructure/renderers/word_renderer.py`、`server/app/infrastructure/renderers/ppt_renderer.py`、`server/app/api/routers/deliverables.py`、`server/worker/handlers.py`。
 
-- [ ] 从已确认大纲生成 Word。
-- [ ] 从同一份已确认大纲生成 PPT。
-- [ ] Word 和 PPT 共享关键数据、图表和结论来源。
-- [ ] 生成可下载文件。
-- [ ] 保存交付物版本和追溯索引。
-- [ ] 支持重新生成。
+**对应 SPEC：** [specs/0006-outline-and-deliverables.md](specs/0006-outline-and-deliverables.md)，实现已完成，待项目负责人确认收口。
+
+- [x] 从已确认大纲生成 Word。
+- [x] 从同一份已确认大纲生成 PPT。
+- [x] Word 和 PPT 共享关键数据、图表和结论来源。
+- [x] 生成可下载文件。
+- [x] 保存交付物版本和追溯索引。
+- [x] 支持重新生成。
 
 ## 任务 10：端到端验收
 
