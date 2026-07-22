@@ -5,7 +5,7 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：V1.0 端到端验收阶段，已完成技术债务清理（TD-001/TD-002 关闭，pytest 0 warnings）、Worker 端到端验证（状态机流转正常）、前端 UI 补充（大纲/交付物/执行工作区页面，SPEC 0005 前端接线已完成），待项目负责人确认收口
+- 状态：V1.0 端到端验收阶段，已完成技术债务清理（TD-001/TD-002 关闭，pytest 0 warnings）、Worker 端到端验证（状态机流转正常）、前端 UI 补充（大纲/交付物/执行工作区页面，SPEC 0005 前端接线已完成）、前端测试框架引入（Vitest + RTL，37 个单元测试全部通过），待项目负责人确认收口
 - 下一阶段入口：项目负责人确认收口后进入 git 版本控制上传；此后进入 V1.0 完整端到端手动演示验收
 
 ## 工程入口
@@ -48,6 +48,7 @@
 - [decisions/0015-start-spec-0004-dataset-workspace.md](decisions/0015-start-spec-0004-dataset-workspace.md)：启动 SPEC 0004 数据集工作区切片的决策记录。
 - [decisions/0016-start-spec-0005-controlled-python-execution.md](decisions/0016-start-spec-0005-controlled-python-execution.md)：启动 SPEC 0005 受控 Python 执行切片的决策记录。
 - [decisions/0017-start-spec-0006-outline-and-deliverables.md](decisions/0017-start-spec-0006-outline-and-deliverables.md)：启动 SPEC 0006 大纲与交付物切片的决策记录。
+- [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
 
 ## 变更规则
 
