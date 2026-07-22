@@ -116,6 +116,11 @@ deepseek-v4-flash
 | `typescript` | `6.0.3` | npm 注册表 | 类型系统 |
 | `react-router` | `7.17.0` | npm 注册表 | 前端路由 |
 | `@tanstack/react-query` | `5.101.0` | npm 注册表 | 接口状态与轮询 |
+| `vitest` | `4.1.10` | npm 注册表 | 前端单元测试框架（Vite 原生） |
+| `@testing-library/react` | `^16.0.0` | npm 注册表 | React 组件 DOM 测试 |
+| `@testing-library/jest-dom` | `^6.0.0` | npm 注册表 | jest-dom matchers（toBeInTheDocument 等） |
+| `@testing-library/user-event` | `^14.0.0` | npm 注册表 | 用户交互模拟 |
+| `jsdom` | `^25.0.0` | npm 注册表 | 浏览器环境模拟 |
 
 前端目录规范：
 

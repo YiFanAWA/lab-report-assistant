@@ -5,6 +5,36 @@
 
 ---
 
+## SPEC 0005 前端测试：Vitest + RTL 单元测试
+
+**完成日期：** 2026-07-23  
+**阶段：** V1.0 验收阶段，前端测试框架引入和单元测试补充  
+**目标：** 为 ExecutionWorkspaceView 的 11 个 API 端点补充前端单元测试，建立前端测试基线。
+
+### 一、测试框架引入
+
+- **选择 Vitest 而非 Jest**：与 Vite 项目原生集成，零额外配置，API 兼容 Jest。
+- **新增 devDependencies**：vitest、@testing-library/react、@testing-library/jest-dom、@testing-library/user-event、jsdom（共 85 个传递依赖包）。
+- **配置文件**：vitest.config.ts（jsdom 环境 + globals）+ src/setupTests.ts（jest-dom matchers + cleanup）。
+- **package.json 脚本**：`test: vitest run` + `test:watch: vitest`。
+
+### 二、测试文件（2 个）
+
+| 文件 | 测试数 | 覆盖范围 |
+| --- | --- | --- |
+| [features/execution/\_\_tests\_\_/api.test.ts](../apps/web/src/features/execution/__tests__/api.test.ts) | 20 | 11 个 API 函数的 URL/method/body/响应解析/错误处理 + 通用错误处理逻辑 |
+| [routes/\_\_tests\_\_/ExecutionWorkspaceView.test.tsx](../apps/web/src/routes/__tests__/ExecutionWorkspaceView.test.tsx) | 17 | 渲染（加载/空/正常）、生成区域（状态门控/方案下拉）、代码任务卡片（CANDIDATE/CONFIRMED/STALE）、执行记录卡片（SUCCEEDED/FAILED/空）、完成确认按钮（启用/禁用） |
+
+### 三、验收证据
+
+| 验收项 | 命令 | 结果 |
+| --- | --- | --- |
+| 单元测试 | `npm run test` | **37 passed**（api 20 + 组件 17） |
+| 类型检查 | `npm run lint` | tsc --noEmit 通过 |
+| 生产构建 | `npm run build` | Vite 构建通过，113 模块，389.56 kB |
+
+---
+
 ## SPEC 0005 前端接线：代码任务与执行记录工作区
 
 **完成日期：** 2026-07-23  

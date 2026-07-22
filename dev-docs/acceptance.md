@@ -220,6 +220,8 @@
 | 2026-07-23 | SPEC 0005 前端接线：执行工作区 | 新增 `apps/web/src/features/execution/{types,api,hooks}.ts`（11 个 API 函数 + 11 个 TanStack Query hooks）和 `apps/web/src/routes/ExecutionWorkspaceView.tsx`（代码任务生成/编辑/确认/拒绝/触发执行 + 执行记录列表/stdout+stderr/产物下载/完成结果确认）；`App.tsx` 新增 `/execution` 路由；`ProjectDetailView.tsx` 新增执行工作区入口（ANALYSIS_CONFIRMED 及之后显示）；jobs 类型扩展 GENERATE_CODE_TASK/EXECUTE_CODE_TASK | 通过 |
 | 2026-07-23 | SPEC 0005 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过（含新增 execution feature 和 ExecutionWorkspaceView） | 通过 |
 | 2026-07-23 | SPEC 0005 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，**113 模块**转换（原 110 + 新增 3），生成 `dist/`（389.56 kB，gzip 106.12 kB） | 通过 |
+| 2026-07-23 | SPEC 0005 前端测试框架引入 | 引入 Vitest + React Testing Library（vitest 4.1.10 + @testing-library/react + @testing-library/jest-dom + @testing-library/user-event + jsdom），新增 vitest.config.ts + setupTests.ts + package.json test 脚本；dependency-review.md 更新 | 通过 |
+| 2026-07-23 | SPEC 0005 前端单元测试 | `npm.cmd run test` 运行 **37 个测试全部通过**：api.test.ts（20 个，覆盖 11 个 API 函数的成功和错误场景）+ ExecutionWorkspaceView.test.tsx（17 个，覆盖渲染/生成区域/代码任务卡片/执行记录卡片/完成确认按钮）；lint 和 build 不受影响 | 通过 |
 
 ## 漂移检查清单
 
