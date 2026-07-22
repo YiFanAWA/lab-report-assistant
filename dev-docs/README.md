@@ -50,6 +50,11 @@
 - [decisions/0017-start-spec-0006-outline-and-deliverables.md](decisions/0017-start-spec-0006-outline-and-deliverables.md)：启动 SPEC 0006 大纲与交付物切片的决策记录。
 - [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
 
+## V1.0 发布文档
+
+- [release-checklist-v1.0.0.md](release-checklist-v1.0.0.md)：V1.0.0 发布清单（发布前状态检查、发布物清单、标签操作）。
+- [changelog-v1.0.0.md](changelog-v1.0.0.md)：V1.0.0 详细变更日志（新增功能、Bug 修复、技术债务清理、架构改进）。
+
 ## 变更规则
 
 - 项目方向、功能边界、技术路线或验收标准发生变化时，必须先更新 `project-charter.md`。
