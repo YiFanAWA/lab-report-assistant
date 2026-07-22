@@ -54,6 +54,7 @@
 
 - [release-checklist-v1.0.0.md](release-checklist-v1.0.0.md)：V1.0.0 发布清单（发布前状态检查、发布物清单、标签操作）。
 - [changelog-v1.0.0.md](changelog-v1.0.0.md)：V1.0.0 详细变更日志（新增功能、Bug 修复、技术债务清理、架构改进）。
+- [v1.1.0-planning.md](v1.1.0-planning.md)：V1.1.0 版本功能迭代规划（遗留债务分析、6 个 SPEC 规划、实施顺序）。
 
 ## 变更规则
 
