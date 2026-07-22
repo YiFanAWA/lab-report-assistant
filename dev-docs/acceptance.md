@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：SPEC 0004 数据集工作区已完成实现、端到端验收，待项目负责人确认收口  
+> 状态：SPEC 0005 受控 Python 执行已完成实现与端到端验收，待项目负责人确认收口  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。SPEC 0004 已完成端到端验收（含主链路、错误分支、STALE 传播）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0004 已用 curl 端到端验证作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。SPEC 0005 已完成端到端验收（含主链路、错误分支、STALE 传播、受控执行环境安全限制）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0005 已用 API 测试套件（33 个测试覆盖 11 个端点）作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -106,7 +106,8 @@
 - 上一切片 SPEC 0001 的代码结构、后端测试、数据库迁移、前端构建和前后端代理验收已通过；当前待确认收口切片为 SPEC 0002。
 - SPEC 0002 的需求来源、结构化任务单、L0-L3、编辑确认、状态推进和最小变更记录已通过当前命令/API/代理验收，并已由项目负责人确认收口。
 - SPEC 0003 的来源登记、后台任务、Worker、采集与解析、证据卡片、确认拒绝、状态推进和 STALE 传播已通过当前命令/API/代理/curl 端到端验收，并已由项目负责人确认收口。
-- SPEC 0004 的数据集上传、字段概览、质量评分、分析方案候选、用户确认、状态推进和 STALE 传播已通过当前命令/API/curl 端到端验收，待项目负责人确认收口。
+- SPEC 0004 的数据集上传、字段概览、质量评分、分析方案候选、用户确认、状态推进和 STALE 传播已通过当前命令/API/curl 端到端验收，并已由项目负责人确认收口。
+- SPEC 0005 的受控 Python 执行引擎、AST import 白名单校验、psutil 进程树内存监控、CodeTask/ExecutionRun/ExecutionArtifact 核心合同、STALE 传播、状态推进到 RESULT_CONFIRMED 已通过 API 测试套件（33 个测试覆盖 11 个端点）和 python_executor 单元测试（48 个测试覆盖安全限制、超时、内存、产物收集）端到端验收，待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -176,6 +177,19 @@
 | 2026-07-06 | SPEC 0004 错误分支验证 | 6 个错误分支全部通过：上传到 DRAFT 项目（PROJECT_EVIDENCE_NOT_CONFIRMED）、上传 .txt 文件（DATASET_FILE_UNSUPPORTED）、确认不存在的 plan_id（ANALYSIS_PLAN_NOT_FOUND）、拒绝已 CONFIRMED 方案（ANALYSIS_PLAN_NOT_CONFIRMABLE）、GET 不存在的 dataset（DATASET_NOT_FOUND）、上传到不存在的 project（PROJECT_NOT_FOUND） | 通过 |
 | 2026-07-06 | SPEC 0004 STALE 传播验证 | 重新上传（reupload）创建 v2，旧版本 v1 变 SUPERSEDED，旧 CONFIRMED 方案变 STALE，已 STALE 方案保持 STALE（无重复标记），新自动生成方案为 CANDIDATE，项目状态保持 ANALYSIS_CONFIRMED（无回退） | 通过 |
 | 2026-07-06 | SPEC 0004 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 curl 端到端验证、6 个错误分支、STALE 传播作为替代证据 | 未执行 |
+| 2026-07-07 | SPEC 0005 启动 | 创建 `dev-docs/specs/0005-controlled-python-execution.md`，限定受控 Python 执行环境、CodeTask/ExecutionRun/ExecutionArtifact 核心合同、状态推进到 RESULT_CONFIRMED | 通过 |
+| 2026-07-07 | SPEC 0005 依赖安装 | `server` 下安装 `psutil 7.2.2`、`matplotlib 3.11.0`、`scipy 1.18.0`、`scikit-learn 1.9.0`；使用 `--prefer-binary` 标志避免 matplotlib 源码构建失败 | 通过 |
+| 2026-07-07 | SPEC 0005 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 `456 passed, 21 warnings`；原 375 + 新增 81 测试（python_executor 48 + execution_api 33）；warnings 仍为第三方 `fastapi.testclient` 弃用提示和 pandas datetime 推断 UserWarning（已知非阻断） | 通过 |
+| 2026-07-07 | SPEC 0005 数据库迁移 | 使用全新临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 `0005`，新增 3 张表（code_tasks、execution_runs、execution_artifacts）和 6 个索引 | 通过 |
+| 2026-07-07 | SPEC 0005 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过 | 通过 |
+| 2026-07-07 | SPEC 0005 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，106 模块转换，生成 `dist/`（347.19 kB，gzip 99.84 kB） | 通过 |
+| 2026-07-07 | SPEC 0005 API 端点注册 | 新增 `code_tasks.py`（7 端点）和 `execution_runs.py`（4 端点），共 11 个新端点；扩展 `main.py` 错误码映射（not_found_codes += CODE_TASK/EXECUTION_RUN/EXECUTION_ARTIFACT_NOT_FOUND，forbidden_codes += CODE_EXECUTION_DISABLED） | 通过 |
+| 2026-07-07 | SPEC 0005 Worker handler 注册 | 验证 `worker/handlers.py` HANDLERS 映射新增 2 个 handler：GENERATE_CODE_TASK、EXECUTE_CODE_TASK，共 7 个 handler | 通过 |
+| 2026-07-07 | SPEC 0005 受控执行环境安全验证 | `python_executor.py` 通过 AST 校验拦截禁止 import（socket/ssl/http/urllib/requests 等）和动态导入（`__import__`/`importlib.import_module`）；超时返回 EXECUTION_TIMEOUT；内存超限（psutil 进程树监控，0.5s 轮询）返回 EXECUTION_MEMORY_LIMIT；输出过大返回 EXECUTION_OUTPUT_TOO_LARGE；48 个单元测试全部通过 | 通过 |
+| 2026-07-07 | SPEC 0005 状态机推进验证 | API 测试覆盖：CANDIDATE→CONFIRMED（confirm）、CANDIDATE→REJECTED（reject）、CONFIRMED 编辑→CANDIDATE（code_version 递增）、CONFIRMED→触发执行（execute）、SUCCEEDED→RESULT_CONFIRMED（complete）、FAILED 无成功执行时 complete 返回 PROJECT_NO_SUCCESSFUL_EXECUTION_RUN | 通过 |
+| 2026-07-07 | SPEC 0005 STALE 传播验证 | AnalysisPlan 重新确认 → 关联 CodeTask 变 STALE；CodeTask 编辑 → 关联 ExecutionRun 变 STALE；端到端 API 测试覆盖两条传播链 | 通过 |
+| 2026-07-07 | SPEC 0005 产物下载验证 | API 测试覆盖 CSV（text/csv）和 PNG（image/png）产物下载；不存在的产物返回 EXECUTION_ARTIFACT_NOT_FOUND；路径穿越防护已实现 | 通过 |
+| 2026-07-07 | SPEC 0005 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（33 个测试覆盖 11 个端点的成功/失败/状态机路径）作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

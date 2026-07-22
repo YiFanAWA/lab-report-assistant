@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from app.core.errors import AppError
 from app.api.routers import (
     health, projects, requirements, sources, evidence, jobs,
-    datasets, analysis,
+    datasets, analysis, code_tasks, execution_runs,
 )
 
 app = FastAPI(
@@ -36,6 +36,8 @@ app.include_router(evidence.router)
 app.include_router(jobs.router)
 app.include_router(datasets.router)
 app.include_router(analysis.router)
+app.include_router(code_tasks.router)
+app.include_router(execution_runs.router)
 
 
 @app.exception_handler(AppError)
@@ -51,10 +53,14 @@ async def handle_app_error(request: Request, exc: AppError):
         "DATASET_NOT_FOUND",
         "DATASET_VERSION_NOT_FOUND",
         "ANALYSIS_PLAN_NOT_FOUND",
+        "CODE_TASK_NOT_FOUND",
+        "EXECUTION_RUN_NOT_FOUND",
+        "EXECUTION_ARTIFACT_NOT_FOUND",
     }
     forbidden_codes = {
         "SOURCE_ACCESS_RESTRICTED",
         "DATASET_ACCESS_RESTRICTED",
+        "CODE_EXECUTION_DISABLED",
     }
     too_large_codes = {
         "REQUIREMENT_FILE_TOO_LARGE",

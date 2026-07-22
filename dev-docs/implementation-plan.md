@@ -131,16 +131,16 @@
 
 ## 任务 7：受控 Python 执行
 
-**文件：** 代码阶段确认后创建。
+**文件：** `server/app/infrastructure/sandbox/python_executor.py`、`server/app/modules/execution/`、`server/app/api/routers/code_tasks.py`、`server/app/api/routers/execution_runs.py`、`server/worker/handlers.py`、`server/alembic/versions/0005_create_execution_tables.py`。
 
-**对应 SPEC：** [specs/0005-controlled-python-execution.md](specs/0005-controlled-python-execution.md)，SPEC 文档已编写完成，待项目负责人确认后进入实现。
+**对应 SPEC：** [specs/0005-controlled-python-execution.md](specs/0005-controlled-python-execution.md)，已完成实现与端到端验收，待项目负责人确认收口。
 
-- [ ] 展示待执行 Python 代码。
-- [ ] 支持用户编辑代码。
-- [ ] 限制执行目录、时间、资源和输出位置。
-- [ ] 保存 stdout、stderr、退出状态、表格和图表产物。
-- [ ] 失败时保存失败记录，不覆盖为成功。
-- [ ] 每个结果关联代码版本和数据版本。
+- [x] 展示待执行 Python 代码。
+- [x] 支持用户编辑代码。
+- [x] 限制执行目录、时间、资源和输出位置。
+- [x] 保存 stdout、stderr、退出状态、表格和图表产物。
+- [x] 失败时保存失败记录，不覆盖为成功。
+- [x] 每个结果关联代码版本和数据版本。
 
 ## 任务 8：大纲核心
 

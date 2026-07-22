@@ -5,6 +5,93 @@
 
 ---
 
+## SPEC 0005 受控 Python 执行（V0.3 里程碑第二部分）
+
+**完成日期：** 2026-07-07  
+**切片编号：** SPEC 0005  
+**里程碑：** V0.3 受控 Python 执行（数据分析与 Python 执行第二部分）  
+**决策记录：** [0016-start-spec-0005-controlled-python-execution.md](decisions/0016-start-spec-0005-controlled-python-execution.md)  
+**SPEC 文档：** [0005-controlled-python-execution.md](specs/0005-controlled-python-execution.md)
+
+### 一、切片目标
+
+为已确认分析方案的实验项目生成可执行 Python 代码候选，用户编辑确认后在受控环境中执行，保存 stdout、stderr、退出状态、表格和图表产物，建立"代码 → 执行 → 结果"的完整追踪链，推进项目状态到 RESULT_CONFIRMED。
+
+### 二、范围决策
+
+| 决策项 | 选择 | 理由 |
+| --- | --- | --- |
+| 执行引擎 | subprocess + 临时脚本文件 + AST import 白名单 | V1 最简方案，无需容器或沙箱库 |
+| 网络禁用 | AST 黑名单（socket/ssl/http/urllib/requests 等）+ 动态导入拦截 | 用户确认扩展拉黑列表，防止 ssl/http.client 绕过 |
+| 内存限制 | psutil 进程树总 RSS 软监控，0.5s 轮询 | 跨平台硬限制 ROI 过低，进程树监控解决 Windows venv launcher 问题 |
+| 字段截断 | AnalysisPlan 阶段为唯一截断点 | 用户确认避免双重截断，CodeTask 直接透传 |
+| LLM 接入 | 本地规则提供者 `LocalRuleCodeTaskProvider` | 真实 DeepSeek 推迟到后续切片 |
+| 产物收集 | 扫描 work_dir 下 .csv 和 .png | 不递归子目录，按名称排序确保稳定 |
+
+### 三、新增文件
+
+| 文件 | 用途 |
+| --- | --- |
+| `server/app/infrastructure/sandbox/__init__.py` | sandbox 包初始化 |
+| `server/app/infrastructure/sandbox/python_executor.py` | 核心执行引擎（AST 校验 + subprocess + psutil 监控） |
+| `server/app/modules/execution/__init__.py` | execution 模块初始化 |
+| `server/app/modules/execution/models.py` | CodeTask/ExecutionRun/ExecutionArtifact ORM 模型 |
+| `server/app/modules/execution/status.py` | 枚举定义 |
+| `server/app/modules/execution/contracts.py` | Pydantic 请求/响应合同 |
+| `server/app/modules/execution/service.py` | 执行核心服务（500+ 行） |
+| `server/app/modules/llm/code_task_provider.py` | 代码任务提供者（LocalRule + Fake） |
+| `server/alembic/versions/0005_create_execution_tables.py` | Alembic 迁移（3 表 + 6 索引） |
+| `server/app/api/routers/code_tasks.py` | 代码任务 API（7 端点） |
+| `server/app/api/routers/execution_runs.py` | 执行记录 API（4 端点） |
+| `server/tests/conftest.py` | 测试全局 ORM 模型注册 |
+| `server/tests/test_python_executor.py` | 执行引擎单元测试（48 个） |
+| `server/tests/test_execution_api.py` | 执行 API 测试（33 个） |
+
+### 四、修改文件
+
+| 文件 | 变更 |
+| --- | --- |
+| `server/app/core/config.py` | 新增 execution_timeout_seconds、execution_memory_limit_mb、execution_output_max_bytes、code_task_provider 配置项 |
+| `server/app/modules/jobs/status.py` | 新增 GENERATE_CODE_TASK、EXECUTE_CODE_TASK 枚举值 |
+| `server/app/modules/llm/gateway.py` | 新增 get_code_task_provider() 工厂方法 |
+| `server/app/modules/analysis/service.py` | confirm_analysis_plan 新增 STALE 传播到 CodeTask |
+| `server/worker/handlers.py` | 新增 handle_generate_code_task、handle_execute_code_task |
+| `server/alembic/env.py` | 导入 execution ORM 模型 |
+| `server/app/main.py` | 注册 code_tasks/execution_runs 路由，扩展错误码映射 |
+
+### 五、状态机
+
+```
+CodeTask: CANDIDATE → CONFIRMED / REJECTED
+         CONFIRMED 编辑 → CANDIDATE（code_version 递增）
+         AnalysisPlan 重新确认 → STALE
+
+ExecutionRun: PENDING → RUNNING → SUCCEEDED / FAILED
+              CodeTask 编辑 → STALE
+
+Project: ANALYSIS_CONFIRMED → EXECUTING → RESULT_CONFIRMED
+                            → EXECUTION_FAILED（可重试）
+```
+
+### 六、受控执行环境安全限制
+
+- **import 白名单**：pandas、numpy、matplotlib、scipy、sklearn、openpyxl
+- **import 黑名单**：socket、ssl、http、http.client、http.server、urllib、requests、telnetlib、smtplib、poplib、ftplib、imaplib、nntplib、socketserver、xmlrpc、webbrowser、asyncore、asynchat、os、sys、subprocess、shutil、ctypes、signal、select、resource、fcntl、pathlib、io、multiprocessing、threading、asyncio、concurrent、pickle、email
+- **动态导入拦截**：`__import__()` 调用 + `importlib.import_module()` 调用
+- **资源限制**：限时 30s（硬限制）、限输出 10MB（截断+标记）、限内存 1024MB（psutil 进程树 0.5s 轮询软监控）
+- **错误码**：EXECUTION_IMPORT_FORBIDDEN、EXECUTION_TIMEOUT、EXECUTION_MEMORY_LIMIT、EXECUTION_OUTPUT_TOO_LARGE、EXECUTION_SCRIPT_ERROR
+
+### 七、验收结果
+
+- 后端测试：456 passed（原 375 + 新增 81）
+- 数据库迁移：0004 → 0005 成功
+- 前端类型检查：通过
+- 前端构建：通过（106 模块，347.19 kB）
+- API 测试：33 个测试覆盖 11 个端点
+- 执行引擎测试：48 个测试覆盖安全限制、超时、内存、产物收集
+
+---
+
 ## SPEC 0004 数据集工作区（V0.3 里程碑第一部分）
 
 **完成日期：** 2026-07-06  

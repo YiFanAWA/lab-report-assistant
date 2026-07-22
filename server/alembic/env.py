@@ -12,6 +12,7 @@ from app.modules.sources.models import Source, ParsedDocument, EvidenceCard  # n
 from app.modules.jobs.models import BackgroundJob  # noqa: F401
 from app.modules.datasets.models import Dataset, DatasetVersion  # noqa: F401
 from app.modules.analysis.models import AnalysisPlan  # noqa: F401
+from app.modules.execution.models import CodeTask, ExecutionRun, ExecutionArtifact  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

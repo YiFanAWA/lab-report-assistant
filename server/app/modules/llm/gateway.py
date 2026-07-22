@@ -47,3 +47,22 @@ def get_analysis_plan_provider():
         code="ANALYSIS_PLAN_PROVIDER_UNAVAILABLE",
         message=f"未知的分析方案提供者：{provider_name}",
     )
+
+
+def get_code_task_provider():
+    """返回当前激活的代码任务候选提供者。
+
+    设计决策（用户确认）：AnalysisPlan 阶段为字段截断唯一截断点，
+    CodeTask 生成时直接透传已截断字段内容，提供者不做二次截断。
+    """
+    provider_name = getattr(settings, "code_task_provider", "local_rule")
+    if provider_name == "local_rule" or provider_name is None:
+        from app.modules.llm.code_task_provider import LocalRuleCodeTaskProvider
+        return LocalRuleCodeTaskProvider()
+    if provider_name == "fake":
+        from app.modules.llm.code_task_provider import FakeCodeTaskProvider
+        return FakeCodeTaskProvider()
+    raise AppError(
+        code="CODE_TASK_PROVIDER_UNAVAILABLE",
+        message=f"未知的代码任务提供者：{provider_name}",
+    )

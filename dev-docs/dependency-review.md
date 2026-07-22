@@ -225,36 +225,39 @@ SPEC 0004 实际启用的新增后端依赖：
 
 ### SPEC 0005 计划启用的新增后端依赖
 
-本切片计划安装以下运行时依赖，实际安装版本以 SPEC 0005 验收时记录为准：
+本切片已安装以下运行时依赖，实际安装版本记录如下：
 
-| 依赖 | 复核版本 | 计划安装版本 | 来源 | 用途 |
+| 依赖 | 复核版本 | 实际安装版本 | 来源 | 用途 |
 | --- | --- | --- | --- | --- |
-| `scipy` | `1.17.1` | 待定 | PyPI | 统计检验（执行环境 import 白名单） |
-| `scikit-learn` | `1.9.0` | 待定 | PyPI | 基础建模（执行环境 import 白名单） |
-| `matplotlib` | `3.11.0` | 待定 | PyPI | 图表生成（agg backend，执行环境 import 白名单） |
+| `scipy` | `1.17.1` | `1.18.0` | PyPI | 统计检验（执行环境 import 白名单） |
+| `scikit-learn` | `1.9.0` | `1.9.0` | PyPI | 基础建模（执行环境 import 白名单） |
+| `matplotlib` | `3.11.0` | `3.11.0` | PyPI | 图表生成（agg backend，执行环境 import 白名单） |
+| `psutil` | — | `7.2.2` | PyPI | 进程树内存软监控（SPEC 0005 新增，0.5s 轮询） |
 
 约束：
 
 - 上述依赖作为受控执行环境的 import 白名单成员，由应用托管，普通用户不手动安装。
 - `playwright` 不在 SPEC 0005 安装，继续推迟到后续需要动态网页渲染的切片。
 - 真实 DeepSeek 调用继续推迟到后续切片，本切片继续使用本地规则提供者 `LocalRuleCodeTaskProvider`。
-- 执行环境严格限制 import 白名单为 `pandas`、`numpy`、`matplotlib`、`scipy.stats`、`sklearn`、`openpyxl`，禁止 `os`、`subprocess`、`socket` 等。
+- 执行环境严格限制 import 白名单为 `pandas`、`numpy`、`matplotlib`、`scipy.stats`、`sklearn`、`openpyxl`，禁止 `os`、`subprocess`、`socket`、`ssl`、`http.client`、`urllib`、`requests` 等，并通过 AST 校验拦截 `__import__()` 和 `importlib.import_module()` 动态导入。
+- 内存监控使用 psutil 进程树总 RSS（解决 Windows venv launcher 导致的子进程内存遗漏问题），0.5s 轮询，超限 kill 整个进程树并标记 EXECUTION_MEMORY_LIMIT。
 
 ## 6. 数据分析与交付物依赖复核
 
-| 依赖 | 复核版本 | 来源 | 用途 |
-| --- | --- | --- | --- |
-| `pandas` | `3.0.3` | PyPI | 表格数据处理 |
-| `numpy` | `2.4.6` | PyPI | 数值计算 |
-| `scipy` | `1.17.1` | PyPI | 统计检验 |
-| `scikit-learn` | `1.9.0` | PyPI | 基础建模 |
-| `matplotlib` | `3.11.0` | PyPI | 图表生成 |
-| `openpyxl` | `3.1.5` | PyPI | Excel 读取 |
-| `python-docx` | `1.2.0` | PyPI | Word 生成 |
-| `python-pptx` | `1.0.2` | PyPI | PPT 生成 |
-| `pypdf` | `6.13.2` | PyPI | PDF 文本读取 |
-| `beautifulsoup4` | `4.15.0` | PyPI | HTML 解析 |
-| `playwright` | `1.60.0` | PyPI | 动态网页后备渲染 |
+| 依赖 | 复核版本 | 实际安装版本 | 来源 | 用途 |
+| --- | --- | --- | --- | --- |
+| `pandas` | `3.0.3` | `3.0.3` | PyPI | 表格数据处理 |
+| `numpy` | `2.4.6` | `2.5.1` | PyPI | 数值计算（pandas 3.0.3 传递依赖升级） |
+| `scipy` | `1.17.1` | `1.18.0` | PyPI | 统计检验（SPEC 0005 安装时升级到 1.18.0） |
+| `scikit-learn` | `1.9.0` | `1.9.0` | PyPI | 基础建模 |
+| `matplotlib` | `3.11.0` | `3.11.0` | PyPI | 图表生成 |
+| `psutil` | — | `7.2.2` | PyPI | 进程树内存监控（SPEC 0005 新增，用于受控执行环境软监控） |
+| `openpyxl` | `3.1.5` | `3.1.5` | PyPI | Excel 读取 |
+| `python-docx` | `1.2.0` | `1.2.0` | PyPI | Word 生成 |
+| `python-pptx` | `1.0.2` | 未安装 | PyPI | PPT 生成（推迟到 SPEC 0006/0007） |
+| `pypdf` | `6.13.2` | `6.14.2` | PyPI | PDF 文本读取 |
+| `beautifulsoup4` | `4.15.0` | `4.15.0` | PyPI | HTML 解析 |
+| `playwright` | `1.60.0` | 未安装 | PyPI | 动态网页后备渲染（推迟到后续切片） |
 
 约束：
 

@@ -6,6 +6,7 @@ handler 内部不创建新 Session。Worker 主循环负责创建和关闭 Sessi
 
 import json
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -23,13 +24,22 @@ from app.infrastructure.parsers.dataset_parser import (
 )
 from app.modules.jobs import service as job_service
 from app.modules.jobs.status import JobType
-from app.modules.llm.gateway import get_evidence_card_provider, get_analysis_plan_provider
+from app.modules.llm.gateway import (
+    get_evidence_card_provider,
+    get_analysis_plan_provider,
+    get_code_task_provider,
+)
 from app.modules.sources import service as sources_service
 
 
 def _parse_input(job) -> dict:
     """解析任务的 input_json。"""
     return json.loads(job.input_json)
+
+
+def _now() -> datetime:
+    """返回当前 UTC 时间。"""
+    return datetime.now(timezone.utc)
 
 
 def _source_dir(project_id: str, source_id: str) -> Path:
@@ -336,10 +346,195 @@ def handle_generate_analysis_plan(db: Session, job) -> dict:
     }
 
 
+def handle_generate_code_task(db: Session, job) -> dict:
+    """基于已确认分析方案生成代码任务候选。
+
+    调用 CodeTaskDraftProvider 基于 AnalysisPlan 的 cleaning/analysis/chart plan
+    拼装可执行 Python 代码，保存为 CodeTask（status=CANDIDATE）。
+
+    设计决策（用户确认）：AnalysisPlan 阶段为字段截断唯一截断点，
+    CodeTask 生成时直接透传已截断字段内容，提供者不做二次截断。
+    """
+    data = _parse_input(job)
+    analysis_plan_id = data.get("analysis_plan_id")
+    dataset_id = data.get("dataset_id")
+    dataset_version_id = data.get("dataset_version_id")
+    if not analysis_plan_id or not dataset_id or not dataset_version_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 analysis_plan_id、dataset_id 或 dataset_version_id")
+
+    from app.modules.analysis import service as analysis_service
+    from app.modules.execution import service as execution_service
+
+    plan = analysis_service.get_analysis_plan_by_project(
+        db, job.project_id, analysis_plan_id)
+    if plan.status != "CONFIRMED":
+        raise AppError(code="ANALYSIS_PLAN_NOT_CONFIRMED",
+                       message="分析方案未确认，无法生成代码任务")
+
+    # 构建 analysis_plan dict 传给提供者
+    try:
+        cleaning_plan = json.loads(plan.cleaning_plan) if plan.cleaning_plan else []
+        analysis_plan_items = json.loads(plan.analysis_plan) if plan.analysis_plan else []
+        chart_plan = json.loads(plan.chart_plan) if plan.chart_plan else []
+    except json.JSONDecodeError as exc:
+        raise AppError(code="ANALYSIS_PLAN_INVALID",
+                       message=f"分析方案 JSON 解析失败：{exc}") from exc
+
+    plan_dict = {
+        "cleaning_plan": cleaning_plan,
+        "analysis_plan": analysis_plan_items,
+        "chart_plan": chart_plan,
+    }
+
+    provider = get_code_task_provider()
+    draft = provider.generate(plan_dict)
+
+    task = execution_service.save_code_task_draft(
+        db,
+        project_id=job.project_id,
+        analysis_plan_id=analysis_plan_id,
+        dataset_id=dataset_id,
+        dataset_version_id=dataset_version_id,
+        code=draft.code,
+        candidate_source=provider.source_label(),
+    )
+
+    db.commit()
+    return {
+        "code_task_id": task.id,
+        "code_length": len(draft.code),
+        "code_version": task.code_version,
+    }
+
+
+def handle_execute_code_task(db: Session, job) -> dict:
+    """在受控环境中执行已确认代码任务。
+
+    流程：
+    1. 获取已确认 CodeTask
+    2. 创建 ExecutionRun（PENDING）
+    3. 标记为 RUNNING，推进 project.status 到 EXECUTING
+    4. 调用 python_executor.execute_code_safe 执行
+    5. 根据结果标记 SUCCEEDED 或 FAILED
+    """
+    data = _parse_input(job)
+    code_task_id = data.get("code_task_id")
+    dataset_version_id = data.get("dataset_version_id")
+    code_version = data.get("code_version")
+    if not code_task_id or not dataset_version_id:
+        raise AppError(code="JOB_INPUT_INVALID",
+                       message="任务缺少 code_task_id 或 dataset_version_id")
+
+    from app.modules.datasets import service as dataset_service
+    from app.modules.execution import service as execution_service
+    from app.infrastructure.sandbox.python_executor import execute_code_safe
+
+    task = execution_service.get_code_task_by_project(db, job.project_id, code_task_id)
+    if task.status != "CONFIRMED":
+        raise AppError(code="CODE_TASK_NOT_EXECUTABLE",
+                       message="代码任务未确认，无法执行")
+
+    # 获取数据集文件路径
+    version = dataset_service.get_version_by_id(db, dataset_version_id)
+    data_path = version.file_path
+    if not data_path:
+        raise AppError(code="DATASET_PARSE_FAILED",
+                       message="数据集版本未关联文件")
+
+    # 创建执行记录
+    run = execution_service.create_execution_run(
+        db,
+        project_id=job.project_id,
+        code_task_id=code_task_id,
+        dataset_version_id=dataset_version_id,
+        code_version=code_version or task.code_version,
+    )
+
+    # 标记为 RUNNING（推进 project.status 到 EXECUTING）
+    execution_service.mark_execution_running(db, run.id)
+    db.flush()
+
+    # 准备执行工作目录
+    work_dir = settings.project_data_root / job.project_id / "executions" / run.id
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    started_at = _now()
+    result = execute_code_safe(
+        code=task.code,
+        work_dir=str(work_dir),
+        data_path=data_path,
+        timeout_seconds=settings.execution_timeout_seconds,
+        memory_limit_mb=settings.execution_memory_limit_mb,
+        output_max_bytes=settings.execution_output_max_bytes,
+    )
+    finished_at = _now()
+    duration = (finished_at - started_at).total_seconds()
+
+    # 转换产物为 dict 列表
+    artifacts_data = [
+        {
+            "artifact_type": a.artifact_type,
+            "file_path": a.file_path,
+            "file_size_bytes": a.file_size_bytes,
+            "name": a.name,
+        }
+        for a in result.artifacts
+    ]
+
+    if result.sandbox_error_code is None and result.exit_code == 0:
+        # 执行成功
+        execution_service.mark_execution_succeeded(
+            db,
+            run_id=run.id,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            exit_code=result.exit_code,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+            artifacts=artifacts_data,
+        )
+        db.commit()
+        return {
+            "run_id": run.id,
+            "exit_code": result.exit_code,
+            "artifact_count": len(artifacts_data),
+            "duration_seconds": duration,
+        }
+    else:
+        # 执行失败（脚本错误或沙箱限制）
+        error_code = result.sandbox_error_code or "EXECUTION_SCRIPT_ERROR"
+        error_message = result.stderr[:500] if result.stderr else f"脚本退出码 {result.exit_code}"
+        execution_service.mark_execution_failed(
+            db,
+            run_id=run.id,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            exit_code=result.exit_code,
+            error_code=error_code,
+            error_message=error_message,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+            artifacts=artifacts_data,
+        )
+        db.commit()
+        return {
+            "run_id": run.id,
+            "exit_code": result.exit_code,
+            "error_code": error_code,
+            "artifact_count": len(artifacts_data),
+            "duration_seconds": duration,
+        }
+
+
 HANDLERS: dict[str, Callable] = {
     JobType.FETCH_URL.value: handle_fetch_url,
     JobType.PARSE_DOCUMENT.value: handle_parse_document,
     JobType.GENERATE_EVIDENCE.value: handle_generate_evidence,
     JobType.PARSE_DATASET.value: handle_parse_dataset,
     JobType.GENERATE_ANALYSIS_PLAN.value: handle_generate_analysis_plan,
+    JobType.GENERATE_CODE_TASK.value: handle_generate_code_task,
+    JobType.EXECUTE_CODE_TASK.value: handle_execute_code_task,
 }

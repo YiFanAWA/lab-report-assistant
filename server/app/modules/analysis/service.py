@@ -250,7 +250,11 @@ def update_analysis_plan(
 
 def confirm_analysis_plan(db: Session, project_id: str,
                             plan_id: str) -> AnalysisPlan:
-    """确认候选方案，状态变为 CONFIRMED。"""
+    """确认候选方案，状态变为 CONFIRMED。
+
+    STALE 传播：重新确认时，关联的 CodeTask 全部变 STALE。
+    首次确认时无 CodeTask，传播为空操作。
+    """
     plan = get_analysis_plan_by_project(db, project_id, plan_id)
     if plan.status != AnalysisPlanStatus.CANDIDATE.value:
         raise AppError(
@@ -260,9 +264,16 @@ def confirm_analysis_plan(db: Session, project_id: str,
     plan.status = AnalysisPlanStatus.CONFIRMED.value
     plan.confirmed_at = _now()
     plan.updated_at = _now()
+
+    # STALE 传播：重新确认时，关联的 CodeTask 全部变 STALE
+    # 延迟导入避免循环依赖（execution.service 依赖 analysis.service）
+    from app.modules.execution import service as execution_service
+    stale_count = execution_service.mark_code_tasks_stale(db, plan_id)
+
     _add_change(db, project_id,
                 AnalysisChangeType.ANALYSIS_PLAN_CONFIRMED.value,
-                f"确认分析方案：{plan.id}")
+                f"确认分析方案：{plan.id}"
+                + (f"（{stale_count} 个代码任务变 STALE）" if stale_count else ""))
     db.commit()
     db.refresh(plan)
     return plan

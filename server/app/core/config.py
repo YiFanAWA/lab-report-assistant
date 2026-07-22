@@ -98,5 +98,33 @@ class Settings:
     def analysis_plan_provider(self) -> str:
         return os.getenv("ANALYSIS_PLAN_PROVIDER", "local_rule")
 
+    @property
+    def code_task_provider(self) -> str:
+        return os.getenv("CODE_TASK_PROVIDER", "local_rule")
+
+    @property
+    def execution_timeout_seconds(self) -> int:
+        raw = os.getenv("EXECUTION_TIMEOUT_SECONDS", "30")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 30
+
+    @property
+    def execution_memory_limit_mb(self) -> int:
+        raw = os.getenv("EXECUTION_MEMORY_LIMIT_MB", "1024")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 1024
+
+    @property
+    def execution_output_max_bytes(self) -> int:
+        raw = os.getenv("EXECUTION_OUTPUT_MAX_BYTES", str(10 * 1024 * 1024))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 10 * 1024 * 1024
+
 
 settings = Settings()
