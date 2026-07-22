@@ -1,7 +1,7 @@
 # 技术债务清理计划
 
 **创建日期：** 2026-07-22  
-**当前阶段：** SPEC 0006 已收口，准备进入 V1.0 完整端到端验收  
+**当前阶段：** V1.0 端到端验收阶段，TD-001 和 TD-002 已清理关闭  
 **适用范围：** 实验报告助手项目  
 **目标：** 在 V1.0 验收阶段清理已知非阻断技术债务，确保 V1.0 发布前无遗留警告
 
@@ -226,6 +226,8 @@ with warnings.catch_warnings():
 
 | 债务编号 | 名称 | 引入切片 | 关闭时间 | 关闭证据 |
 | --- | --- | --- | --- | --- |
+| TD-001 | fastapi.testclient httpx 弃用提示 | SPEC 0002 | 2026-07-22 | 安装 `httpx2 2.7.0`（传递依赖 `httpcore2 2.7.0`、`truststore 0.10.4`），`pyproject.toml` dev 依赖新增 `httpx2>=2.0.0`；验证 `python -m pytest` → 569 passed, **0 warnings** |
+| TD-002 | pandas datetime 推断 UserWarning | SPEC 0004 | 2026-07-22 | `dataset_parser.py:96` 添加 `format="mixed"` 参数；验证 `python -m pytest` → 569 passed, **0 warnings** |
 | TD-003 | 浏览器点击截图验收未执行 | SPEC 0002 | 2026-07-22 | 本会话已完成浏览器端到端验收，截图保存至 `dev-docs/e2e-screenshots/`，详见 `dev-docs/e2e-acceptance-report-v1.0.md` |
 
 ---

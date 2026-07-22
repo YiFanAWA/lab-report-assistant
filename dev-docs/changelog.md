@@ -5,6 +5,122 @@
 
 ---
 
+## V1.0 端到端验收阶段：技术债务清理 + Worker 验证 + 前端 UI 补充
+
+**完成日期：** 2026-07-22  
+**阶段：** V1.0 完整端到端验收阶段  
+**依据：** [e2e-acceptance-report-v1.0.md](e2e-acceptance-report-v1.0.md)、[tech-debt-cleanup-plan.md](tech-debt-cleanup-plan.md)、[worker-e2e-log.md](worker-e2e-log.md)
+
+### 一、技术债务清理（TD-001 + TD-002）
+
+**目标：** 将 pytest warnings 从 21 条降至 0 条，确保 V1.0 发布前无遗留警告。
+
+| 债务 | 清理方案 | 验证结果 |
+| --- | --- | --- |
+| TD-001（httpx 弃用提示） | 安装 `httpx2 2.7.0`（传递依赖 `httpcore2 2.7.0`、`truststore 0.10.4`）；`pyproject.toml` dev 依赖新增 `httpx2>=2.0.0` | pytest → 569 passed, **0 warnings** |
+| TD-002（pandas datetime 推断） | `dataset_parser.py:96` 添加 `format="mixed"` 参数 | pytest → 569 passed, **0 warnings** |
+
+**修改文件：**
+- `server/pyproject.toml`：dev 依赖新增 `httpx2>=2.0.0`
+- `server/app/infrastructure/parsers/dataset_parser.py`：`_infer_field_type` 中 `to_datetime` 添加 `format="mixed"`
+
+### 二、Worker 端到端验证
+
+**目标：** 启动 Worker 进程进行实际后台任务验证，确认状态机流转正常。
+
+**验证脚本：** `server/worker_e2e_verify.py`  
+**运行日志：** `dev-docs/worker-e2e-log.md`
+
+**验证流程：**
+1. alembic upgrade head 确保数据库最新
+2. 创建项目 → 推进到 RESULT_CONFIRMED → 插入模拟 ExecutionRun
+3. 触发大纲生成 → Worker `handle_generate_outline` 执行 → CANDIDATE
+4. 确认大纲 → OUTLINE_CONFIRMED
+5. 触发 Word 生成 → Worker `handle_generate_word` 执行 → Word 文件生成（37032 bytes）
+6. 触发 PPT 生成 → Worker `handle_generate_ppt` 执行 → PPT 文件生成（32231 bytes）
+7. 完成项目 → COMPLETED
+
+**结果：** 项目 proj_6c52304bf9fb 完整流转 RESULT_CONFIRMED → COMPLETED，Word 和 PPT 文件均实际存在。
+
+### 三、前端 UI 补充（V1.0 确认事项第 4 和第 9 项）
+
+**目标：** 为 SPEC 0006 新增的 11 个 API 端点补充前端页面代码，让用户能在浏览器中走完"生成大纲 → 确认 → 生成 Word/PPT → 下载 → 完成项目"的完整流程。
+
+#### 3.1 新增 outlines feature 模块
+
+**`apps/web/src/features/outlines/types.ts`：**
+- OutlineSection、OutlineStatus、DeliverableType、DeliverableStatus、DeliverableVersionStatus
+- Outline、OutlineListResponse、UpdateOutlineRequest
+- Deliverable、DeliverableListResponse
+- DeliverableVersion、DeliverableVersionListResponse
+- GenerateOutlineResponse、GenerateDeliverableResponse、CompleteProjectResponse
+
+**`apps/web/src/features/outlines/api.ts`：** 12 个 API 函数
+- generateOutline、listOutlines、getOutline、updateOutline、confirmOutline、rejectOutline
+- generateWord、generatePpt
+- listDeliverables、listDeliverableVersions、buildDeliverableDownloadUrl、completeProject
+
+**`apps/web/src/features/outlines/hooks.ts`：** 11 个 TanStack Query hooks
+- useOutlines、useOutline、useGenerateOutline、useUpdateOutline、useConfirmOutline、useRejectOutline
+- useGenerateWord、useGeneratePpt
+- useDeliverables（3s 轮询）、useDeliverableVersions（3s 轮询）、useCompleteProject
+
+#### 3.2 新增工作区视图
+
+**`apps/web/src/routes/OutlineWorkspaceView.tsx`：**
+- 项目状态展示（含 RESULT_CONFIRMED/OUTLINE_CONFIRMED/GENERATING/COMPLETED 中文映射）
+- 生成大纲候选按钮（仅 RESULT_CONFIRMED 状态可见）
+- 大纲卡片：章节列表（含来源类型标签）、编辑模式（title/content/source_type/source_ids 可编辑）、确认/拒绝按钮
+- STALE 提示
+- 确认后显示 Word/PPT 生成按钮，跟踪生成任务状态（useJob 轮询）
+
+**`apps/web/src/routes/DeliverableWorkspaceView.tsx`：**
+- 交付物列表（Word 和 PPT 卡片，含状态中文映射）
+- 版本列表（含状态、文件大小、耗时）
+- 下载按钮（仅 SUCCEEDED 版本可下载）
+- 失败版本错误信息展示
+- 完成项目按钮（需至少一个 Word 和一个 PPT SUCCEEDED）
+- 3 秒轮询交付物和版本状态
+
+#### 3.3 路由和入口更新
+
+**`apps/web/src/app/App.tsx`：** 新增 2 个路由
+- `/projects/:projectId/outline` → OutlineWorkspaceView
+- `/projects/:projectId/deliverables` → DeliverableWorkspaceView
+
+**`apps/web/src/routes/ProjectDetailView.tsx`：**
+- 状态中文映射新增 EXECUTING/EXECUTION_FAILED/RESULT_CONFIRMED/OUTLINE_CONFIRMED/GENERATING
+- ORDERED_STATUSES 新增 5 个状态
+- 大纲工作区入口（RESULT_CONFIRMED 及之后显示）
+- 交付物工作区入口（OUTLINE_CONFIRMED 及之后显示）
+
+**`apps/web/src/features/jobs/types.ts`：** JobType 新增 GENERATE_OUTLINE/GENERATE_WORD/GENERATE_PPT
+
+#### 3.4 验收证据
+
+| 验收项 | 命令 | 结果 |
+| --- | --- | --- |
+| 前端类型检查 | `npm run lint` | tsc --noEmit 通过 |
+| 前端构建 | `npm run build` | Vite 构建通过，**110 模块**（原 106 + 新增 4），370.81 kB，gzip 103.39 kB |
+
+### 四、文件变更统计
+
+- **新增文件：** 6 个（outlines feature 3 + 工作区视图 2 + worker_e2e_verify.py 1）
+- **修改文件：** 5 个（pyproject.toml、dataset_parser.py、App.tsx、ProjectDetailView.tsx、jobs/types.ts）
+- **文档更新：** 4 个（acceptance.md、changelog.md、README.md、tech-debt-cleanup-plan.md）
+
+### 五、V1.0 确认事项进展
+
+| 确认事项 | 状态 |
+| --- | --- |
+| 第 4 项：V1.0 是否需要支持前端 UI 变更 | ✅ 已补充大纲和交付物前端页面 |
+| 第 6 项：是否在 V1.0 清理 TD-001 | ✅ 已安装 httpx2，warnings 归零 |
+| 第 7 项：是否在 V1.0 清理 TD-002 | ✅ 已添加 format="mixed"，warnings 归零 |
+| 第 8 项：是否在 V1.0 启动 Worker 进程做端到端验证 | ✅ 已执行 Worker E2E 验证，状态机流转正常 |
+| 第 9 项：是否需要为 V1.0 补充前端大纲/交付物页面 | ✅ 已补充 11 个 API 端点的前端页面代码 |
+
+---
+
 ## SPEC 0006 大纲与交付物（V0.4 里程碑）
 
 **完成日期：** 2026-07-22  

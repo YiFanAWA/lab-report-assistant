@@ -93,7 +93,7 @@ def _infer_field_type(series) -> str:
     if dtype_kind == "O":
         # 尝试 datetime（用 errors="coerce" 避免格式不一致抛异常）
         try:
-            converted = __import__("pandas").to_datetime(series, errors="coerce")
+            converted = __import__("pandas").to_datetime(series, errors="coerce", format="mixed")
             non_nat = converted.notna().sum()
             # 若非空值中至少 50% 能解析为日期，则判定为 datetime
             non_null_count = int(series.notna().sum())

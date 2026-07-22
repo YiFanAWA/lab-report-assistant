@@ -5,7 +5,10 @@ export type JobType =
   | "PARSE_DOCUMENT"
   | "GENERATE_EVIDENCE"
   | "PARSE_DATASET"
-  | "GENERATE_ANALYSIS_PLAN";
+  | "GENERATE_ANALYSIS_PLAN"
+  | "GENERATE_OUTLINE"
+  | "GENERATE_WORD"
+  | "GENERATE_PPT";
 
 export type JobStatus =
   | "PENDING"

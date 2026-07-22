@@ -12,6 +12,11 @@ function statusLabel(s: string) {
     DATASET_READY: "数据集已就绪",
     ANALYSIS_PLANNED: "分析方案已生成",
     ANALYSIS_CONFIRMED: "分析方案已确认",
+    EXECUTING: "执行中",
+    EXECUTION_FAILED: "执行失败",
+    RESULT_CONFIRMED: "结果已确认",
+    OUTLINE_CONFIRMED: "大纲已确认",
+    GENERATING: "交付物生成中",
     COMPLETED: "已完成",
   };
   return m[s] ?? s;
@@ -27,6 +32,11 @@ const ORDERED_STATUSES = [
   "DATASET_READY",
   "ANALYSIS_PLANNED",
   "ANALYSIS_CONFIRMED",
+  "EXECUTING",
+  "EXECUTION_FAILED",
+  "RESULT_CONFIRMED",
+  "OUTLINE_CONFIRMED",
+  "GENERATING",
   "COMPLETED",
 ];
 
@@ -59,6 +69,17 @@ const secondaryLinkStyle: React.CSSProperties = {
   fontSize: "0.9rem",
 };
 
+const accentLinkStyle: React.CSSProperties = {
+  display: "inline-block",
+  marginTop: "0.5rem",
+  padding: "0.5rem 0.9rem",
+  background: "#7c3aed",
+  color: "#fff",
+  borderRadius: "0.375rem",
+  textDecoration: "none",
+  fontSize: "0.9rem",
+};
+
 export function ProjectDetailView() {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: project, isLoading, isError, error } = useProject(projectId ?? "");
@@ -83,6 +104,8 @@ export function ProjectDetailView() {
   const showEvidenceEntry = isAtOrAfter(project.status, "REQUIREMENT_CONFIRMED");
   const showDatasetsEntry = isAtOrAfter(project.status, "EVIDENCE_CONFIRMED");
   const showAnalysisEntry = isAtOrAfter(project.status, "DATASET_READY");
+  const showOutlineEntry = isAtOrAfter(project.status, "RESULT_CONFIRMED");
+  const showDeliverablesEntry = isAtOrAfter(project.status, "OUTLINE_CONFIRMED");
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -133,6 +156,22 @@ export function ProjectDetailView() {
         <div style={{ marginTop: "0.5rem" }}>
           <Link to={`/projects/${project.id}/analysis`} style={secondaryLinkStyle}>
             进入分析方案工作区
+          </Link>
+        </div>
+      )}
+
+      {showOutlineEntry && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Link to={`/projects/${project.id}/outline`} style={accentLinkStyle}>
+            进入大纲工作区
+          </Link>
+        </div>
+      )}
+
+      {showDeliverablesEntry && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Link to={`/projects/${project.id}/deliverables`} style={accentLinkStyle}>
+            进入交付物工作区
           </Link>
         </div>
       )}

@@ -210,6 +210,13 @@
 | 2026-07-22 | V1.0 端到端验收：浏览器截图 | browser_use agent 访问 http://localhost:5173/，页面标题"实验报告助手"正常渲染；控制台无 error/warning（仅 1 条 React DevTools info）；GET /api/projects 通过 Vite 代理成功；截图保存至 `dev-docs/e2e-screenshots/home-full.png` 和 `home-viewport.png`（21,229 bytes） | 通过 |
 | 2026-07-22 | V1.0 端到端验收报告 | 生成完整端到端验收报告 `dev-docs/e2e-acceptance-report-v1.0.md`，覆盖 16 项验收检查（自动化测试 4 项 + 运行时 2 项 + API 5 项 + UI 5 项），全部通过；TD-003（浏览器截图验收）已关闭 | 通过 |
 | 2026-07-22 | 技术债务清理计划 | 生成 `dev-docs/tech-debt-cleanup-plan.md`，覆盖 TD-001（httpx 弃用）和 TD-002（pandas datetime 推断），各含 2 种清理方案、回退方案、验证命令和预计耗时 | 文档就绪 |
+| 2026-07-22 | TD-001 清理 | `server` 下安装 `httpx2 2.7.0`（传递依赖 `httpcore2 2.7.0`、`truststore 0.10.4`）；`pyproject.toml` dev 依赖新增 `httpx2>=2.0.0`；验证 `python -m pytest` → 569 passed, **0 warnings**（从 21 降至 0） | 通过 |
+| 2026-07-22 | TD-002 清理 | `dataset_parser.py:96` 添加 `format="mixed"` 参数，pandas 不再发出 datetime 推断 UserWarning；验证 `python -m pytest` → 569 passed, **0 warnings** | 通过 |
+| 2026-07-22 | Worker 端到端验证 | 执行 `server/worker_e2e_verify.py`，项目 proj_6c52304bf9fb 完整流转 RESULT_CONFIRMED → 生成大纲候选 → 确认大纲 → 生成 Word（37032 bytes）→ 生成 PPT（32231 bytes）→ COMPLETED；Word 和 PPT 文件均实际存在；日志保存至 `dev-docs/worker-e2e-log.md` | 通过 |
+| 2026-07-22 | V1.0 前端 UI 补充：大纲工作区 | 新增 `apps/web/src/features/outlines/{types,api,hooks}.ts`（12 个 API 函数 + 11 个 TanStack Query hooks）和 `apps/web/src/routes/OutlineWorkspaceView.tsx`（大纲生成/列表/编辑/确认/拒绝/Word 生成/PPT 生成 7 个端点接线）；jobs 类型扩展 GENERATE_OUTLINE/GENERATE_WORD/GENERATE_PPT | 通过 |
+| 2026-07-22 | V1.0 前端 UI 补充：交付物工作区 | 新增 `apps/web/src/routes/DeliverableWorkspaceView.tsx`（交付物列表/版本列表/下载/完成项目 4 个端点接线）；`App.tsx` 新增 `/outline` 和 `/deliverables` 路由；`ProjectDetailView.tsx` 新增大纲和交付物入口链接及 RESULT_CONFIRMED/OUTLINE_CONFIRMED/GENERATING 状态中文映射 | 通过 |
+| 2026-07-22 | V1.0 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过（含新增 outlines feature 和 2 个工作区视图） | 通过 |
+| 2026-07-22 | V1.0 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，**110 模块**转换（原 106 + 新增 4），生成 `dist/`（370.81 kB，gzip 103.39 kB） | 通过 |
 
 ## 漂移检查清单
 
