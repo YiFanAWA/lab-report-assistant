@@ -106,6 +106,7 @@ export function ProjectDetailView() {
   const showAnalysisEntry = isAtOrAfter(project.status, "DATASET_READY");
   const showOutlineEntry = isAtOrAfter(project.status, "RESULT_CONFIRMED");
   const showDeliverablesEntry = isAtOrAfter(project.status, "OUTLINE_CONFIRMED");
+  const showExecutionEntry = isAtOrAfter(project.status, "ANALYSIS_CONFIRMED");
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -156,6 +157,14 @@ export function ProjectDetailView() {
         <div style={{ marginTop: "0.5rem" }}>
           <Link to={`/projects/${project.id}/analysis`} style={secondaryLinkStyle}>
             进入分析方案工作区
+          </Link>
+        </div>
+      )}
+
+      {showExecutionEntry && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Link to={`/projects/${project.id}/execution`} style={secondaryLinkStyle}>
+            进入执行工作区
           </Link>
         </div>
       )}

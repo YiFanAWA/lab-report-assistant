@@ -5,6 +5,79 @@
 
 ---
 
+## SPEC 0005 前端接线：代码任务与执行记录工作区
+
+**完成日期：** 2026-07-23  
+**阶段：** V1.0 端到端验收阶段，前端 SPEC 0005 接线补充  
+**目标：** 为 SPEC 0005 受控 Python 执行的 11 个 API 端点补充前端页面，让用户能在浏览器中走完"生成代码 → 编辑 → 确认 → 触发执行 → 查看结果 → 下载产物 → 完成结果确认"的完整流程。
+
+### 一、架构决策
+
+- **单一 `features/execution/` feature 模块**：与后端唯一 owner `server/app/modules/execution/` 边界对齐，不拆分 code_tasks 和 execution_runs。
+- **单个 `ExecutionWorkspaceView` 视图**：代码任务和执行记录紧耦合（ExecutionRun 关联 code_task_id），双 section 布局避免用户频繁切换。
+- **3s 轮询执行记录**：受控 Python 执行可能持续较长时间，前端实时反映 PENDING → RUNNING → SUCCEEDED/FAILED 状态变化。
+
+### 二、新增文件（4 个）
+
+| 文件 | 行数 | 职责 |
+| --- | --- | --- |
+| [features/execution/types.ts](../apps/web/src/features/execution/types.ts) | 90 | CodeTask/ExecutionRun/ExecutionArtifact 等类型，与后端 contracts.py 对齐 |
+| [features/execution/api.ts](../apps/web/src/features/execution/api.ts) | 160 | 11 个 API 函数（7 code_tasks + 4 execution_runs） |
+| [features/execution/hooks.ts](../apps/web/src/features/execution/hooks.ts) | 150 | 11 个 TanStack Query hooks，执行记录启用 3s 轮询 |
+| [routes/ExecutionWorkspaceView.tsx](../apps/web/src/routes/ExecutionWorkspaceView.tsx) | 750 | 执行工作区视图（代码任务 + 执行记录双 section） |
+
+### 三、修改文件（3 个）
+
+| 文件 | 改动 | 说明 |
+| --- | --- | --- |
+| [features/jobs/types.ts](../apps/web/src/features/jobs/types.ts) | +2 行 | JobType 新增 `GENERATE_CODE_TASK` / `EXECUTE_CODE_TASK` |
+| [app/App.tsx](../apps/web/src/app/App.tsx) | +2 行 | 新增 `/projects/:projectId/execution` 路由 |
+| [routes/ProjectDetailView.tsx](../apps/web/src/routes/ProjectDetailView.tsx) | +10 行 | 新增执行工作区入口（ANALYSIS_CONFIRMED 及之后显示） |
+
+### 四、API 端点映射（11 个）
+
+#### code_tasks（7 端点）
+
+| 前端函数 | HTTP | 路径 | 说明 |
+| --- | --- | --- | --- |
+| `generateCodeTask` | POST | `/analysis/{plan_id}/code/generate` | 触发生成代码候选 |
+| `listCodeTasks` | GET | `/code-tasks?status=` | 代码任务列表 |
+| `getCodeTask` | GET | `/code-tasks/{task_id}` | 代码任务详情 |
+| `updateCodeTask` | PUT | `/code-tasks/{task_id}` | 编辑代码（code 字段） |
+| `confirmCodeTask` | POST | `/code-tasks/{task_id}/confirm` | 确认代码 |
+| `rejectCodeTask` | POST | `/code-tasks/{task_id}/reject` | 拒绝代码 |
+| `executeCodeTask` | POST | `/code-tasks/{task_id}/execute` | 触发执行 |
+
+#### execution_runs（4 端点）
+
+| 前端函数 | HTTP | 路径 | 说明 |
+| --- | --- | --- | --- |
+| `listExecutionRuns` | GET | `/execution-runs?status=` | 执行记录列表（含 artifacts） |
+| `getExecutionRun` | GET | `/execution-runs/{run_id}` | 执行详情（含 stdout/stderr） |
+| `buildArtifactDownloadUrl` | — | `/execution-runs/{run_id}/artifacts/{artifact_id}` | 产物下载 URL |
+| `completeExecution` | POST | `/execution-runs/complete` | 完成结果确认 |
+
+### 五、UI 布局
+
+- **Section 1 代码任务**：生成代码候选（选择已确认分析方案）→ 代码编辑器（深色主题 monospace textarea）→ 编辑/确认/拒绝/触发执行按钮
+- **Section 2 执行记录**：执行记录卡片列表 → stdout/stderr（可折叠，默认成功时折叠）→ 产物下载（TABLE_CSV/CHART_PNG）→ 完成结果确认按钮
+- **状态机流转**：ANALYSIS_CONFIRMED → 生成代码 → CANDIDATE → 确认 → CONFIRMED → 触发执行 → SUCCEEDED → 完成结果确认 → RESULT_CONFIRMED
+
+### 六、验收证据
+
+| 验收项 | 命令 | 结果 |
+| --- | --- | --- |
+| 前端类型检查 | `npm run lint` | tsc --noEmit 通过 |
+| 前端构建 | `npm run build` | Vite 构建通过，**113 模块**（原 110 + 新增 3），389.56 kB，gzip 106.12 kB |
+
+### 七、文件变更统计
+
+- **新增文件：** 4 个（execution feature 3 + 工作区视图 1）
+- **修改文件：** 3 个（jobs/types.ts、App.tsx、ProjectDetailView.tsx）
+- **新增代码：** 约 1150 行
+
+---
+
 ## V1.0 端到端验收阶段：技术债务清理 + Worker 验证 + 前端 UI 补充
 
 **完成日期：** 2026-07-22  
