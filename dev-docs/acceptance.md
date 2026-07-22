@@ -205,6 +205,11 @@
 | 2026-07-22 | SPEC 0006 handler bug 修复 | `worker/handlers.py` 中 `_gather_outline_context` 缺少 `from app.modules.analysis.models import AnalysisPlan` 导入，导致查询分析方案时 NameError，已在测试阶段发现并修复 | 通过 |
 | 2026-07-22 | SPEC 0006 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（21 个测试覆盖 11 个端点）、Worker handler 测试（13 个测试）和渲染器测试（18 个测试验证真实文件生成）作为替代证据 | 未执行 |
 | 2026-07-22 | SPEC 0006 版本控制收口 | commit `8e098ab`（33 文件，+6823/-16 行）；首次 push 因网络无法连接 github.com:443 失败，启动本地代理 verge-mihomo（PID 48780，端口 7897）后通过 `git -c http.proxy=http://127.0.0.1:7897 push origin master` 成功推送 `f30d500..8e098ab master -> master` | 通过 |
+| 2026-07-22 | V1.0 端到端验收：服务启动 | 后端 uvicorn 在 8001 端口启动成功，前端 Vite dev 在 5173 端口启动成功，数据库已迁移到 0006 | 通过 |
+| 2026-07-22 | V1.0 端到端验收：API 主链路 | 创建项目返回 proj_495cc9fe10a5（DRAFT）；查询项目列表返回 1 个项目；查询大纲列表返回空列表；查询交付物列表返回空列表；大纲生成前置校验返回 400 + OUTLINE_NOT_GENERATABLE（状态机正确） | 通过 |
+| 2026-07-22 | V1.0 端到端验收：浏览器截图 | browser_use agent 访问 http://localhost:5173/，页面标题"实验报告助手"正常渲染；控制台无 error/warning（仅 1 条 React DevTools info）；GET /api/projects 通过 Vite 代理成功；截图保存至 `dev-docs/e2e-screenshots/home-full.png` 和 `home-viewport.png`（21,229 bytes） | 通过 |
+| 2026-07-22 | V1.0 端到端验收报告 | 生成完整端到端验收报告 `dev-docs/e2e-acceptance-report-v1.0.md`，覆盖 16 项验收检查（自动化测试 4 项 + 运行时 2 项 + API 5 项 + UI 5 项），全部通过；TD-003（浏览器截图验收）已关闭 | 通过 |
+| 2026-07-22 | 技术债务清理计划 | 生成 `dev-docs/tech-debt-cleanup-plan.md`，覆盖 TD-001（httpx 弃用）和 TD-002（pandas datetime 推断），各含 2 种清理方案、回退方案、验证命令和预计耗时 | 文档就绪 |
 
 ## 漂移检查清单
 
