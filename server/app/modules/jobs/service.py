@@ -168,6 +168,26 @@ def list_jobs(db: Session, project_id: str, status: str | None = None,
     return query.order_by(BackgroundJob.created_at.desc()).all()
 
 
+def has_active_jobs(db: Session, project_id: str) -> bool:
+    """检查项目是否有活跃任务（PENDING 或 RUNNING）。
+
+    用于清理脚本保护（SPEC 0012）：有活跃任务的项目跳过清理，
+    避免清理正在执行任务的项目导致数据不一致。
+    """
+    count = (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.project_id == project_id,
+            BackgroundJob.status.in_([
+                JobStatus.PENDING.value,
+                JobStatus.RUNNING.value,
+            ]),
+        )
+        .count()
+    )
+    return count > 0
+
+
 def _job_to_response(job: BackgroundJob) -> JobResponse:
     """将 BackgroundJob ORM 模型转换为 JobResponse。"""
     return JobResponse(

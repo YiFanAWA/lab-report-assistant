@@ -194,5 +194,23 @@ class Settings:
         except (TypeError, ValueError):
             return 50 * 1024 * 1024
 
+    @property
+    def data_retention_days(self) -> int:
+        """数据保留天数（SPEC 0012）。
+
+        - 0（默认）：永久保留，不清理
+        - >0：保留 N 天，超过 N 天的项目进入清理列表
+        - 负值或非数字：降级到 0（永久保留）
+        - 浮点数：截断为整数（与现有 int(raw) 配置模式一致）
+        """
+        raw = os.getenv("DATA_RETENTION_DAYS", "0")
+        try:
+            value = int(raw)
+            if value < 0:
+                return 0
+            return value
+        except (TypeError, ValueError):
+            return 0
+
 
 settings = Settings()

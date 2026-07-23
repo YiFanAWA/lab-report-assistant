@@ -113,6 +113,12 @@ LLM 调用失败时自动降级到 LocalRule，不阻断流程。
 | `WORD_TEMPLATE_PATH` | `""` | Word 模板路径（留空使用默认模板） |
 | `PPT_TEMPLATE_PATH` | `""` | PPT 母版路径（留空使用默认母版） |
 
+### 数据保留与清理配置
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DATA_RETENTION_DAYS` | `0` | 数据保留天数（0=永久保留，>0=保留 N 天后可清理） |
+
 ## 配置示例
 
 ### 示例 1：LocalRule 模式（默认，无需 API Key）
@@ -222,6 +228,43 @@ SQLite 在高并发写入时可能锁定。如遇 `database is locked` 错误：
 1. 检查文件大小是否超过 `DATASET_MAX_SIZE_BYTES`（默认 50MB）
 2. 检查文件格式是否为 CSV 或 XLSX
 3. 检查 `PROJECT_DATA_ROOT` 路径是否有写入权限
+
+## 数据保留与清理
+
+默认情况下，所有项目数据永久保留（`DATA_RETENTION_DAYS=0`）。如需定期清理过期项目数据，可配置保留天数并手动执行清理脚本。
+
+### 配置保留天数
+
+```bash
+# 设置保留 30 天（超过 30 天未更新的项目可被清理）
+$env:DATA_RETENTION_DAYS = "30"
+```
+
+### 执行清理脚本
+
+清理脚本支持两种模式：dry-run（默认，只输出报告不删除）和 execute（实际删除）。
+
+```bash
+cd server
+.venv\Scripts\activate
+
+# 默认 dry-run：只输出清理报告，不实际删除
+python -m scripts.cleanup_expired_data
+
+# 显式 dry-run
+python -m scripts.cleanup_expired_data --dry-run
+
+# 实际执行清理（删除过期项目数据）
+python -m scripts.cleanup_expired_data --execute
+```
+
+### 清理行为说明
+
+- 基于 `Project.updated_at` 判断过期：超过 `DATA_RETENTION_DAYS` 天未更新的项目进入清理列表。
+- 活跃项目自动重置计时器：项目有任何更新（如状态推进、数据上传）时 `updated_at` 自动刷新。
+- RUNNING job 保护：有 PENDING/RUNNING 后台任务的项目跳过清理，避免清理正在执行任务的项目。
+- 级联删除：清理项目时按外键依赖顺序删除全部 18 张关联表记录和项目文件系统目录。
+- `--dry-run` 和 `--execute` 同时指定时采用 dry-run（安全优先）。
 
 ## 开发文档
 
