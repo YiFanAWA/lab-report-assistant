@@ -285,6 +285,10 @@
 | 2026-07-23 | V1.1.0 回归测试执行记录 | 6 项检查全部通过（后端 704 + 前端 411 + lint + build + 迁移 + SPEC 0012 专项 58），详见 [v1.1.0-regression-test-plan.md](v1.1.0-regression-test-plan.md) 第九章 | 通过 |
 | 2026-07-23 | V1.1.0 发布文档回写 | 更新 `dev-docs/README.md`（状态行 + V1.1.0 发布文档索引）、`dev-docs/acceptance.md`（SPEC 0010/0011/0012 由"待确认收口"改为"已确认收口"，V1.1.0 已发布）；新增 `dev-docs/release-checklist-v1.1.0.md` | 通过 |
 | 2026-07-23 | V1.1.0 项目负责人确认收口 | 项目负责人确认两份草稿文档（changelog-v1.1.0.md、v1.1.0-regression-test-plan.md）无修订、确认 SPEC 0010/0011/0012 收口并发布 V1.1.0，要求打 tag v1.1.0 并 push | 通过 |
+| 2026-07-23 | V1.1.0 文档漂移修正 | 修正 implementation-plan.md（顶部说明/执行门禁/任务 2 合同定义勾选/任务 3 状态机前置校验勾选+工作流回退标注 V2.0 待办/任务 10 端到端验收 6 项勾选）和 v1.1.0-planning.md（顶部状态+总结更新为已发布）；commit `949547c` 已 push 到 origin/master | 通过 |
+| 2026-07-23 | V1.1.0 回归验收第二道门禁 | SPEC 0007（36 passed）+ SPEC 0010（39 passed）+ SPEC 0011（23 passed）针对性测试全部通过 | 通过 |
+| 2026-07-23 | V1.1.0 回归验收第三道门禁-端到端 | `worker_e2e_verify.py` 临时数据库运行：项目 `proj_f4d1ef5672c3` RESULT_CONFIRMED → COMPLETED，Word 37033 bytes + PPT 32231 bytes 文件实际生成，E2E_RESULT=PASS；LocalRule 降级路径验证通过 | 通过 |
+| 2026-07-23 | V1.1.0 回归验收第三道门禁-关键回归点 | 63 passed 覆盖 R-1 STALE 传播 / R-2 版本管理 / R-3 失败不覆盖 / R-4 socket 拦截 / R-5 localhost/file:// 拒绝 / R-6 路径穿越防护 | 通过 |
 
 ## 漂移检查清单
 

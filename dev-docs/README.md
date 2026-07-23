@@ -66,6 +66,7 @@
 - [release-checklist-v1.1.0.md](release-checklist-v1.1.0.md)：V1.1.0 发布清单（发布前状态检查、发布物清单、6 个 SPEC 摘要、标签操作）。
 - [changelog-v1.1.0.md](changelog-v1.1.0.md)：V1.1.0 详细变更日志（6 个 SPEC 新增功能、5 个 Bug 修复、架构改进、升级指南）。
 - [v1.1.0-regression-test-plan.md](v1.1.0-regression-test-plan.md)：V1.1.0 回归测试执行计划（三道门禁 + 6 个 SPEC 专项回归 + 执行记录）。
+- [worker-e2e-log-v1.1.0-regression.md](worker-e2e-log-v1.1.0-regression.md)：V1.1.0 发布后端到端回归验证日志（worker_e2e_verify.py 临时数据库运行结果）。
 
 ## 变更规则
 
