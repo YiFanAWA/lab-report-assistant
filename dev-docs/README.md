@@ -5,8 +5,8 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（403 个测试全部通过），待项目负责人确认收口；SPEC 0010（Word 模板支持）SPEC 文档已创建，待项目负责人确认后进入实现
-- 下一阶段入口：项目负责人确认 SPEC 0009 收口 + 确认 SPEC 0010 范围后进入实现
+- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 + 前端 411）；SPEC 0011（PPT 配置选项）SPEC 文档已创建，待项目负责人确认后进入实现
+- 下一阶段入口：项目负责人确认 SPEC 0011 范围后进入实现
 
 ## 工程入口
 
@@ -52,6 +52,7 @@
 - [decisions/0019-deepseek-llm-integration.md](decisions/0019-deepseek-llm-integration.md)：接入真实 DeepSeek LLM 的决策记录（V1.1.0 SPEC 0007）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
+- [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。
 
 ## V1.0 发布文档
 
