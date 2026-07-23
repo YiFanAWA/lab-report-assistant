@@ -50,6 +50,7 @@
 - [decisions/0017-start-spec-0006-outline-and-deliverables.md](decisions/0017-start-spec-0006-outline-and-deliverables.md)：启动 SPEC 0006 大纲与交付物切片的决策记录。
 - [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
 - [decisions/0019-deepseek-llm-integration.md](decisions/0019-deepseek-llm-integration.md)：接入真实 DeepSeek LLM 的决策记录（V1.1.0 SPEC 0007）。
+- [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 
 ## V1.0 发布文档
 
