@@ -1,6 +1,6 @@
 # 实验报告助手｜实施计划
 
-> **给后续 agent 的要求：** SPEC 0001 第一开发切片已由项目负责人确认。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 公开资料与证据工作流已完成实现与端到端验收并由项目负责人确认收口。SPEC 0004 数据集工作区已完成实现与端到端验收并由项目负责人确认收口。SPEC 0005 受控 Python 执行已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 大纲与交付物已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007/0009/0010/0011 已完成实现与测试验收；SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个测试），待项目负责人确认收口。
+> **给后续 agent 的要求：** SPEC 0001 第一开发切片已由项目负责人确认。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 公开资料与证据工作流已完成实现与端到端验收并由项目负责人确认收口。SPEC 0004 数据集工作区已完成实现与端到端验收并由项目负责人确认收口。SPEC 0005 受控 Python 执行已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 大纲与交付物已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0008（部署文档与运维指南）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口；V1.1.0 已发布并打 tag v1.1.0（后端 704 passed + 前端 411 passed，0 warnings）。后续新切片开始前仍需先编写并确认新 SPEC。
 
 **目标：** 构建“实验报告助手”的第一版 Web MVP 闭环：项目创建、要求拆解、证据工作流、数据分析执行、大纲确认、Word/PPT 生成。
 
@@ -12,7 +12,7 @@
 
 ## 执行门禁
 
-代码阶段已由项目负责人批准启动，SPEC 0001 第一开发切片已完成命令、API 和前后端代理验收，并已由项目负责人确认。SPEC 0002 实验要求输入与结构化任务单已完成实现、复核验收并由项目负责人确认收口。SPEC 0003 公开资料与证据工作流已完成实现与端到端验收并由项目负责人确认收口。SPEC 0004 数据集工作区已完成实现、端到端验收并由项目负责人确认收口。SPEC 0005 受控 Python 执行 SPEC 文档已编写完成，待项目负责人确认后进入实现。当前暂停在 SPEC 0005 实现前。
+代码阶段已由项目负责人批准启动，SPEC 0001-0006 全部完成实现、端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段 SPEC 0007-0012 全部完成实现与测试验收并由项目负责人确认收口；V1.1.0 已发布并打 tag v1.1.0。任务 0-10 全部完成。后续新切片开始前仍需先编写并确认新 SPEC。
 
 ## 规划文件归属
 
@@ -76,10 +76,10 @@
 - [x] 定义 `ProjectStatus` 和项目创建/列表/详情最小合同。
 - [x] 定义 `RequirementPlan`、`ReplicationLevel`。
 - [x] 定义最小 `RequirementSource` 和 `ChangeRecord`。
-- [x] 定义 `SourceRecord`、`EvidenceCard`、`DatasetVersion`。（SourceRecord、EvidenceCard 在 SPEC 0003 实现；DatasetVersion 推迟到数据集切片）
-- [ ] 定义 `AnalysisPlan`、`CodeTask`、`ExecutionRun`。
-- [ ] 定义 `Outline`、`Deliverable`。
-- [ ] 为每个合同写 schema 或类型测试。
+- [x] 定义 `SourceRecord`、`EvidenceCard`、`DatasetVersion`。（SourceRecord、EvidenceCard 在 SPEC 0003 实现；DatasetVersion 在 SPEC 0004 实现）
+- [x] 定义 `AnalysisPlan`、`CodeTask`、`ExecutionRun`。（AnalysisPlan 在 SPEC 0004 实现；CodeTask/ExecutionRun 在 SPEC 0005 实现）
+- [x] 定义 `Outline`、`Deliverable`。（SPEC 0006 实现，含 DeliverableVersion）
+- [x] 为每个合同写 schema 或类型测试。（各 SPEC 均有 service/API/渲染器测试套件覆盖）
 - [x] 在需求任务单中区分模型建议、本地规则候选、未知项和超范围任务。
 
 ## 任务 3：项目工作区核心
@@ -92,8 +92,8 @@
 - [x] 保存需求来源、任务单生成、任务单修改、任务单确认的最小变更记录。
 - [x] 支持项目状态查询。
 - [x] 支持需求阶段从 `DRAFT` 推进到 `REQUIREMENT_PARSED` 和 `REQUIREMENT_CONFIRMED`。
-- [ ] 支持工作流阶段回退。
-- [ ] 测试状态不能跳过必需人工确认点。
+- [ ] 支持工作流阶段回退。（V2.0 待办：当前架构为单向推进 + STALE 传播，未实现阶段回退）
+- [x] 测试状态不能跳过必需人工确认点。（各 SPEC API 测试覆盖状态机前置校验，如 OUTLINE_NOT_GENERATABLE、PROJECT_EVIDENCE_NOT_CONFIRMED、PROJECT_NO_SUCCESSFUL_EXECUTION_RUN 等）
 
 ## 任务 4：实验要求拆解
 
@@ -168,14 +168,18 @@
 
 ## 任务 10：端到端验收
 
-**文件：** 代码阶段确认后创建。
+**文件：** `server/worker_e2e_verify.py`、`dev-docs/e2e-acceptance-report-v1.0.md`、`dev-docs/acceptance.md`。
 
-- [ ] 准备“胃病数据分析”标准实验样例。
-- [ ] 从创建项目跑到 Word/PPT 下载。
-- [ ] 验证资料性结论能追溯到来源。
-- [ ] 验证实验性结论能追溯到执行记录。
-- [ ] 验证 L3 或受限资源被拒绝或降级。
-- [ ] 更新 `dev-docs/acceptance.md` 的证据记录。
+**对应 SPEC：** V1.0 闭环验收（SPEC 0001-0006 端到端），已完成并通过。
+
+- [x] 准备"胃病数据分析"标准实验样例。
+- [x] 从创建项目跑到 Word/PPT 下载。
+- [x] 验证资料性结论能追溯到来源。
+- [x] 验证实验性结论能追溯到执行记录。
+- [x] 验证 L3 或受限资源被拒绝或降级。
+- [x] 更新 `dev-docs/acceptance.md` 的证据记录。
+
+**验收方式说明：** V1.0 端到端验收通过 `worker_e2e_verify.py` 脚本（proj_6c52304bf9fb 完整流转 RESULT_CONFIRMED → COMPLETED，Word 37032 bytes、PPT 32231 bytes）+ API 测试套件（覆盖 source_type/source_ids 追溯链、SOURCE_URL_NOT_PUBLIC/SOURCE_ACCESS_RESTRICTED 拒绝路径）+ e2e-acceptance-report-v1.0.md（16 项验收全部通过）完成。未做手动 UI 点击端到端（因无 in-app Browser 工具，已记录为非阻断债务，以 Vitest 411 个组件测试作为替代证据）。
 
 ## 覆盖关系
 
