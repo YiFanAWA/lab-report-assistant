@@ -5,8 +5,8 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：V1.0 端到端验收阶段，已完成技术债务清理（TD-001/TD-002 关闭，pytest 0 warnings）、Worker 端到端验证（状态机流转正常）、前端 UI 补充（大纲/交付物/执行工作区页面，SPEC 0005 前端接线已完成）、前端测试框架引入（Vitest + RTL，37 个单元测试全部通过），待项目负责人确认收口
-- 下一阶段入口：项目负责人确认收口后进入 git 版本控制上传；此后进入 V1.0 完整端到端手动演示验收
+- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（403 个测试全部通过），待项目负责人确认收口；SPEC 0010（Word 模板支持）SPEC 文档已创建，待项目负责人确认后进入实现
+- 下一阶段入口：项目负责人确认 SPEC 0009 收口 + 确认 SPEC 0010 范围后进入实现
 
 ## 工程入口
 
@@ -51,6 +51,7 @@
 - [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
 - [decisions/0019-deepseek-llm-integration.md](decisions/0019-deepseek-llm-integration.md)：接入真实 DeepSeek LLM 的决策记录（V1.1.0 SPEC 0007）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
+- [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 
 ## V1.0 发布文档
 

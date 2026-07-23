@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：SPEC 0005 受控 Python 执行已完成实现与端到端验收，待项目负责人确认收口  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收，待项目负责人确认收口。  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。SPEC 0005 已完成端到端验收（含主链路、错误分支、STALE 传播、受控执行环境安全限制）。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0005 已用 API 测试套件（33 个测试覆盖 11 个端点）作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。SPEC 0009 前端测试套件已从 37 个增加到 403 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0009 以 Vitest 单元测试套件作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收，待项目负责人确认收口；后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（403 个测试全部通过），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -107,7 +107,11 @@
 - SPEC 0002 的需求来源、结构化任务单、L0-L3、编辑确认、状态推进和最小变更记录已通过当前命令/API/代理验收，并已由项目负责人确认收口。
 - SPEC 0003 的来源登记、后台任务、Worker、采集与解析、证据卡片、确认拒绝、状态推进和 STALE 传播已通过当前命令/API/代理/curl 端到端验收，并已由项目负责人确认收口。
 - SPEC 0004 的数据集上传、字段概览、质量评分、分析方案候选、用户确认、状态推进和 STALE 传播已通过当前命令/API/curl 端到端验收，并已由项目负责人确认收口。
-- SPEC 0005 的受控 Python 执行引擎、AST import 白名单校验、psutil 进程树内存监控、CodeTask/ExecutionRun/ExecutionArtifact 核心合同、STALE 传播、状态推进到 RESULT_CONFIRMED 已通过 API 测试套件（33 个测试覆盖 11 个端点）和 python_executor 单元测试（48 个测试覆盖安全限制、超时、内存、产物收集）端到端验收，待项目负责人确认收口。
+- SPEC 0005 的受控 Python 执行引擎、AST import 白名单校验、psutil 进程树内存监控、CodeTask/ExecutionRun/ExecutionArtifact 核心合同、STALE 传播、状态推进到 RESULT_CONFIRMED 已通过 API 测试套件（33 个测试覆盖 11 个端点）和 python_executor 单元测试（48 个测试覆盖安全限制、超时、内存、产物收集）端到端验收，并已由项目负责人确认收口。
+- SPEC 0006 的大纲与交付物（Outline + Deliverable + DeliverableVersion）核心合同、Word/PPT 渲染器、状态推进到 COMPLETED、STALE 传播、交付物下载已通过 API 测试套件（21 个测试覆盖 11 个端点）、Worker handler 测试（13 个测试）和渲染器测试（18 个测试验证真实文件生成）端到端验收，并已由项目负责人确认收口。
+- V1.0.0 已发布并打 tag v1.0.0，端到端验收报告 `dev-docs/e2e-acceptance-report-v1.0.md` 全部通过。
+- V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与后端测试验收（605 passed, 0 warnings），5 个提供者全部替换为 LLM 优先 + LocalRule 降级。
+- V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（403 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件），待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -223,6 +227,17 @@
 | 2026-07-23 | SPEC 0005 前端测试框架引入 | 引入 Vitest + React Testing Library（vitest 4.1.10 + @testing-library/react + @testing-library/jest-dom + @testing-library/user-event + jsdom），新增 vitest.config.ts + setupTests.ts + package.json test 脚本；dependency-review.md 更新 | 通过 |
 | 2026-07-23 | SPEC 0005 前端单元测试 | `npm.cmd run test` 运行 **37 个测试全部通过**：api.test.ts（20 个，覆盖 11 个 API 函数的成功和错误场景）+ ExecutionWorkspaceView.test.tsx（17 个，覆盖渲染/生成区域/代码任务卡片/执行记录卡片/完成确认按钮）；lint 和 build 不受影响 | 通过 |
 | 2026-07-23 | SPEC 0007 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 **605 passed, 0 warnings**；原 569 + 新增 36 测试（deepseek_client 11 + deepseek_providers 25）；覆盖成功/降级/校验失败/错误码映射场景 | 通过 |
+| 2026-07-23 | SPEC 0009 启动 | 创建 `dev-docs/specs/0009-frontend-test-coverage.md`，限定前端测试覆盖补全范围：8 个 API 模块 + 11 个 Workspace 组件 | 通过 |
+| 2026-07-23 | SPEC 0009 测试框架配置 | 引入 Vitest 4.1.10 + React Testing Library + jsdom；新增 `vitest.config.ts` + `setupTests.ts` + `package.json` test 脚本；与 Vite 原生集成 | 通过 |
+| 2026-07-23 | SPEC 0009 第一批：projects + requirements API 测试 | 新增 `features/projects/__tests__/api.test.ts`（10 测试）+ `features/requirements/__tests__/api.test.ts`（19 测试），覆盖 6 个 projects API 和 7 个 requirements API 的成功/错误/状态码场景；commit `c8bbdf9` | 通过 |
+| 2026-07-23 | SPEC 0009 第一批：ProjectListView 组件测试 | 新增 `routes/__tests__/ProjectListView.test.tsx`（11 测试），覆盖渲染/创建项目/加载状态/错误展示/空状态；commit `32646d5` | 通过 |
+| 2026-07-23 | SPEC 0009 第一批：ProjectDetailView 组件测试 | 新增 `routes/__tests__/ProjectDetailView.test.tsx`（39 测试），覆盖 14 种状态中文标签映射和 8 个入口链接的 `isAtOrAfter` 状态机门控逻辑；commit `5782499` | 通过 |
+| 2026-07-23 | SPEC 0009 第一批：RequirementWorkspaceView 组件测试 | 新增 `routes/__tests__/RequirementWorkspaceView.test.tsx`（35 测试），覆盖粘贴要求/Word 上传/来源列表/任务单展示/编辑确认门控/复刻层级展示；commit `1e5e5c5` | 通过 |
+| 2026-07-23 | SPEC 0009 第二批：sources + evidence API 测试 | 新增 `features/sources/__tests__/api.test.ts`（16 测试）+ `features/evidence/__tests__/api.test.ts`（17 测试），覆盖 6 个 sources API（含 FormData 构造）和 6 个 evidence API（含 source_id/status 筛选参数）；commit `323b723` | 通过 |
+| 2026-07-23 | SPEC 0009 第二、三批：datasets + analysis + outlines + jobs API 测试 | 新增 4 个 API 测试文件共 83 测试：datasets（22，含 FormData + URL 编码）/ analysis（19，含筛选参数 + 状态门控）/ outlines（33，含 Word/PPT 触发 + 同步 URL 构造）/ jobs（9，含 status/job_type 筛选）；commit `2a87626` | 通过 |
+| 2026-07-23 | SPEC 0009 第二、三批：6 个 Workspace 组件测试 | 新增 6 个组件测试共 136 测试：SourcesWorkspaceView（24）/ EvidenceWorkspaceView（22）/ DatasetWorkspaceView（25）/ AnalysisWorkspaceView（21）/ OutlineWorkspaceView（24）/ DeliverableWorkspaceView（20）；覆盖加载状态/状态门控/表单校验/列表展示/操作按钮门控/STALE 提示/完成操作门控；commit `2a87626` | 通过 |
+| 2026-07-23 | SPEC 0009 完整测试套件验收 | `apps/web` 下运行 `npx vitest run`，结果为 **403 passed**（19 个测试文件）；从 37 个测试增加到 403 个，覆盖 8 个 API 模块和 11 个 Workspace 组件，无回归；`npm.cmd run lint` 和 `npm.cmd run build` 不受影响 | 通过 |
+| 2026-07-23 | SPEC 0009 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 Vitest 单元测试套件（403 个测试覆盖 19 个测试文件）作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 
