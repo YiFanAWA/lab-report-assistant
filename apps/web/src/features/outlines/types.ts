@@ -108,10 +108,25 @@ export interface GenerateOutlineResponse {
   job_id: string;
 }
 
-/** 触发生成交付物响应。 */
+/** 触发生成交付物响应。
+
+ * template_used 表示是否使用了项目级 Word 模板（SPEC 0010）。
+ */
 export interface GenerateDeliverableResponse {
   job_id: string;
   deliverable_id: string;
+  template_used?: boolean;
+}
+
+/** Word 模板响应体（SPEC 0010）。 */
+export interface WordTemplate {
+  id: string;
+  project_id: string;
+  original_filename: string;
+  file_size_bytes: number;
+  content_hash: string;
+  created_at: string;
+  updated_at: string | null;
 }
 
 /** 完成项目响应。 */

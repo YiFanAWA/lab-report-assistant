@@ -108,10 +108,27 @@ class GenerateOutlineResponse(BaseModel):
 
 
 class GenerateDeliverableResponse(BaseModel):
-    """触发生成交付物响应。"""
+    """触发生成交付物响应。
+
+    template_used 表示是否使用了项目级 Word 模板（SPEC 0010）。
+    PPT 生成的响应 template_used 固定为 False。
+    """
 
     job_id: str
     deliverable_id: str
+    template_used: bool = False
+
+
+class WordTemplateResponse(BaseModel):
+    """Word 模板响应（SPEC 0010）。"""
+
+    id: str
+    project_id: str
+    original_filename: str
+    file_size_bytes: int
+    content_hash: str
+    created_at: str
+    updated_at: str | None = None
 
 
 class CompleteProjectResponse(BaseModel):

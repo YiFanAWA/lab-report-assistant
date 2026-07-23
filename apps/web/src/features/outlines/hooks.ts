@@ -13,6 +13,9 @@ import {
   listDeliverables,
   listDeliverableVersions,
   completeProject,
+  uploadWordTemplate,
+  getWordTemplate,
+  deleteWordTemplate,
 } from "./api";
 import type { UpdateOutlineRequest } from "./types";
 
@@ -154,6 +157,43 @@ export function useCompleteProject(projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["project", projectId] });
       qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
+    },
+  });
+}
+
+// --- SPEC 0010 Word 模板 ---
+
+function wordTemplateKey(projectId: string) {
+  return ["word-template", projectId];
+}
+
+/** 获取 Word 模板信息。 */
+export function useWordTemplate(projectId: string) {
+  return useQuery({
+    queryKey: [...wordTemplateKey(projectId)],
+    queryFn: () => getWordTemplate(projectId),
+    staleTime: 5_000,
+  });
+}
+
+/** 上传或替换 Word 模板。 */
+export function useUploadWordTemplate(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadWordTemplate(projectId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...wordTemplateKey(projectId)] });
+    },
+  });
+}
+
+/** 删除 Word 模板。 */
+export function useDeleteWordTemplate(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteWordTemplate(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...wordTemplateKey(projectId)] });
     },
   });
 }

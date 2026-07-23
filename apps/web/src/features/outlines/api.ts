@@ -11,6 +11,7 @@ import type {
   GenerateOutlineResponse,
   GenerateDeliverableResponse,
   CompleteProjectResponse,
+  WordTemplate,
 } from "./types";
 
 const BASE = "/api";
@@ -171,4 +172,60 @@ export async function completeProject(
     { method: "POST" }
   );
   return handle<CompleteProjectResponse>(r);
+}
+
+// --- SPEC 0010 Word 模板管理 ---
+
+/** 上传或替换 Word 模板。 */
+export async function uploadWordTemplate(
+  projectId: string,
+  file: File
+): Promise<WordTemplate> {
+  const body = new FormData();
+  body.append("file", file);
+  const r = await fetch(
+    `${BASE}/projects/${encodeURIComponent(projectId)}/word-template`,
+    {
+      method: "POST",
+      body,
+    }
+  );
+  return handle<WordTemplate>(r);
+}
+
+/** 获取 Word 模板信息。无模板返回 null。 */
+export async function getWordTemplate(
+  projectId: string
+): Promise<WordTemplate | null> {
+  const r = await fetch(
+    `${BASE}/projects/${encodeURIComponent(projectId)}/word-template`
+  );
+  if (r.status === 200) {
+    return r.json() as Promise<WordTemplate | null>;
+  }
+  return handle<WordTemplate | null>(r);
+}
+
+/** 删除 Word 模板。 */
+export async function deleteWordTemplate(
+  projectId: string
+): Promise<void> {
+  const r = await fetch(
+    `${BASE}/projects/${encodeURIComponent(projectId)}/word-template`,
+    { method: "DELETE" }
+  );
+  if (!r.ok) {
+    let detail: any = null;
+    try {
+      detail = await r.json();
+    } catch {
+      detail = { message: `请求失败 (${r.status})` };
+    }
+    throw detail?.error ?? detail ?? { message: r.statusText };
+  }
+}
+
+/** 构造 Word 模板下载 URL。 */
+export function buildWordTemplateDownloadUrl(projectId: string): string {
+  return `${BASE}/projects/${encodeURIComponent(projectId)}/word-template/download`;
 }

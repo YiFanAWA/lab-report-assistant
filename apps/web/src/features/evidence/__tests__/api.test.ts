@@ -1,4 +1,4 @@
-/**
+﻿/**
  * evidence api 单元测试。
  *
  * 覆盖 6 个 API 函数：
@@ -9,7 +9,7 @@
  * - rejectEvidence: 拒绝证据卡片
  * - completeEvidence: 完成证据确认
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -83,11 +83,11 @@ beforeEach(() => {
 describe("generateEvidence", () => {
   it("成功生成证据卡片候选", async () => {
     const responseBody = { job_id: "job_001" };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await generateEvidence(PROJECT_ID, SOURCE_ID);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(
       `${BASE}/projects/${PROJECT_ID}/sources/${SOURCE_ID}/evidence/generate`
     );
@@ -97,17 +97,17 @@ describe("generateEvidence", () => {
 
   it("来源 ID 被 URL 编码", async () => {
     const responseBody = { job_id: "job_001" };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await generateEvidence(PROJECT_ID, "src with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("src%20with%20space");
   });
 
   it("来源不存在时抛出错误", async () => {
     const errorBody = { error: { code: "SOURCE_NOT_FOUND", message: "来源不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(generateEvidence(PROJECT_ID, "src_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -121,11 +121,11 @@ describe("listEvidence", () => {
   it("成功获取证据卡片列表", async () => {
     const cards = [makeCard(), makeCard({ id: "card_002" })];
     const responseBody: EvidenceCardListResponse = { items: cards };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listEvidence(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/evidence`
     );
     expect(result).toHaveLength(2);
@@ -134,7 +134,7 @@ describe("listEvidence", () => {
 
   it("空列表返回空数组", async () => {
     const responseBody: EvidenceCardListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listEvidence(PROJECT_ID);
 
@@ -143,31 +143,31 @@ describe("listEvidence", () => {
 
   it("按 source_id 筛选", async () => {
     const responseBody: EvidenceCardListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listEvidence(PROJECT_ID, { source_id: "src_001" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("source_id=src_001");
   });
 
   it("按 status 筛选", async () => {
     const responseBody: EvidenceCardListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listEvidence(PROJECT_ID, { status: "CANDIDATE" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("status=CANDIDATE");
   });
 
   it("同时按 source_id 和 status 筛选", async () => {
     const responseBody: EvidenceCardListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listEvidence(PROJECT_ID, { source_id: "src_001", status: "CONFIRMED" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("source_id=src_001");
     expect(url).toContain("status=CONFIRMED");
   });
@@ -180,7 +180,7 @@ describe("listEvidence", () => {
 describe("updateEvidence", () => {
   it("成功更新证据卡片", async () => {
     const updatedCard = makeCard({ summary: "更新后的摘要" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updatedCard));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updatedCard));
 
     const payload: UpdateEvidenceCardRequest = {
       summary: "更新后的摘要",
@@ -190,7 +190,7 @@ describe("updateEvidence", () => {
     };
     const result = await updateEvidence(PROJECT_ID, "card_001", payload);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/evidence/card_001`);
     expect(opts.method).toBe("PUT");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -204,7 +204,7 @@ describe("updateEvidence", () => {
 
   it("更新已确认卡片时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "已确认卡片不可更新" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     const payload: UpdateEvidenceCardRequest = {
       summary: "新摘要",
@@ -226,11 +226,11 @@ describe("confirmEvidence", () => {
       status: "CONFIRMED",
       confirmed_at: "2026-07-23T11:00:00Z",
     });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmedCard));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmedCard));
 
     const result = await confirmEvidence(PROJECT_ID, "card_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/evidence/card_001/confirm`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("CONFIRMED");
@@ -239,17 +239,17 @@ describe("confirmEvidence", () => {
 
   it("卡片 ID 被 URL 编码", async () => {
     const card = makeCard();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(card));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(card));
 
     await confirmEvidence(PROJECT_ID, "card with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("card%20with%20space");
   });
 
   it("确认已确认卡片时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "卡片已确认" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(confirmEvidence(PROJECT_ID, "card_001")).rejects.toEqual(errorBody.error);
   });
@@ -262,11 +262,11 @@ describe("confirmEvidence", () => {
 describe("rejectEvidence", () => {
   it("成功拒绝证据卡片", async () => {
     const rejectedCard = makeCard({ status: "REJECTED" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(rejectedCard));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(rejectedCard));
 
     const result = await rejectEvidence(PROJECT_ID, "card_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/evidence/card_001/reject`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("REJECTED");
@@ -274,7 +274,7 @@ describe("rejectEvidence", () => {
 
   it("拒绝已确认卡片时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "已确认卡片不可拒绝" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(rejectEvidence(PROJECT_ID, "card_001")).rejects.toEqual(errorBody.error);
   });
@@ -290,11 +290,11 @@ describe("completeEvidence", () => {
       project_id: PROJECT_ID,
       status: "EVIDENCE_CONFIRMED",
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await completeEvidence(PROJECT_ID);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/evidence/complete`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("EVIDENCE_CONFIRMED");
@@ -302,7 +302,7 @@ describe("completeEvidence", () => {
 
   it("无确认证据卡片时抛出错误", async () => {
     const errorBody = { error: { code: "NO_CONFIRMED_EVIDENCE", message: "无确认的证据卡片" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
 
     await expect(completeEvidence(PROJECT_ID)).rejects.toEqual(errorBody.error);
   });

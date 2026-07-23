@@ -62,6 +62,7 @@ async def handle_app_error(request: Request, exc: AppError):
         "OUTLINE_NOT_FOUND",
         "DELIVERABLE_NOT_FOUND",
         "DELIVERABLE_VERSION_NOT_FOUND",
+        "WORD_TEMPLATE_NOT_FOUND",
     }
     forbidden_codes = {
         "SOURCE_ACCESS_RESTRICTED",
@@ -72,6 +73,7 @@ async def handle_app_error(request: Request, exc: AppError):
         "REQUIREMENT_FILE_TOO_LARGE",
         "SOURCE_FILE_TOO_LARGE",
         "DATASET_FILE_TOO_LARGE",
+        "WORD_TEMPLATE_TOO_LARGE",
     }
     if exc.code in not_found_codes:
         status = 404

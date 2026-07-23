@@ -1,4 +1,4 @@
-/**
+﻿/**
  * datasets api 单元测试。
  *
  * 覆盖 8 个 API 函数：
@@ -11,7 +11,7 @@
  * - reuploadDataset: 重新上传数据集（创建新版本）
  * - completeDatasets: 完成数据集收集
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -106,12 +106,12 @@ beforeEach(() => {
 describe("uploadDataset", () => {
   it("成功上传文件数据集（含描述）", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const file = new File(["col1,col2\n1,2"], "data.csv", { type: "text/csv" });
     const result = await uploadDataset(PROJECT_ID, file, "标题", "描述");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/datasets/upload`);
     expect(opts.method).toBe("POST");
     expect(opts.body).toBeInstanceOf(FormData);
@@ -125,12 +125,12 @@ describe("uploadDataset", () => {
 
   it("未传 description 时不附加该字段", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const file = new File(["x"], "data.csv");
     await uploadDataset(PROJECT_ID, file, "标题");
 
-    const opts = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const opts = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     const formData = opts.body as FormData;
     expect(formData.get("title")).toBe("标题");
     expect(formData.has("description")).toBe(false);
@@ -138,18 +138,18 @@ describe("uploadDataset", () => {
 
   it("项目 ID 被 URL 编码", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const file = new File(["x"], "data.csv");
     await uploadDataset("proj with space", file, "标题");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("proj%20with%20space");
   });
 
   it("上传失败时抛出错误", async () => {
     const errorBody = { error: { code: "FILE_TOO_LARGE", message: "文件过大" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(413, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(413, errorBody));
 
     const file = new File(["x"], "big.csv");
     await expect(
@@ -165,7 +165,7 @@ describe("uploadDataset", () => {
 describe("createUrlDataset", () => {
   it("成功登记 URL 数据集", async () => {
     const dataset = makeDataset({ dataset_kind: "URL" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const result = await createUrlDataset(
       PROJECT_ID,
@@ -174,7 +174,7 @@ describe("createUrlDataset", () => {
       "描述"
     );
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/datasets/url`);
     expect(opts.method).toBe("POST");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -187,18 +187,18 @@ describe("createUrlDataset", () => {
 
   it("未传 description 时 body 中 description 为 undefined", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     await createUrlDataset(PROJECT_ID, "https://example.com/data.csv", "标题");
 
-    const opts = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const opts = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     const body = JSON.parse(opts.body);
     expect(body.description).toBeUndefined();
   });
 
   it("URL 无效时抛出校验错误", async () => {
     const errorBody = { error: { code: "VALIDATION_ERROR", message: "URL 格式无效" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
 
     await expect(
       createUrlDataset(PROJECT_ID, "not-a-url", "标题")
@@ -214,11 +214,11 @@ describe("listDatasets", () => {
   it("成功获取数据集列表", async () => {
     const datasets = [makeDataset(), makeDataset({ id: "ds_002" })];
     const responseBody: DatasetListResponse = { items: datasets };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDatasets(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/datasets`
     );
     expect(result).toHaveLength(2);
@@ -227,7 +227,7 @@ describe("listDatasets", () => {
 
   it("空列表返回空数组", async () => {
     const responseBody: DatasetListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDatasets(PROJECT_ID);
 
@@ -236,7 +236,7 @@ describe("listDatasets", () => {
 
   it("项目不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PROJECT_NOT_FOUND", message: "项目不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(listDatasets("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -249,11 +249,11 @@ describe("listDatasets", () => {
 describe("getDataset", () => {
   it("成功获取数据集详情", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const result = await getDataset(PROJECT_ID, "ds_001");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/datasets/ds_001`
     );
     expect(result.id).toBe("ds_001");
@@ -261,17 +261,17 @@ describe("getDataset", () => {
 
   it("数据集 ID 被 URL 编码", async () => {
     const dataset = makeDataset();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     await getDataset(PROJECT_ID, "ds with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("ds%20with%20space");
   });
 
   it("数据集不存在时抛出错误", async () => {
     const errorBody = { error: { code: "DATASET_NOT_FOUND", message: "数据集不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(getDataset(PROJECT_ID, "ds_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -288,11 +288,11 @@ describe("listDatasetVersions", () => {
       makeVersion({ id: "ver_002", version: 1, status: "SUPERSEDED" }),
     ];
     const responseBody: DatasetVersionListResponse = { items: versions };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDatasetVersions(PROJECT_ID, "ds_001");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/datasets/ds_001/versions`
     );
     expect(result).toHaveLength(2);
@@ -301,7 +301,7 @@ describe("listDatasetVersions", () => {
 
   it("无版本时返回空数组", async () => {
     const responseBody: DatasetVersionListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDatasetVersions(PROJECT_ID, "ds_001");
 
@@ -310,7 +310,7 @@ describe("listDatasetVersions", () => {
 
   it("数据集不存在时抛出错误", async () => {
     const errorBody = { error: { code: "DATASET_NOT_FOUND", message: "数据集不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(
       listDatasetVersions(PROJECT_ID, "ds_nonexistent")
@@ -325,11 +325,11 @@ describe("listDatasetVersions", () => {
 describe("deleteDataset", () => {
   it("成功软删除数据集", async () => {
     const deleted = makeDataset({ status: "DELETED" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(deleted));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(deleted));
 
     const result = await deleteDataset(PROJECT_ID, "ds_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/datasets/ds_001`);
     expect(opts.method).toBe("DELETE");
     expect(result.status).toBe("DELETED");
@@ -337,7 +337,7 @@ describe("deleteDataset", () => {
 
   it("删除已删除数据集抛出状态冲突", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "数据集已删除" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(deleteDataset(PROJECT_ID, "ds_001")).rejects.toEqual(errorBody.error);
   });
@@ -350,12 +350,12 @@ describe("deleteDataset", () => {
 describe("reuploadDataset", () => {
   it("成功重新上传数据集创建新版本", async () => {
     const dataset = makeDataset({ job_id: "job_002" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(dataset));
 
     const file = new File(["col1,col2\n3,4"], "data_v2.csv", { type: "text/csv" });
     const result = await reuploadDataset(PROJECT_ID, "ds_001", file);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/datasets/ds_001/reupload`);
     expect(opts.method).toBe("POST");
     expect(opts.body).toBeInstanceOf(FormData);
@@ -366,7 +366,7 @@ describe("reuploadDataset", () => {
 
   it("数据集不存在时抛出错误", async () => {
     const errorBody = { error: { code: "DATASET_NOT_FOUND", message: "数据集不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     const file = new File(["x"], "data.csv");
     await expect(
@@ -382,11 +382,11 @@ describe("reuploadDataset", () => {
 describe("completeDatasets", () => {
   it("成功完成数据集收集", async () => {
     const responseBody: CompleteDatasetsResponse = { status: "DATASET_READY" };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await completeDatasets(PROJECT_ID);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/datasets/complete`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("DATASET_READY");
@@ -394,7 +394,7 @@ describe("completeDatasets", () => {
 
   it("无就绪数据集时抛出错误", async () => {
     const errorBody = { error: { code: "NO_READY_DATASET", message: "无就绪数据集" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
 
     await expect(completeDatasets(PROJECT_ID)).rejects.toEqual(errorBody.error);
   });

@@ -49,6 +49,7 @@ from app.modules.outlines.models import (
     Deliverable,
     DeliverableVersion,
     Outline,
+    WordTemplate,
     _now,
     _uid,
 )
@@ -930,3 +931,192 @@ def mark_deliverable_version_failed(
                 f"交付物生成失败：版本 {version_id}（error={error_code}）")
     db.flush()
     return v
+
+
+# --- Word 模板管理（SPEC 0010）---
+
+
+import hashlib
+from fastapi import UploadFile
+
+
+def _word_template_to_response(t: "WordTemplate") -> "WordTemplateResponse":
+    from app.modules.outlines.contracts import WordTemplateResponse
+    return WordTemplateResponse(
+        id=t.id,
+        project_id=t.project_id,
+        original_filename=t.original_filename,
+        file_size_bytes=t.file_size_bytes,
+        content_hash=t.content_hash,
+        created_at=t.created_at.isoformat(),
+        updated_at=t.updated_at.isoformat() if t.updated_at else None,
+    )
+
+
+def word_template_to_response(t: "WordTemplate") -> "WordTemplateResponse":
+    """对外暴露的响应转换。"""
+    return _word_template_to_response(t)
+
+
+def get_word_template(db: Session, project_id: str) -> "WordTemplate | None":
+    """查询项目的 Word 模板，不存在返回 None。"""
+    _ensure_project(db, project_id)
+    return (
+        db.query(WordTemplate)
+        .filter(WordTemplate.project_id == project_id)
+        .first()
+    )
+
+
+def _save_word_template_file(
+    project_id: str, content: bytes
+) -> tuple[str, str, int]:
+    """保存模板文件到受控工作区，返回 (relative_path, content_hash, file_size)。
+
+    存储路径：{PROJECT_DATA_ROOT}/{project_id}/word_template/template.docx
+    使用固定文件名，覆盖式存储。
+    """
+    base_dir = settings.project_data_root / project_id / "word_template"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    file_path = base_dir / "template.docx"
+    file_path.write_bytes(content)
+
+    content_hash = hashlib.sha256(content).hexdigest()
+    # 相对路径（相对 project_data_root）
+    relative_path = f"{project_id}/word_template/template.docx"
+    return relative_path, content_hash, len(content)
+
+
+def _delete_word_template_file(project_id: str) -> None:
+    """删除模板文件，幂等。"""
+    base_dir = settings.project_data_root / project_id / "word_template"
+    if base_dir.exists():
+        import shutil
+        shutil.rmtree(base_dir, ignore_errors=True)
+
+
+def upload_word_template(
+    db: Session,
+    project_id: str,
+    upload_file: UploadFile,
+) -> "WordTemplate":
+    """上传或替换项目的 Word 模板。
+
+    校验：
+    - 项目存在
+    - 文件名后缀为 .docx
+    - 文件大小不超过 word_template_max_size_bytes
+    - 文件内容可被 python-docx 打开（推迟到渲染器层校验，此处仅校验大小和后缀）
+
+    若已有模板，先删旧记录和旧文件，再写新记录和新文件。
+    """
+    project = _ensure_project(db, project_id)
+
+    # 校验文件名后缀
+    original_filename = upload_file.filename or "template.docx"
+    if not original_filename.lower().endswith(".docx"):
+        raise AppError(
+            code="WORD_TEMPLATE_FILE_UNSUPPORTED",
+            message="仅支持 .docx 文件",
+        )
+
+    # 读取内容
+    content = upload_file.file.read()
+    file_size = len(content)
+
+    # 校验大小
+    if file_size > settings.word_template_max_size_bytes:
+        raise AppError(
+            code="WORD_TEMPLATE_TOO_LARGE",
+            message=(
+                f"模板文件大小 {file_size} 字节超过上限 "
+                f"{settings.word_template_max_size_bytes} 字节"
+            ),
+        )
+    if file_size == 0:
+        raise AppError(
+            code="WORD_TEMPLATE_FILE_UNSUPPORTED",
+            message="模板文件为空",
+        )
+
+    # 删除旧模板（如果存在）
+    existing = (
+        db.query(WordTemplate)
+        .filter(WordTemplate.project_id == project_id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.flush()
+
+    # 保存文件
+    relative_path, content_hash, saved_size = _save_word_template_file(
+        project_id, content
+    )
+
+    # 创建新记录
+    now = _now()
+    template = WordTemplate(
+        id=_uid(),
+        project_id=project_id,
+        file_path=relative_path,
+        original_filename=original_filename,
+        content_hash=content_hash,
+        file_size_bytes=saved_size,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(template)
+
+    _add_change(db, project_id,
+                "WORD_TEMPLATE_UPLOADED",
+                f"上传 Word 模板：{original_filename}（{saved_size} 字节）")
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+def delete_word_template(db: Session, project_id: str) -> None:
+    """删除项目的 Word 模板。
+
+    删除数据库记录和文件。
+    不存在时抛出 WORD_TEMPLATE_NOT_FOUND。
+    """
+    _ensure_project(db, project_id)
+    template = (
+        db.query(WordTemplate)
+        .filter(WordTemplate.project_id == project_id)
+        .first()
+    )
+    if not template:
+        raise AppError(
+            code="WORD_TEMPLATE_NOT_FOUND",
+            message="项目未上传 Word 模板",
+        )
+    db.delete(template)
+    _delete_word_template_file(project_id)
+    _add_change(db, project_id,
+                "WORD_TEMPLATE_DELETED",
+                "删除 Word 模板")
+    db.commit()
+
+
+def get_word_template_file_path(
+    db: Session, project_id: str
+) -> tuple[Path, str] | None:
+    """返回模板文件下载信息：(绝对路径, 原始文件名)。
+
+    无模板时返回 None。
+    """
+    template = get_word_template(db, project_id)
+    if not template:
+        return None
+    abs_path = (settings.project_data_root / template.file_path).resolve()
+    # 防路径穿越
+    base = settings.project_data_root.resolve()
+    if not str(abs_path).startswith(str(base)):
+        raise AppError(
+            code="WORD_TEMPLATE_NOT_DOWNLOADABLE",
+            message="模板路径无效",
+        )
+    return abs_path, template.original_filename

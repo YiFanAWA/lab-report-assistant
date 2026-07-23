@@ -1,11 +1,11 @@
-/**
+﻿/**
  * execution api 单元测试。
  *
  * 覆盖 11 个 API 函数（7 code_tasks + 4 execution_runs）：
  * - 成功场景：验证 URL、HTTP method、请求体、响应解析
  * - 错误场景：验证非 ok 响应时抛出结构化错误
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

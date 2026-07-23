@@ -39,6 +39,9 @@ vi.mock("../../features/outlines/hooks", () => ({
   useDeliverables: vi.fn(),
   useDeliverableVersions: vi.fn(),
   useCompleteProject: vi.fn(),
+  useWordTemplate: vi.fn(),
+  useUploadWordTemplate: vi.fn(),
+  useDeleteWordTemplate: vi.fn(),
 }));
 
 vi.mock("../../features/jobs/hooks", () => ({
@@ -54,6 +57,9 @@ import {
   useRejectOutline,
   useGenerateWord,
   useGeneratePpt,
+  useWordTemplate,
+  useUploadWordTemplate,
+  useDeleteWordTemplate,
 } from "../../features/outlines/hooks";
 import { useJob } from "../../features/jobs/hooks";
 import { OutlineWorkspaceView } from "../OutlineWorkspaceView";
@@ -68,6 +74,9 @@ const mockedUseConfirmOutline = vi.mocked(useConfirmOutline);
 const mockedUseRejectOutline = vi.mocked(useRejectOutline);
 const mockedUseGenerateWord = vi.mocked(useGenerateWord);
 const mockedUseGeneratePpt = vi.mocked(useGeneratePpt);
+const mockedUseWordTemplate = vi.mocked(useWordTemplate);
+const mockedUseUploadWordTemplate = vi.mocked(useUploadWordTemplate);
+const mockedUseDeleteWordTemplate = vi.mocked(useDeleteWordTemplate);
 const mockedUseJob = vi.mocked(useJob);
 
 // --- 测试辅助 ---
@@ -154,6 +163,14 @@ function setupMocks(options: {
   mockedUseRejectOutline.mockReturnValue(makeMutationMock() as any);
   mockedUseGenerateWord.mockReturnValue(makeMutationMock() as any);
   mockedUseGeneratePpt.mockReturnValue(makeMutationMock() as any);
+  mockedUseUploadWordTemplate.mockReturnValue(makeMutationMock() as any);
+  mockedUseDeleteWordTemplate.mockReturnValue(makeMutationMock() as any);
+
+  // Word 模板查询默认返回 null（无模板）
+  mockedUseWordTemplate.mockReturnValue({
+    data: null,
+    isLoading: false,
+  } as any);
 }
 
 /** 用路由上下文渲染组件。 */

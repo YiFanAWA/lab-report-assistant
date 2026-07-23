@@ -795,6 +795,9 @@ def handle_generate_word(db: Session, job) -> dict:
     """从已确认大纲生成 Word 文档。
 
     调用 WordRenderer 渲染 .docx 文件，保存为 DeliverableVersion（status=SUCCEEDED）。
+
+    SPEC 0010：若项目有 Word 模板，使用 render_with_template；
+    模板解析失败时降级到默认渲染并记录日志。
     """
     data = _parse_input(job)
     outline_id = data.get("outline_id")
@@ -832,14 +835,46 @@ def handle_generate_word(db: Session, job) -> dict:
                       / "deliverables" / deliverable_id)
         output_path = output_dir / f"word_v{version.version}.docx"
 
+        # SPEC 0010：检查项目级 Word 模板
+        template = outline_service.get_word_template(db, job.project_id)
         renderer = WordRenderer()
-        renderer.render(
-            project_name=project.name,
-            project_topic=project.topic,
-            outline_sections=sections,
-            execution_artifacts=artifacts,
-            output_path=str(output_path),
-        )
+
+        if template:
+            # 拼接模板绝对路径
+            template_abs_path = (
+                settings.project_data_root / template.file_path
+            ).resolve()
+            try:
+                renderer.render_with_template(
+                    template_path=str(template_abs_path),
+                    project_name=project.name,
+                    project_topic=project.topic,
+                    outline_sections=sections,
+                    execution_artifacts=artifacts,
+                    output_path=str(output_path),
+                )
+            except AppError as template_err:
+                # 降级到默认渲染
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Word 模板渲染失败，降级到默认渲染：%s (code=%s)",
+                    template_err.message, template_err.code,
+                )
+                renderer.render(
+                    project_name=project.name,
+                    project_topic=project.topic,
+                    outline_sections=sections,
+                    execution_artifacts=artifacts,
+                    output_path=str(output_path),
+                )
+        else:
+            renderer.render(
+                project_name=project.name,
+                project_topic=project.topic,
+                outline_sections=sections,
+                execution_artifacts=artifacts,
+                output_path=str(output_path),
+            )
 
         finished_at = _now()
         duration = (finished_at - started_at).total_seconds()
@@ -861,6 +896,7 @@ def handle_generate_word(db: Session, job) -> dict:
             "version": version.version,
             "file_size_bytes": file_size,
             "duration_seconds": duration,
+            "template_used": template is not None,
         }
     except AppError as err:
         finished_at = _now()

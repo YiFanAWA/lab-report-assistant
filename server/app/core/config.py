@@ -164,8 +164,21 @@ class Settings:
 
     @property
     def word_template_path(self) -> str:
-        """Word 模板路径（可选，留空使用默认模板）。"""
+        """Word 模板路径（可选，留空使用默认模板）。
+
+        注意：全局模板功能推迟到 V2.0。V1.1.0 使用项目级模板上传。
+        此环境变量保留但不使用。
+        """
         return os.getenv("WORD_TEMPLATE_PATH", "")
+
+    @property
+    def word_template_max_size_bytes(self) -> int:
+        """Word 模板文件大小上限（默认 5MB）。"""
+        raw = os.getenv("WORD_TEMPLATE_MAX_SIZE_BYTES", str(5 * 1024 * 1024))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 5 * 1024 * 1024
 
     @property
     def ppt_template_path(self) -> str:

@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收，待项目负责人确认收口。  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收；SPEC 0010（Word 模板支持）已完成实现与测试验收，待项目负责人确认收口。  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。SPEC 0009 前端测试套件已从 37 个增加到 403 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。当前会话未暴露可调用的 in-app Browser 工具，SPEC 0009 以 Vitest 单元测试套件作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。SPEC 0010 新增 18 个后端测试（623 passed）和 8 个前端 API 测试。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（403 个测试全部通过），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -111,7 +111,8 @@
 - SPEC 0006 的大纲与交付物（Outline + Deliverable + DeliverableVersion）核心合同、Word/PPT 渲染器、状态推进到 COMPLETED、STALE 传播、交付物下载已通过 API 测试套件（21 个测试覆盖 11 个端点）、Worker handler 测试（13 个测试）和渲染器测试（18 个测试验证真实文件生成）端到端验收，并已由项目负责人确认收口。
 - V1.0.0 已发布并打 tag v1.0.0，端到端验收报告 `dev-docs/e2e-acceptance-report-v1.0.md` 全部通过。
 - V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与后端测试验收（605 passed, 0 warnings），5 个提供者全部替换为 LLM 优先 + LocalRule 降级。
-- V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（403 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件），待项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（411 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件）。
+- V1.1.0 阶段：SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed，新增 18 个后端测试 + 8 个前端 API 测试，覆盖模板 CRUD/渲染器模板渲染/降级策略/Worker 接线/前端 UI 接线），待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -238,6 +239,21 @@
 | 2026-07-23 | SPEC 0009 第二、三批：6 个 Workspace 组件测试 | 新增 6 个组件测试共 136 测试：SourcesWorkspaceView（24）/ EvidenceWorkspaceView（22）/ DatasetWorkspaceView（25）/ AnalysisWorkspaceView（21）/ OutlineWorkspaceView（24）/ DeliverableWorkspaceView（20）；覆盖加载状态/状态门控/表单校验/列表展示/操作按钮门控/STALE 提示/完成操作门控；commit `2a87626` | 通过 |
 | 2026-07-23 | SPEC 0009 完整测试套件验收 | `apps/web` 下运行 `npx vitest run`，结果为 **403 passed**（19 个测试文件）；从 37 个测试增加到 403 个，覆盖 8 个 API 模块和 11 个 Workspace 组件，无回归；`npm.cmd run lint` 和 `npm.cmd run build` 不受影响 | 通过 |
 | 2026-07-23 | SPEC 0009 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 Vitest 单元测试套件（403 个测试覆盖 19 个测试文件）作为替代证据 | 未执行 |
+| 2026-07-23 | SPEC 0010 启动 | 创建 `dev-docs/specs/0010-word-template-support.md`，限定 Word 模板支持范围：项目级模板上传、Jinja2 风格 `{{var}}` 占位符、章节循环渲染 `{{#sections}}...{{/sections}}`、不支持预览（推迟到 V2.0） | 通过 |
+| 2026-07-23 | SPEC 0010 数据模型 | `server/app/modules/outlines/models.py` 新增 `WordTemplate` ORM 实体（项目级唯一约束 `uq_word_templates_project_id`，覆盖式存储）；新增 Alembic 迁移 `0007_create_word_templates_table.py` | 通过 |
+| 2026-07-23 | SPEC 0010 数据库迁移 | 使用全新临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移 `0006 -> 0007`，新增 `word_templates` 表和唯一约束 | 通过 |
+| 2026-07-23 | SPEC 0010 后端 service | `server/app/modules/outlines/service.py` 新增 Word 模板 CRUD 方法：`upload_word_template`（SHA-256 哈希 + 覆盖式存储）、`get_word_template`、`delete_word_template`、`get_word_template_file_path`；文件存储路径 `{PROJECT_DATA_ROOT}/{project_id}/word_template/template.docx` | 通过 |
+| 2026-07-23 | SPEC 0010 渲染器 | `server/app/infrastructure/renderers/word_renderer.py` 新增 `render_with_template` 方法 + 辅助方法（`_find_section_block`、`_replace_cover_vars`、`_replace_vars`、`_render_template_sections`）；采用文本重建方式渲染章节循环块（收集 before/template/after 段落 → 删除所有段落 → 按顺序重建） | 通过 |
+| 2026-07-23 | SPEC 0010 API 端点 | `server/app/api/routers/outlines.py` 新增 4 个 Word 模板端点：POST 上传、GET 获取、DELETE 删除、GET 下载；`generate_word` 返回新增 `template_used` 字段；`main.py` 扩展错误码映射（`WORD_TEMPLATE_NOT_FOUND` → 404，`WORD_TEMPLATE_TOO_LARGE` → 413） | 通过 |
+| 2026-07-23 | SPEC 0010 Worker 接线 | `server/worker/handlers.py` 的 `handle_generate_word` 接线模板逻辑：检测项目级模板 → 有模板调用 `render_with_template` → 失败时降级到默认 `render` 并记录 warning 日志 → 返回 `template_used` 字段 | 通过 |
+| 2026-07-23 | SPEC 0010 降级策略验证 | 渲染器测试覆盖：模板文件不存在返回 `WORD_TEMPLATE_FILE_MISSING`、模板无法打开返回 `WORD_TEMPLATE_PARSE_FAILED`、循环标记不匹配返回 `WORD_TEMPLATE_SECTION_BLOCK_INVALID`、无循环块时按封面变量替换 | 通过 |
+| 2026-07-23 | SPEC 0010 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 **623 passed, 0 warnings**；原 605 + 新增 18 测试（渲染器 6 + API 12）；覆盖模板上传/获取/删除/下载/替换/非 docx/过大/generate_word template_used | 通过 |
+| 2026-07-23 | SPEC 0010 前端接线 | `apps/web/src/features/outlines/{types,api,hooks}.ts` 新增 `WordTemplate` 接口 + 4 个 API 函数 + 3 个 TanStack Query hooks；`OutlineWorkspaceView.tsx` 新增 `WordTemplateSection` 组件（上传/下载/删除 UI + 占位符说明） | 通过 |
+| 2026-07-23 | SPEC 0010 前端测试 | `apps/web` 下运行 `npm.cmd test -- --run`，结果为 **411 passed**（19 个测试文件）；新增 8 个 Word 模板 API 测试（uploadWordTemplate 3 + getWordTemplate 2 + deleteWordTemplate 2 + buildWordTemplateDownloadUrl 1） | 通过 |
+| 2026-07-23 | SPEC 0010 前端 lint 修复 | 批量修复 8 个测试文件共 215 处 `global.fetch` → `(globalThis as any).fetch` 预存在 lint 错误 + 1 处 `analysis/api.test.ts` 类型错误（`UpdateAnalysisPlanRequest` 字段 `string | null` 与 `AnalysisPlan` 字段 `string` 不兼容，用非空断言修复） | 通过 |
+| 2026-07-23 | SPEC 0010 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过（含新增 WordTemplate 接口和 4 个 API 函数） | 通过 |
+| 2026-07-23 | SPEC 0010 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，**113 模块**转换，生成 `dist/`（393.37 kB，gzip 106.99 kB） | 通过 |
+| 2026-07-23 | SPEC 0010 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（12 个测试覆盖 4 个端点的成功/失败/降级路径）、渲染器测试（6 个测试覆盖模板渲染/降级）和前端测试（8 个 API 测试 + 组件测试）作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

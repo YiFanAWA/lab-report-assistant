@@ -12,9 +12,16 @@
   POST /outline/{outline_id}/reject             拒绝大纲
   POST /outline/{outline_id}/word/generate       触发 Word 生成
   POST /outline/{outline_id}/ppt/generate        触发 PPT 生成
+
+  SPEC 0010 Word 模板支持：
+  POST /word-template                            上传 Word 模板
+  GET  /word-template                            获取 Word 模板信息
+  DELETE /word-template                          删除 Word 模板
+  GET  /word-template/download                   下载 Word 模板
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -27,6 +34,7 @@ from app.modules.outlines.contracts import (
     OutlineListResponse,
     GenerateOutlineResponse,
     GenerateDeliverableResponse,
+    WordTemplateResponse,
 )
 
 router = APIRouter(prefix="/api/projects/{project_id}")
@@ -132,8 +140,14 @@ def generate_word(project_id: str, outline_id: str,
                    db: Session = Depends(_db)):
     job_id, deliverable_id = outline_service.generate_word(
         db, project_id, outline_id)
+    # 检查是否有项目级 Word 模板
+    template = outline_service.get_word_template(db, project_id)
+    template_used = template is not None
     return GenerateDeliverableResponse(
-        job_id=job_id, deliverable_id=deliverable_id)
+        job_id=job_id,
+        deliverable_id=deliverable_id,
+        template_used=template_used,
+    )
 
 
 # --- 触发 PPT 生成 ---
@@ -147,4 +161,58 @@ def generate_ppt(project_id: str, outline_id: str,
     job_id, deliverable_id = outline_service.generate_ppt(
         db, project_id, outline_id)
     return GenerateDeliverableResponse(
-        job_id=job_id, deliverable_id=deliverable_id)
+        job_id=job_id, deliverable_id=deliverable_id, template_used=False)
+
+
+# --- SPEC 0010 Word 模板管理 ---
+
+
+@router.post("/word-template",
+             response_model=WordTemplateResponse,
+             status_code=200)
+def upload_word_template(project_id: str,
+                          file: UploadFile = File(...),
+                          db: Session = Depends(_db)):
+    """上传或替换项目的 Word 模板。"""
+    template = outline_service.upload_word_template(
+        db, project_id, file)
+    return outline_service.word_template_to_response(template)
+
+
+@router.get("/word-template",
+            response_model=WordTemplateResponse | None)
+def get_word_template(project_id: str,
+                       db: Session = Depends(_db)):
+    """获取项目的 Word 模板信息。无模板返回 null。"""
+    template = outline_service.get_word_template(db, project_id)
+    if not template:
+        return None
+    return outline_service.word_template_to_response(template)
+
+
+@router.delete("/word-template", status_code=204)
+def delete_word_template(project_id: str,
+                         db: Session = Depends(_db)):
+    """删除项目的 Word 模板。"""
+    outline_service.delete_word_template(db, project_id)
+    return None
+
+
+@router.get("/word-template/download")
+def download_word_template(project_id: str,
+                             db: Session = Depends(_db)):
+    """下载项目的 Word 模板文件。"""
+    info = outline_service.get_word_template_file_path(db, project_id)
+    if not info:
+        raise AppError(
+            code="WORD_TEMPLATE_NOT_FOUND",
+            message="项目未上传 Word 模板",
+        )
+    abs_path, original_filename = info
+    media_type = ("application/vnd.openxmlformats-officedocument"
+                  ".wordprocessingml.document")
+    return FileResponse(
+        path=str(abs_path),
+        media_type=media_type,
+        filename=original_filename,
+    )

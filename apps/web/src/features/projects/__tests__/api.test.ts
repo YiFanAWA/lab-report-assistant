@@ -1,4 +1,4 @@
-/**
+﻿/**
  * projects api 单元测试。
  *
  * 覆盖 3 个 API 函数：
@@ -10,7 +10,7 @@
  * - 成功场景：验证 URL、HTTP method、请求体、响应解析
  * - 错误场景：验证非 ok 响应时抛出结构化错误
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -63,11 +63,11 @@ describe("fetchProjects", () => {
   it("成功获取项目列表", async () => {
     const projects = [makeProject(), makeProject({ id: "proj_def456" })];
     const responseBody: ProjectListResponse = { items: projects };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await fetchProjects();
 
-    expect(global.fetch).toHaveBeenCalledWith(`${BASE}/projects`);
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(`${BASE}/projects`);
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe("proj_abc123");
     expect(result[1].id).toBe("proj_def456");
@@ -75,7 +75,7 @@ describe("fetchProjects", () => {
 
   it("空列表返回空数组", async () => {
     const responseBody: ProjectListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await fetchProjects();
 
@@ -86,13 +86,13 @@ describe("fetchProjects", () => {
     const errorBody: ApiError = {
       error: { code: "INTERNAL_ERROR", message: "服务器内部错误", field: null },
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(500, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(500, errorBody));
 
     await expect(fetchProjects()).rejects.toEqual(errorBody.error);
   });
 
   it("响应非 JSON 时回退到默认错误", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce({
       ok: false,
       status: 502,
       statusText: "Bad Gateway",
@@ -109,22 +109,22 @@ describe("fetchProjects", () => {
 describe("fetchProject", () => {
   it("成功获取单个项目", async () => {
     const project = makeProject();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(project));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(project));
 
     const result = await fetchProject("proj_abc123");
 
-    expect(global.fetch).toHaveBeenCalledWith(`${BASE}/projects/proj_abc123`);
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(`${BASE}/projects/proj_abc123`);
     expect(result.id).toBe("proj_abc123");
     expect(result.name).toBe("胃病数据分析");
   });
 
   it("项目 ID 被 URL 编码", async () => {
     const project = makeProject();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(project));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(project));
 
     await fetchProject("proj with spaces/特殊字符");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/proj%20with%20spaces%2F%E7%89%B9%E6%AE%8A%E5%AD%97%E7%AC%A6`
     );
   });
@@ -133,7 +133,7 @@ describe("fetchProject", () => {
     const errorBody: ApiError = {
       error: { code: "PROJECT_NOT_FOUND", message: "项目不存在", field: null },
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(fetchProject("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -142,11 +142,11 @@ describe("fetchProject", () => {
 describe("createProject", () => {
   it("成功创建项目", async () => {
     const newProject = makeProject({ id: "proj_new123" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(newProject));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(newProject));
 
     const result = await createProject({ name: "新项目", topic: "测试主题" });
 
-    expect(global.fetch).toHaveBeenCalledWith(`${BASE}/projects`, {
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(`${BASE}/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "新项目", topic: "测试主题" }),
@@ -157,11 +157,11 @@ describe("createProject", () => {
 
   it("创建请求体包含 name 和 topic", async () => {
     const newProject = makeProject();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(newProject));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(newProject));
 
     await createProject({ name: "胃病分析", topic: "胃病" });
 
-    const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const callArgs = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(callArgs[1].body);
     expect(body.name).toBe("胃病分析");
     expect(body.topic).toBe("胃病");
@@ -173,7 +173,7 @@ describe("createProject", () => {
     const errorBody: ApiError = {
       error: { code: "VALIDATION_ERROR", message: "name 不能为空", field: "name" },
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
 
     await expect(
       createProject({ name: "", topic: "测试" })

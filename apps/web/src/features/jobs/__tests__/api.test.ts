@@ -1,11 +1,11 @@
-/**
+﻿/**
  * jobs api 单元测试。
  *
  * 覆盖 2 个 API 函数：
  * - fetchJob: 获取任务详情
  * - listJobs: 获取任务列表（含 status / job_type 筛选）
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -67,11 +67,11 @@ beforeEach(() => {
 describe("fetchJob", () => {
   it("成功获取任务详情", async () => {
     const job = makeJob();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(job));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(job));
 
     const result = await fetchJob(PROJECT_ID, "job_001");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/jobs/job_001`
     );
     expect(result.id).toBe("job_001");
@@ -81,17 +81,17 @@ describe("fetchJob", () => {
 
   it("任务 ID 被 URL 编码", async () => {
     const job = makeJob();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(job));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(job));
 
     await fetchJob(PROJECT_ID, "job with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("job%20with%20space");
   });
 
   it("任务不存在时抛出错误", async () => {
     const errorBody = { error: { code: "JOB_NOT_FOUND", message: "任务不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(fetchJob(PROJECT_ID, "job_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -105,11 +105,11 @@ describe("listJobs", () => {
   it("成功获取任务列表（无筛选）", async () => {
     const jobs = [makeJob(), makeJob({ id: "job_002", job_type: "PARSE_DOCUMENT" })];
     const responseBody: JobListResponse = { items: jobs };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listJobs(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/jobs`
     );
     expect(result).toHaveLength(2);
@@ -118,38 +118,38 @@ describe("listJobs", () => {
 
   it("按 status 筛选", async () => {
     const responseBody: JobListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listJobs(PROJECT_ID, { status: "RUNNING" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("status=RUNNING");
   });
 
   it("按 job_type 筛选", async () => {
     const responseBody: JobListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listJobs(PROJECT_ID, { job_type: "FETCH_URL" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("job_type=FETCH_URL");
   });
 
   it("同时按 status 和 job_type 筛选", async () => {
     const responseBody: JobListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listJobs(PROJECT_ID, { status: "FAILED", job_type: "PARSE_DOCUMENT" });
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("status=FAILED");
     expect(url).toContain("job_type=PARSE_DOCUMENT");
   });
 
   it("空列表返回空数组", async () => {
     const responseBody: JobListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listJobs(PROJECT_ID);
 
@@ -158,7 +158,7 @@ describe("listJobs", () => {
 
   it("项目不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PROJECT_NOT_FOUND", message: "项目不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(listJobs("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });

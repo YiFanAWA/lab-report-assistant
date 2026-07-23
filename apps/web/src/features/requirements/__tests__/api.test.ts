@@ -1,4 +1,4 @@
-/**
+﻿/**
  * requirements api 单元测试。
  *
  * 覆盖 7 个 API 函数：
@@ -14,7 +14,7 @@
  * - 成功场景：验证 URL、HTTP method、请求体、响应解析
  * - 错误场景：验证非 ok 响应时抛出结构化错误
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -121,11 +121,11 @@ beforeEach(() => {
 describe("addTextSource", () => {
   it("成功添加文本来源", async () => {
     const source = makeSource();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
 
     const result = await addTextSource(PROJECT_ID, "实验要求", "分析胃病数据");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/sources/text`);
     expect(opts.method).toBe("POST");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -137,17 +137,17 @@ describe("addTextSource", () => {
 
   it("项目 ID 被 URL 编码", async () => {
     const source = makeSource();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
 
     await addTextSource("proj with space", "title", "text");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("proj%20with%20space");
   });
 
   it("文本为空时抛出校验错误", async () => {
     const errorBody = { error: { code: "VALIDATION_ERROR", message: "text 不能为空" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
 
     await expect(
       addTextSource(PROJECT_ID, "实验要求", "")
@@ -158,14 +158,14 @@ describe("addTextSource", () => {
 describe("addDocxSource", () => {
   it("成功添加 .docx 文件来源", async () => {
     const source = makeSource({ source_type: "DOCX", original_file_path: "/path/to/file.docx" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
 
     const file = new File(["docx content"], "requirement.docx", {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
     const result = await addDocxSource(PROJECT_ID, "实验要求文档", file);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/sources/docx`);
     expect(opts.method).toBe("POST");
     // FormData 不设置 Content-Type，浏览器自动添加 boundary
@@ -175,12 +175,12 @@ describe("addDocxSource", () => {
 
   it("FormData 包含 file 和 title", async () => {
     const source = makeSource();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(source));
 
     const file = new File(["content"], "test.docx", { type: "application/octet-stream" });
     await addDocxSource(PROJECT_ID, "标题", file);
 
-    const opts = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const opts = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     const formData = opts.body as FormData;
     expect(formData.get("title")).toBe("标题");
     expect(formData.get("file")).toBeInstanceOf(File);
@@ -188,7 +188,7 @@ describe("addDocxSource", () => {
 
   it("文件上传失败时抛出错误", async () => {
     const errorBody = { error: { code: "FILE_TOO_LARGE", message: "文件过大" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(413, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(413, errorBody));
 
     const file = new File(["x"], "big.docx");
     await expect(
@@ -201,11 +201,11 @@ describe("fetchSources", () => {
   it("成功获取来源列表", async () => {
     const sources = [makeSource(), makeSource({ id: "src_002" })];
     const responseBody: SourceListResponse = { items: sources };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await fetchSources(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/requirements/sources`
     );
     expect(result).toHaveLength(2);
@@ -214,7 +214,7 @@ describe("fetchSources", () => {
 
   it("空列表返回空数组", async () => {
     const responseBody: SourceListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await fetchSources(PROJECT_ID);
 
@@ -223,7 +223,7 @@ describe("fetchSources", () => {
 
   it("项目不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PROJECT_NOT_FOUND", message: "项目不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(fetchSources("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -236,11 +236,11 @@ describe("fetchSources", () => {
 describe("generatePlan", () => {
   it("成功生成任务单", async () => {
     const plan = makePlanResponse();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
 
     const result = await generatePlan(PROJECT_ID, "src_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/plans/generate`);
     expect(opts.method).toBe("POST");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -251,7 +251,7 @@ describe("generatePlan", () => {
 
   it("来源 ID 不存在时抛出错误", async () => {
     const errorBody = { error: { code: "SOURCE_NOT_FOUND", message: "来源不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(generatePlan(PROJECT_ID, "src_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -260,11 +260,11 @@ describe("generatePlan", () => {
 describe("fetchCurrentPlan", () => {
   it("成功获取当前任务单", async () => {
     const plan = makePlanResponse({ status: "CONFIRMED" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
 
     const result = await fetchCurrentPlan(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/requirements/plan`
     );
     expect(result.status).toBe("CONFIRMED");
@@ -272,7 +272,7 @@ describe("fetchCurrentPlan", () => {
 
   it("任务单不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PLAN_NOT_FOUND", message: "任务单不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(fetchCurrentPlan(PROJECT_ID)).rejects.toEqual(errorBody.error);
   });
@@ -281,11 +281,11 @@ describe("fetchCurrentPlan", () => {
 describe("confirmPlan", () => {
   it("成功确认任务单", async () => {
     const confirmedPlan = makePlanResponse({ status: "CONFIRMED", confirmed_at: "2026-07-23T11:00:00Z" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmedPlan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmedPlan));
 
     const result = await confirmPlan(PROJECT_ID, "plan_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/plans/plan_001/confirm`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("CONFIRMED");
@@ -294,17 +294,17 @@ describe("confirmPlan", () => {
 
   it("plan ID 被 URL 编码", async () => {
     const plan = makePlanResponse();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
 
     await confirmPlan(PROJECT_ID, "plan with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("plan%20with%20space");
   });
 
   it("任务单已确认时抛出状态冲突错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "任务单已确认" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(confirmPlan(PROJECT_ID, "plan_001")).rejects.toEqual(errorBody.error);
   });
@@ -319,13 +319,13 @@ describe("updatePlan", () => {
         topic: "更新后的主题",
       },
     });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updatedPlan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updatedPlan));
 
     const payload: RequirementPlanPayload = makePlanResponse().payload;
     payload.topic = "更新后的主题";
     const result = await updatePlan(PROJECT_ID, "plan_001", payload);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/plans/plan_001`);
     expect(opts.method).toBe("PUT");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -337,7 +337,7 @@ describe("updatePlan", () => {
 
   it("更新已确认任务单时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "已确认任务单不可更新" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     const payload = makePlanResponse().payload;
     await expect(updatePlan(PROJECT_ID, "plan_001", payload)).rejects.toEqual(errorBody.error);
@@ -345,12 +345,12 @@ describe("updatePlan", () => {
 
   it("payload 被包裹在对象中发送", async () => {
     const plan = makePlanResponse();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(plan));
 
     const payload = makePlanResponse().payload;
     await updatePlan(PROJECT_ID, "plan_001", payload);
 
-    const opts = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const opts = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     const body = JSON.parse(opts.body);
     // 后端期望 { payload: {...} } 结构
     expect(body.payload).toBeDefined();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * outlines api 单元测试。
  *
  * 覆盖 12 个 API 函数：
@@ -15,7 +15,7 @@
  * - buildDeliverableDownloadUrl: 构造下载 URL（同步）
  * - completeProject: 完成项目
  *
- * 使用 vitest mock global.fetch。
+ * 使用 vitest mock (globalThis as any).fetch。
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -137,11 +137,11 @@ beforeEach(() => {
 describe("generateOutline", () => {
   it("成功触发生成大纲", async () => {
     const responseBody: GenerateOutlineResponse = { job_id: "job_001" };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await generateOutline(PROJECT_ID);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/outline/generate`);
     expect(opts.method).toBe("POST");
     expect(result.job_id).toBe("job_001");
@@ -149,7 +149,7 @@ describe("generateOutline", () => {
 
   it("项目状态不允许生成时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "项目状态不允许生成大纲" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(generateOutline(PROJECT_ID)).rejects.toEqual(errorBody.error);
   });
@@ -163,11 +163,11 @@ describe("listOutlines", () => {
   it("成功获取大纲列表（无筛选）", async () => {
     const outlines = [makeOutline(), makeOutline({ id: "outline_002" })];
     const responseBody: OutlineListResponse = { items: outlines };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listOutlines(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/outline`
     );
     expect(result).toHaveLength(2);
@@ -176,17 +176,17 @@ describe("listOutlines", () => {
 
   it("按 status 筛选", async () => {
     const responseBody: OutlineListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listOutlines(PROJECT_ID, "CONFIRMED");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("status=CONFIRMED");
   });
 
   it("空列表返回空数组", async () => {
     const responseBody: OutlineListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listOutlines(PROJECT_ID);
 
@@ -195,7 +195,7 @@ describe("listOutlines", () => {
 
   it("项目不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PROJECT_NOT_FOUND", message: "项目不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(listOutlines("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -208,11 +208,11 @@ describe("listOutlines", () => {
 describe("getOutline", () => {
   it("成功获取大纲详情", async () => {
     const outline = makeOutline();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(outline));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(outline));
 
     const result = await getOutline(PROJECT_ID, "outline_001");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/outline/outline_001`
     );
     expect(result.id).toBe("outline_001");
@@ -221,17 +221,17 @@ describe("getOutline", () => {
 
   it("大纲 ID 被 URL 编码", async () => {
     const outline = makeOutline();
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(outline));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(outline));
 
     await getOutline(PROJECT_ID, "outline with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("outline%20with%20space");
   });
 
   it("大纲不存在时抛出错误", async () => {
     const errorBody = { error: { code: "OUTLINE_NOT_FOUND", message: "大纲不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(
       getOutline(PROJECT_ID, "outline_nonexistent")
@@ -257,11 +257,11 @@ describe("updateOutline", () => {
       ],
     };
     const updated = makeOutline({ ...payload, status: "CANDIDATE" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updated));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updated));
 
     const result = await updateOutline(PROJECT_ID, "outline_001", payload);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/outline/outline_001`);
     expect(opts.method).toBe("PUT");
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -274,7 +274,7 @@ describe("updateOutline", () => {
   it("CONFIRMED 状态编辑后回到 CANDIDATE", async () => {
     const payload: UpdateOutlineRequest = { sections: [] };
     const updated = makeOutline({ status: "CANDIDATE", sections: [] });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updated));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(updated));
 
     const result = await updateOutline(PROJECT_ID, "outline_001", payload);
 
@@ -283,7 +283,7 @@ describe("updateOutline", () => {
 
   it("REJECTED 状态编辑时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "已拒绝大纲不可编辑" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(
       updateOutline(PROJECT_ID, "outline_001", { sections: [] })
@@ -301,11 +301,11 @@ describe("confirmOutline", () => {
       status: "CONFIRMED",
       confirmed_at: "2026-07-23T11:00:00Z",
     });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmed));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(confirmed));
 
     const result = await confirmOutline(PROJECT_ID, "outline_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/outline/outline_001/confirm`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("CONFIRMED");
@@ -314,7 +314,7 @@ describe("confirmOutline", () => {
 
   it("非 CANDIDATE 状态确认时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "只能确认候选大纲" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(
       confirmOutline(PROJECT_ID, "outline_001")
@@ -329,11 +329,11 @@ describe("confirmOutline", () => {
 describe("rejectOutline", () => {
   it("成功拒绝大纲", async () => {
     const rejected = makeOutline({ status: "REJECTED" });
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(rejected));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(rejected));
 
     const result = await rejectOutline(PROJECT_ID, "outline_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/outline/outline_001/reject`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("REJECTED");
@@ -341,7 +341,7 @@ describe("rejectOutline", () => {
 
   it("非 CANDIDATE 状态拒绝时抛出错误", async () => {
     const errorBody = { error: { code: "INVALID_STATUS", message: "只能拒绝候选大纲" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(
       rejectOutline(PROJECT_ID, "outline_001")
@@ -359,11 +359,11 @@ describe("generateWord", () => {
       job_id: "job_word",
       deliverable_id: "del_001",
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await generateWord(PROJECT_ID, "outline_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(
       `${BASE}/projects/${PROJECT_ID}/outline/outline_001/word/generate`
     );
@@ -374,7 +374,7 @@ describe("generateWord", () => {
 
   it("大纲未确认时抛出错误", async () => {
     const errorBody = { error: { code: "OUTLINE_NOT_CONFIRMED", message: "大纲未确认" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(
       generateWord(PROJECT_ID, "outline_001")
@@ -392,11 +392,11 @@ describe("generatePpt", () => {
       job_id: "job_ppt",
       deliverable_id: "del_002",
     };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await generatePpt(PROJECT_ID, "outline_001");
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(
       `${BASE}/projects/${PROJECT_ID}/outline/outline_001/ppt/generate`
     );
@@ -407,7 +407,7 @@ describe("generatePpt", () => {
 
   it("大纲未确认时抛出错误", async () => {
     const errorBody = { error: { code: "OUTLINE_NOT_CONFIRMED", message: "大纲未确认" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(
       generatePpt(PROJECT_ID, "outline_001")
@@ -426,11 +426,11 @@ describe("listDeliverables", () => {
       makeDeliverable({ id: "del_002", deliverable_type: "PPT" }),
     ];
     const responseBody: DeliverableListResponse = { items: deliverables };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDeliverables(PROJECT_ID);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/deliverables`
     );
     expect(result).toHaveLength(2);
@@ -439,17 +439,17 @@ describe("listDeliverables", () => {
 
   it("按 status 筛选", async () => {
     const responseBody: DeliverableListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listDeliverables(PROJECT_ID, "SUCCEEDED");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("status=SUCCEEDED");
   });
 
   it("空列表返回空数组", async () => {
     const responseBody: DeliverableListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDeliverables(PROJECT_ID);
 
@@ -458,7 +458,7 @@ describe("listDeliverables", () => {
 
   it("项目不存在时抛出错误", async () => {
     const errorBody = { error: { code: "PROJECT_NOT_FOUND", message: "项目不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(listDeliverables("proj_nonexistent")).rejects.toEqual(errorBody.error);
   });
@@ -475,11 +475,11 @@ describe("listDeliverableVersions", () => {
       makeVersion({ id: "ver_002", version: 1 }),
     ];
     const responseBody: DeliverableVersionListResponse = { items: versions };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDeliverableVersions(PROJECT_ID, "del_001");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
       `${BASE}/projects/${PROJECT_ID}/deliverables/del_001/versions`
     );
     expect(result).toHaveLength(2);
@@ -488,7 +488,7 @@ describe("listDeliverableVersions", () => {
 
   it("无版本时返回空数组", async () => {
     const responseBody: DeliverableVersionListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await listDeliverableVersions(PROJECT_ID, "del_001");
 
@@ -497,17 +497,17 @@ describe("listDeliverableVersions", () => {
 
   it("交付物 ID 被 URL 编码", async () => {
     const responseBody: DeliverableVersionListResponse = { items: [] };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     await listDeliverableVersions(PROJECT_ID, "del with space");
 
-    const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("del%20with%20space");
   });
 
   it("交付物不存在时抛出错误", async () => {
     const errorBody = { error: { code: "DELIVERABLE_NOT_FOUND", message: "交付物不存在" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
 
     await expect(
       listDeliverableVersions(PROJECT_ID, "del_nonexistent")
@@ -540,7 +540,7 @@ describe("buildDeliverableDownloadUrl", () => {
 
   it("不发起网络请求", () => {
     const fetchSpy = vi.fn();
-    global.fetch = fetchSpy;
+    (globalThis as any).fetch = fetchSpy;
 
     buildDeliverableDownloadUrl(PROJECT_ID, "del_001", "ver_001");
 
@@ -555,11 +555,11 @@ describe("buildDeliverableDownloadUrl", () => {
 describe("completeProject", () => {
   it("成功完成项目", async () => {
     const responseBody: CompleteProjectResponse = { status: "COMPLETED" };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
 
     const result = await completeProject(PROJECT_ID);
 
-    const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/complete`);
     expect(opts.method).toBe("POST");
     expect(result.status).toBe("COMPLETED");
@@ -567,8 +567,143 @@ describe("completeProject", () => {
 
   it("交付物不齐全时抛出错误", async () => {
     const errorBody = { error: { code: "DELIVERABLES_INCOMPLETE", message: "交付物不齐全" } };
-    global.fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
+    (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(409, errorBody));
 
     await expect(completeProject(PROJECT_ID)).rejects.toEqual(errorBody.error);
+  });
+});
+
+// ============================================================
+// SPEC 0010 Word 模板 API
+// ============================================================
+
+import {
+  uploadWordTemplate,
+  getWordTemplate,
+  deleteWordTemplate,
+  buildWordTemplateDownloadUrl,
+} from "../api";
+import type { WordTemplate } from "../types";
+
+describe("SPEC 0010 Word 模板 API", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // --- uploadWordTemplate ---
+
+  describe("uploadWordTemplate", () => {
+    it("成功上传模板返回模板信息", async () => {
+      const responseBody: WordTemplate = {
+        id: "wt_001",
+        project_id: PROJECT_ID,
+        original_filename: "template.docx",
+        file_size_bytes: 12345,
+        content_hash: "abc123",
+        created_at: "2026-07-23T00:00:00Z",
+        updated_at: null,
+      };
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+
+      const file = new File(["content"], "template.docx", {
+        type: "application/octet-stream",
+      });
+      const result = await uploadWordTemplate(PROJECT_ID, file);
+
+      expect(result.id).toBe("wt_001");
+      expect(result.original_filename).toBe("template.docx");
+
+      const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/word-template`);
+      expect(opts.method).toBe("POST");
+      expect(opts.body).toBeInstanceOf(FormData);
+    });
+
+    it("非 .docx 文件返回错误", async () => {
+      const errorBody = {
+        error: { code: "WORD_TEMPLATE_FILE_UNSUPPORTED", message: "仅支持 .docx 文件" },
+      };
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(400, errorBody));
+
+      const file = new File(["content"], "template.txt", { type: "text/plain" });
+      await expect(uploadWordTemplate(PROJECT_ID, file)).rejects.toEqual(errorBody.error);
+    });
+
+    it("文件过大返回错误", async () => {
+      const errorBody = {
+        error: { code: "WORD_TEMPLATE_TOO_LARGE", message: "模板文件过大" },
+      };
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(413, errorBody));
+
+      const file = new File([new Array(6000000).join("x")], "big.docx");
+      await expect(uploadWordTemplate(PROJECT_ID, file)).rejects.toEqual(errorBody.error);
+    });
+  });
+
+  // --- getWordTemplate ---
+
+  describe("getWordTemplate", () => {
+    it("有模板时返回模板信息", async () => {
+      const responseBody: WordTemplate = {
+        id: "wt_001",
+        project_id: PROJECT_ID,
+        original_filename: "template.docx",
+        file_size_bytes: 12345,
+        content_hash: "abc123",
+        created_at: "2026-07-23T00:00:00Z",
+        updated_at: null,
+      };
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(responseBody));
+
+      const result = await getWordTemplate(PROJECT_ID);
+
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe("wt_001");
+      const url = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/word-template`);
+    });
+
+    it("无模板时返回 null", async () => {
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockOkResponse(null));
+
+      const result = await getWordTemplate(PROJECT_ID);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // --- deleteWordTemplate ---
+
+  describe("deleteWordTemplate", () => {
+    it("成功删除模板", async () => {
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+      } as Response);
+
+      await deleteWordTemplate(PROJECT_ID);
+
+      const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/word-template`);
+      expect(opts.method).toBe("DELETE");
+    });
+
+    it("模板不存在时抛出错误", async () => {
+      const errorBody = {
+        error: { code: "WORD_TEMPLATE_NOT_FOUND", message: "项目未上传 Word 模板" },
+      };
+      (globalThis as any).fetch = vi.fn().mockResolvedValueOnce(mockErrorResponse(404, errorBody));
+
+      await expect(deleteWordTemplate(PROJECT_ID)).rejects.toEqual(errorBody.error);
+    });
+  });
+
+  // --- buildWordTemplateDownloadUrl ---
+
+  describe("buildWordTemplateDownloadUrl", () => {
+    it("返回正确的下载 URL", () => {
+      const url = buildWordTemplateDownloadUrl(PROJECT_ID);
+      expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/word-template/download`);
+    });
   });
 });

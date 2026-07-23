@@ -99,6 +99,7 @@ function makeTask(overrides: Partial<RequirementTask> = {}): RequirementTask {
     title: "数据清洗",
     description: "处理缺失值",
     task_type: "REQUIRED",
+    reason: "",
     source_quote: "原文引用",
     ...overrides,
   };

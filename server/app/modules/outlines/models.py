@@ -1,18 +1,19 @@
 """大纲与交付物核心数据模型。
 
-Outline、Deliverable、DeliverableVersion ORM 实体。
+Outline、Deliverable、DeliverableVersion、WordTemplate ORM 实体。
 
 设计要点：
 - Outline.sections_json 存储章节列表，每章节含 title/content/source_type/source_ids
 - Deliverable 关联 Outline，类型 WORD 或 PPT
 - DeliverableVersion 每次生成创建新版本，旧版本保留不删除
 - 失败状态不被覆盖为成功
+- WordTemplate 项目级绑定，每项目最多一个，重新上传覆盖旧模板
 """
 
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy import DateTime, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.engine import Base
@@ -92,3 +93,27 @@ class DeliverableVersion(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
+
+
+class WordTemplate(Base):
+    """项目级 Word 模板实体。
+
+    每个项目最多一个 Word 模板（唯一约束）。
+    重新上传时覆盖旧模板（先删旧记录+旧文件，再写新记录+新文件）。
+    file_path 相对 PROJECT_DATA_ROOT，绝对路径由 service 层拼接。
+    content_hash 用于检测模板是否变更。
+    """
+
+    __tablename__ = "word_templates"
+    __table_args__ = (
+        UniqueConstraint("project_id", name="uq_word_templates_project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uid)
+    project_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)

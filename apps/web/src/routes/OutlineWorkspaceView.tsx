@@ -10,7 +10,11 @@ import {
   useRejectOutline,
   useGenerateWord,
   useGeneratePpt,
+  useWordTemplate,
+  useUploadWordTemplate,
+  useDeleteWordTemplate,
 } from "../features/outlines/hooks";
+import { buildWordTemplateDownloadUrl } from "../features/outlines/api";
 import { useJob } from "../features/jobs/hooks";
 import type { Outline, OutlineSection } from "../features/outlines/types";
 
@@ -778,6 +782,141 @@ export function OutlineWorkspaceView() {
           </div>
         )}
       </section>
+
+      {/* SPEC 0010 Word 模板管理 */}
+      <WordTemplateSection projectId={pid} />
     </div>
+  );
+}
+
+/** Word 模板管理区域（SPEC 0010）。 */
+function WordTemplateSection({ projectId }: { projectId: string }) {
+  const { data: template, isLoading } = useWordTemplate(projectId);
+  const uploadMutation = useUploadWordTemplate(projectId);
+  const deleteMutation = useDeleteWordTemplate(projectId);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
+
+  return (
+    <section
+      style={{
+        marginTop: "1.5rem",
+        padding: "1rem",
+        border: "1px solid #e5e7eb",
+        borderRadius: "0.5rem",
+      }}
+    >
+      <h3 style={{ margin: "0 0 0.5rem" }}>Word 模板</h3>
+      <p style={{ fontSize: "0.8rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+        上传 .docx 模板后，生成 Word 时会使用该模板替代默认格式。
+        模板支持占位符：{`{{project_name}}`}、{`{{project_topic}}`}、
+        {`{{generated_date}}`}、{`{{#sections}}...{{/sections}}`} 章节循环。
+        模板解析失败会自动降级到默认格式。
+      </p>
+
+      {isLoading && (
+        <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>
+      )}
+
+      {template && (
+        <div
+          style={{
+            padding: "0.5rem 0.75rem",
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "0.375rem",
+            marginBottom: "0.75rem",
+          }}
+        >
+          <div style={{ fontSize: "0.85rem" }}>
+            <strong>{template.original_filename}</strong>
+            <span style={{ color: "#6b7280", marginLeft: "0.5rem" }}>
+              ({(template.file_size_bytes / 1024).toFixed(1)} KB)
+            </span>
+          </div>
+          <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+            上传时间：{new Date(template.created_at).toLocaleString("zh-CN")}
+          </div>
+          <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+            <a
+              href={buildWordTemplateDownloadUrl(projectId)}
+              style={{
+                fontSize: "0.8rem",
+                color: "#2563eb",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              下载模板
+            </a>
+            <button
+              onClick={() => {
+                setDeleteErr(null);
+                deleteMutation.mutate(undefined, {
+                  onError: (e) =>
+                    setDeleteErr(errorMessage(e, "删除失败")),
+                });
+              }}
+              disabled={deleteMutation.isPending}
+              style={{
+                padding: "0.15rem 0.5rem",
+                fontSize: "0.8rem",
+                background: "#fee2e2",
+                color: "#b91c1c",
+                border: "1px solid #fecaca",
+                borderRadius: "0.25rem",
+                cursor: "pointer",
+              }}
+            >
+              {deleteMutation.isPending ? "删除中…" : "删除模板"}
+            </button>
+          </div>
+          {deleteErr && (
+            <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+              {deleteErr}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!template && !isLoading && (
+        <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+          当前未上传 Word 模板，生成 Word 时使用默认格式。
+        </p>
+      )}
+
+      {/* 上传表单 */}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          type="file"
+          accept=".docx"
+          onChange={(e) => {
+            setUploadErr(null);
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith(".docx")) {
+              setUploadErr("请选择 .docx 文件");
+              return;
+            }
+            uploadMutation.mutate(file, {
+              onError: (e) => setUploadErr(errorMessage(e, "上传失败")),
+            });
+          }}
+          disabled={uploadMutation.isPending}
+          style={{ fontSize: "0.85rem" }}
+        />
+        {uploadMutation.isPending && (
+          <span style={{ fontSize: "0.8rem", color: "#2563eb" }}>上传中…</span>
+        )}
+        {uploadMutation.isSuccess && (
+          <span style={{ fontSize: "0.8rem", color: "#16a34a" }}>已上传 ✓</span>
+        )}
+      </div>
+      {uploadErr && (
+        <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+          {uploadErr}
+        </p>
+      )}
+    </section>
   );
 }
