@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收；SPEC 0010（Word 模板支持）已完成实现与测试验收；SPEC 0011（PPT 配置选项）已完成实现与测试验收；SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个测试），待项目负责人确认收口。  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。SPEC 0012 新增 58 个后端测试（704 passed，0 warnings），覆盖数据保留配置降级、RUNNING job 保护、过期判断、级联删除、文件系统清理、脚本参数和端到端集成。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 704 个测试（0 warnings）。V1.1.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed）；SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试覆盖页数/主题色/图表开关/降级策略/API 校验）；SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个后端测试覆盖配置降级/RUNNING job 保护/过期判断/级联删除/文件清理/脚本参数/端到端集成），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收并由项目负责人确认收口；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）并由项目负责人确认收口；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed）并由项目负责人确认收口；SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试覆盖页数/主题色/图表开关/降级策略/API 校验）并由项目负责人确认收口；SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个后端测试覆盖配置降级/RUNNING job 保护/过期判断/级联删除/文件清理/脚本参数/端到端集成）并由项目负责人确认收口。V1.1.0 已发布并打 tag v1.1.0。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -110,11 +110,12 @@
 - SPEC 0005 的受控 Python 执行引擎、AST import 白名单校验、psutil 进程树内存监控、CodeTask/ExecutionRun/ExecutionArtifact 核心合同、STALE 传播、状态推进到 RESULT_CONFIRMED 已通过 API 测试套件（33 个测试覆盖 11 个端点）和 python_executor 单元测试（48 个测试覆盖安全限制、超时、内存、产物收集）端到端验收，并已由项目负责人确认收口。
 - SPEC 0006 的大纲与交付物（Outline + Deliverable + DeliverableVersion）核心合同、Word/PPT 渲染器、状态推进到 COMPLETED、STALE 传播、交付物下载已通过 API 测试套件（21 个测试覆盖 11 个端点）、Worker handler 测试（13 个测试）和渲染器测试（18 个测试验证真实文件生成）端到端验收，并已由项目负责人确认收口。
 - V1.0.0 已发布并打 tag v1.0.0，端到端验收报告 `dev-docs/e2e-acceptance-report-v1.0.md` 全部通过。
-- V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与后端测试验收（605 passed, 0 warnings），5 个提供者全部替换为 LLM 优先 + LocalRule 降级。
-- V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（411 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件）。
-- V1.1.0 阶段：SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed，新增 18 个后端测试 + 8 个前端 API 测试，覆盖模板 CRUD/渲染器模板渲染/降级策略/Worker 接线/前端 UI 接线），待项目负责人确认收口。
-- V1.1.0 阶段：SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试，覆盖渲染器页数控制/主题色应用/图表开关/降级策略 + API 请求体解析/校验/错误码），待项目负责人确认收口。
-- V1.1.0 阶段：SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个后端测试，覆盖 DATA_RETENTION_DAYS 配置降级 10 + has_active_jobs RUNNING/PENDING 保护 18 + 过期判断/级联删除/文件系统清理 14 + 脚本参数解析/输出 10 + 端到端集成 6），待项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与后端测试验收（605 passed, 0 warnings），5 个提供者全部替换为 LLM 优先 + LocalRule 降级，已由项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（411 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件），已由项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed，新增 18 个后端测试 + 8 个前端 API 测试，覆盖模板 CRUD/渲染器模板渲染/降级策略/Worker 接线/前端 UI 接线），已由项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试，覆盖渲染器页数控制/主题色应用/图表开关/降级策略 + API 请求体解析/校验/错误码），已由项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0012（数据保留周期配置）已完成实现与测试验收（后端 704 passed，新增 58 个后端测试，覆盖 DATA_RETENTION_DAYS 配置降级 10 + has_active_jobs RUNNING/PENDING 保护 18 + 过期判断/级联删除/文件系统清理 14 + 脚本参数解析/输出 10 + 端到端集成 6），已由项目负责人确认收口。
+- V1.1.0 已发布并打 tag v1.1.0：发布前补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB），回归测试执行记录见 [v1.1.0-regression-test-plan.md](v1.1.0-regression-test-plan.md) 第九章，发布清单见 [release-checklist-v1.1.0.md](release-checklist-v1.1.0.md)，发布说明见 [changelog-v1.1.0.md](changelog-v1.1.0.md)。
 
 ### 代码阶段停止条件
 
@@ -279,6 +280,11 @@
 | 2026-07-23 | SPEC 0012 数据库迁移验证 | SPEC 0012 无 schema 变更（仅新增配置和脚本），运行 `.venv\Scripts\python.exe -m alembic upgrade head` 确认现有迁移（0001-0007）无错误 | 通过 |
 | 2026-07-23 | SPEC 0012 文档回写 | 更新根 `README.md`（新增 DATA_RETENTION_DAYS 环境变量表 + "数据保留与清理"章节）、`dev-docs/README.md`（状态 + SPEC 0012 链接）、`dev-docs/acceptance.md`（状态 + 证据记录）、`dev-docs/implementation-plan.md`（顶部说明）、`dev-docs/v1.1.0-planning.md`（SPEC 0012 状态更新为已完成） | 通过 |
 | 2026-07-23 | SPEC 0012 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以后端测试套件（58 个测试覆盖配置降级/RUNNING job 保护/过期判断/级联删除/文件清理/脚本参数/端到端集成）作为替代证据 | 未执行 |
+| 2026-07-23 | V1.1.0 前端 lint 回归 | `apps/web` 下运行 `npm.cmd run lint`，结果为 `tsc --noEmit` 通过，无类型错误（含 SPEC 0010 WordTemplate 接口、SPEC 0011 PptConfig 接口） | 通过 |
+| 2026-07-23 | V1.1.0 前端 build 回归 | `apps/web` 下运行 `npm.cmd run build`，结果为 Vite 构建通过，114 模块转换，生成 `dist/`（394.96 kB，gzip 107.49 kB） | 通过 |
+| 2026-07-23 | V1.1.0 回归测试执行记录 | 6 项检查全部通过（后端 704 + 前端 411 + lint + build + 迁移 + SPEC 0012 专项 58），详见 [v1.1.0-regression-test-plan.md](v1.1.0-regression-test-plan.md) 第九章 | 通过 |
+| 2026-07-23 | V1.1.0 发布文档回写 | 更新 `dev-docs/README.md`（状态行 + V1.1.0 发布文档索引）、`dev-docs/acceptance.md`（SPEC 0010/0011/0012 由"待确认收口"改为"已确认收口"，V1.1.0 已发布）；新增 `dev-docs/release-checklist-v1.1.0.md` | 通过 |
+| 2026-07-23 | V1.1.0 项目负责人确认收口 | 项目负责人确认两份草稿文档（changelog-v1.1.0.md、v1.1.0-regression-test-plan.md）无修订、确认 SPEC 0010/0011/0012 收口并发布 V1.1.0，要求打 tag v1.1.0 并 push | 通过 |
 
 ## 漂移检查清单
 
