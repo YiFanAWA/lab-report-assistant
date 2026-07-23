@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Python 虚拟环境（容器内重新创建）
+.venv
+__pycache__
+*.pyc
+*.pyo
+
+# 测试与数据（不进入生产镜像）
+tests
+.pytest_cache
+data
+
+# 构建产物
+*.egg-info
+build
+dist
+
+# IDE 与临时文件
+.vscode
+.idea
+.tmp
+*.log

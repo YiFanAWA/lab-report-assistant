@@ -43,6 +43,73 @@ python -m worker.main
 
 Worker 轮询后台任务表，处理 URL 采集、文档解析、LLM 调用、Python 执行、Word/PPT 生成等异步任务。
 
+## Docker 启动（推荐）
+
+### 前置要求
+
+- Docker Desktop（含 Docker Engine + Docker Compose）
+
+### 一键启动
+
+```bash
+# 1. 复制环境变量模板（首次使用）
+cp .env.example .env
+
+# 2. 构建镜像并启动三服务（backend + worker + frontend）
+docker compose build
+docker compose up -d
+
+# 3. 访问应用
+# 前端：http://localhost
+# 后端 API：http://localhost:8001
+# 健康检查：http://localhost:8001/health
+```
+
+### 端口说明
+
+| 服务 | 容器内端口 | 宿主机端口 | 说明 |
+| --- | --- | --- | --- |
+| frontend（nginx） | 80 | 80 | 前端入口，`/api` 请求反向代理到 backend |
+| backend（uvicorn） | 8001 | 8001 | 与 `config.py` 默认值一致，704 测试基于此端口 |
+| worker | — | — | 后台任务进程，不对外暴露端口 |
+
+> 端口被占用时，修改 `docker-compose.yml` 中 `ports` 的左侧数字（宿主机端口），容器内端口保持不变。
+
+### 验证 Worker 在容器内正常工作
+
+```bash
+# 运行 Worker 容器内验证脚本
+powershell -ExecutionPolicy Bypass -File server/scripts/docker_worker_verify.ps1
+```
+
+脚本验证：worker 容器运行状态、worker 日志显示启动、`worker.main` 在容器内可导入、worker command 与 SPEC 0013 一致。
+
+### 常用命令
+
+```bash
+# 查看日志
+docker compose logs -f backend
+docker compose logs -f worker
+
+# 停止服务（保留数据）
+docker compose down
+
+# 停止并删除数据（慎用）
+docker compose down -v
+
+# 重新构建（代码变更后）
+docker compose build && docker compose up -d
+```
+
+### 数据持久化
+
+| 数据卷 | 容器内路径 | 说明 |
+| --- | --- | --- |
+| `db-data` | `/app/data/db` | SQLite 数据库文件 |
+| `project-data` | `/app/data/projects` | 数据集、交付物、Word 模板等 |
+
+> 容器重建后数据不丢失。`docker compose down` 保留数据，`docker compose down -v` 删除数据。
+
 ## 环境变量配置
 
 所有环境变量均有默认值，无需配置即可使用 LocalRule 模式（本地规则提供者）。

@@ -1,0 +1,15 @@
+# Git
+.git
+.gitignore
+
+# Node 依赖（容器内重新安装）
+node_modules
+
+# 构建产物（容器内重新构建）
+dist
+
+# 测试与临时文件
+coverage
+*.log
+.vscode
+.idea

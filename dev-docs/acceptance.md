@@ -289,6 +289,8 @@
 | 2026-07-23 | V1.1.0 回归验收第二道门禁 | SPEC 0007（36 passed）+ SPEC 0010（39 passed）+ SPEC 0011（23 passed）针对性测试全部通过 | 通过 |
 | 2026-07-23 | V1.1.0 回归验收第三道门禁-端到端 | `worker_e2e_verify.py` 临时数据库运行：项目 `proj_f4d1ef5672c3` RESULT_CONFIRMED → COMPLETED，Word 37033 bytes + PPT 32231 bytes 文件实际生成，E2E_RESULT=PASS；LocalRule 降级路径验证通过 | 通过 |
 | 2026-07-23 | V1.1.0 回归验收第三道门禁-关键回归点 | 63 passed 覆盖 R-1 STALE 传播 / R-2 版本管理 / R-3 失败不覆盖 / R-4 socket 拦截 / R-5 localhost/file:// 拒绝 / R-6 路径穿越防护 | 通过 |
+| 2026-07-24 | SPEC 0013 Docker 文件创建 | 创建 server/Dockerfile（多阶段+科学计算包）、apps/web/Dockerfile（node build+nginx）、docker-compose.yml（三服务+端口详细注释）、.dockerignore×2、entrypoint.sh、nginx.conf、.env.example、docker_worker_verify.ps1；.env 已在 .gitignore 排除 | 通过（文件创建） |
+| 2026-07-24 | SPEC 0013 Docker 构建验证 | `docker compose build` 因 Docker 守护进程未运行失败（`failed to connect to docker API... daemon is running`）；Docker CLI 29.5.2 + Compose v5.1.3 已安装；待 Docker Desktop 启动后执行 AC-1~AC-18 验收 | 待验证 |
 
 ## 漂移检查清单
 

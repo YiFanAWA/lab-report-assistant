@@ -304,7 +304,7 @@ SPEC 0004 实际启用的新增后端依赖：
 | `python -m uvicorn app.main:app --reload` | 启动后端 API |
 | `python -m pytest` | 后端测试 |
 | `alembic upgrade head` | 应用数据库迁移 |
-| `python -m worker` | 启动后台 Worker |
+| `python -m worker.main` | 启动后台 Worker |
 
 这些命令当前只是规划，未创建对应文件或脚本。
 
@@ -318,3 +318,32 @@ SPEC 0004 实际启用的新增后端依赖：
 - 样例数据文件发生修改；
 - 项目从本地单用户改为在线多用户；
 - 用户要求更换大模型供应商、前端框架或后端框架。
+
+## 9. Docker 镜像依赖（SPEC 0013，2026-07-24 新增）
+
+V1.2.0 Docker 化部署引入的基础设施镜像，不新增 Python/Node.js 业务依赖。
+
+### 9.1 基础镜像
+
+| 镜像 | 用途 | 选择理由 |
+| --- | --- | --- |
+| `python:3.13-slim` | 后端 + Worker 运行时 | 与开发环境 3.13.5 一致；slim（debian glibc）支持科学计算包预编译 wheel，alpine（musl libc）不支持 |
+| `node:20-slim` | 前端构建阶段 | Node 20 LTS，支持 Vite 6 构建 |
+| `nginx:alpine` | 前端静态托管 + API 反向代理 | 仅托管静态文件和反向代理，无需 Python/Node 运行时，alpine 体积小 |
+
+### 9.2 科学计算包（Docker 镜像内额外安装）
+
+AGENTS.md 要求"应用托管受控环境，用户不应手动安装 pandas/numpy/matplotlib"。这些包不在 `pyproject.toml` 的 dependencies 中（开发环境手动安装），Docker 镜像构建时额外固定版本安装：
+
+| 包 | 版本 | 用途 |
+| --- | --- | --- |
+| pandas | 3.0.3 | 数据分析 |
+| numpy | 2.5.1 | 数值计算 |
+| scipy | 1.18.0 | 统计检验 |
+| scikit-learn | 1.9.0 | 机器学习 |
+| matplotlib | 3.11.0 | 图表生成 |
+| psutil | 7.2.2 | 执行沙箱内存监控 |
+
+### 9.3 已知限制
+
+- 科学计算包未声明在 `pyproject.toml` dependencies 中，属于已存在债务（开发环境手动安装）。Docker 化通过 Dockerfile 额外安装弥补，但 `pip install -e .` 不会自动安装这些包。后续应考虑在 `pyproject.toml` 添加 `[project.optional-dependencies] analysis` 段。

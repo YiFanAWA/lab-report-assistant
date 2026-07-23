@@ -1,0 +1,81 @@
+# 实验报告助手 Docker Compose 编排
+# 使用方法：
+#   1. 复制 .env.example 为 .env 并按需修改
+#   2. docker compose build && docker compose up -d
+#   3. 访问 http://localhost（前端）
+#   4. docker compose down 停止
+
+services:
+  # ===== 后端 API 服务 =====
+  # 提供实验报告助手的 REST API，包括项目/要求/来源/数据集/执行/大纲/交付物等接口
+  backend:
+    build: ./server
+    container_name: lab-report-backend
+    env_file: .env
+    volumes:
+      # 数据库持久化：SQLite 文件存储在 volume 中，容器重建不丢数据
+      - db-data:/app/data/db
+      # 项目数据持久化：数据集/交付物/Word模板等文件
+      - project-data:/app/data/projects
+    ports:
+      # 端口映射格式：<宿主机端口>:<容器内端口>
+      # 容器内固定 8001，与 server/app/core/config.py 默认值和 704 个测试保持一致
+      # 如需改宿主机访问端口，改左侧数字即可（如 "8000:8001"），无需改容器内端口
+      # 常见排障：端口被占用时改左侧数字，或用 `netstat -ano | findstr :8001` 查占用
+      - "8001:8001"
+    healthcheck:
+      # 健康检查：调用 /health 端点，backend 健康后 worker 才启动
+      test: ["CMD", ".venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    # 资源限制（可选，V1.2.0 默认不限制，保持与 V1.1.0 一致）
+    # mem_limit: 2g
+    # cpus: 2
+
+  # ===== Worker 后台任务服务 =====
+  # 轮询 background_jobs 表，处理 URL 采集/PDF 解析/LLM 调用/Python 执行/Word-PPT 生成等异步任务
+  # 与 backend 共享同一镜像和同一数据库 volume，保证数据一致
+  worker:
+    build: ./server
+    container_name: lab-report-worker
+    env_file: .env
+    volumes:
+      # 共享数据库 volume（与 backend 同一 SQLite 文件）
+      - db-data:/app/data/db
+      # 共享项目数据 volume（Worker 生成的交付物需与 backend 互通）
+      - project-data:/app/data/projects
+    # Worker 启动命令（覆盖 backend 的 CMD）
+    # python -m worker.main：worker 包的 main.py 入口（worker 无 __main__.py）
+    command: [".venv/bin/python", "-m", "worker.main"]
+    depends_on:
+      backend:
+        # 等待 backend 健康检查通过后才启动，避免数据库未就绪
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===== 前端 Nginx 服务 =====
+  # 托管 Vite 构建产物，并将 /api 请求反向代理到 backend
+  frontend:
+    build: ./apps/web
+    container_name: lab-report-frontend
+    ports:
+      # 前端端口：宿主机 80 映射到 nginx 80
+      # 用户通过 http://localhost 访问前端，前端 /api 请求由 nginx 代理到 backend:8001
+      # 如需改宿主机端口（如 8080），改左侧数字即可
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+# ===== 数据卷 =====
+# 命名卷由 Docker 管理，数据持久化在宿主机但路径由 Docker 决定
+# 查看卷数据：docker volume inspect lab-report-assistant_db-data
+# 清理卷（会删除所有数据）：docker compose down -v
+volumes:
+  db-data:
+    # SQLite 数据库文件，backend 和 worker 共享
+  project-data:
+    # 项目数据（数据集/交付物/模板等），backend 和 worker 共享
