@@ -222,6 +222,7 @@
 | 2026-07-23 | SPEC 0005 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，**113 模块**转换（原 110 + 新增 3），生成 `dist/`（389.56 kB，gzip 106.12 kB） | 通过 |
 | 2026-07-23 | SPEC 0005 前端测试框架引入 | 引入 Vitest + React Testing Library（vitest 4.1.10 + @testing-library/react + @testing-library/jest-dom + @testing-library/user-event + jsdom），新增 vitest.config.ts + setupTests.ts + package.json test 脚本；dependency-review.md 更新 | 通过 |
 | 2026-07-23 | SPEC 0005 前端单元测试 | `npm.cmd run test` 运行 **37 个测试全部通过**：api.test.ts（20 个，覆盖 11 个 API 函数的成功和错误场景）+ ExecutionWorkspaceView.test.tsx（17 个，覆盖渲染/生成区域/代码任务卡片/执行记录卡片/完成确认按钮）；lint 和 build 不受影响 | 通过 |
+| 2026-07-23 | SPEC 0007 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest`，结果为 **605 passed, 0 warnings**；原 569 + 新增 36 测试（deepseek_client 11 + deepseek_providers 25）；覆盖成功/降级/校验失败/错误码映射场景 | 通过 |
 
 ## 漂移检查清单
 

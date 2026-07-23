@@ -43,6 +43,38 @@ class Settings:
         return os.getenv("DEEPSEEK_API_KEY", "")
 
     @property
+    def deepseek_base_url(self) -> str:
+        """DeepSeek API 基础 URL。"""
+        return os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+
+    @property
+    def deepseek_timeout_seconds(self) -> int:
+        """DeepSeek HTTP 超时秒数。"""
+        raw = os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "30")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 30
+
+    @property
+    def deepseek_max_retries(self) -> int:
+        """DeepSeek 最大重试次数（仅对 5xx 和网络超时重试）。"""
+        raw = os.getenv("DEEPSEEK_MAX_RETRIES", "2")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 2
+
+    @property
+    def deepseek_temperature(self) -> float:
+        """DeepSeek 采样温度（默认 0.3，偏稳定）。"""
+        raw = os.getenv("DEEPSEEK_TEMPERATURE", "0.3")
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return 0.3
+
+    @property
     def source_fetch_timeout_seconds(self) -> int:
         raw = os.getenv("SOURCE_FETCH_TIMEOUT_SECONDS", "30")
         try:

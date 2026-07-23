@@ -5,6 +5,62 @@
 
 ---
 
+## SPEC 0007：真实 DeepSeek LLM 接入
+
+**完成日期：** 2026-07-23  
+**阶段：** V1.1.0 版本，第一个 SPEC  
+**目标：** 将 V1.0 的 5 个 LocalRule 提供者替换为真实 DeepSeek LLM 提供者，保留 LocalRule 作为降级后备。
+
+### 一、新增文件（8 个）
+
+| 文件 | 行数 | 职责 |
+| --- | --- | --- |
+| `server/app/infrastructure/llm/__init__.py` | 1 | LLM 基础设施包 |
+| `server/app/infrastructure/llm/deepseek_client.py` | ~200 | DeepSeek API 统一客户端（HTTP 调用/超时/重试/错误映射） |
+| `server/app/modules/llm/deepseek_requirement_provider.py` | ~200 | 实验要求拆解 LLM provider |
+| `server/app/modules/llm/deepseek_evidence_provider.py` | ~140 | 证据卡片提取 LLM provider |
+| `server/app/modules/llm/deepseek_analysis_plan_provider.py` | ~150 | 分析方案生成 LLM provider |
+| `server/app/modules/llm/deepseek_code_task_provider.py` | ~130 | 代码任务生成 LLM provider |
+| `server/app/modules/llm/deepseek_outline_provider.py` | ~170 | 实验大纲生成 LLM provider |
+| `server/tests/test_deepseek_client.py` | ~230 | DeepSeekClient 单元测试（11 个） |
+| `server/tests/test_deepseek_providers.py` | ~520 | 5 个 provider + Gateway 测试（25 个） |
+
+### 二、修改文件（3 个）
+
+| 文件 | 改动 | 说明 |
+| --- | --- | --- |
+| `server/app/core/config.py` | +34 行 | 新增 5 个 DeepSeek 环境变量属性 |
+| `server/app/modules/llm/gateway.py` | 重写 5 个工厂函数 | 每个新增 `deepseek` 分支 |
+| `server/pyproject.toml` | +1 行 | httpx 从 dev 依赖提升为生产依赖 |
+
+### 三、架构设计
+
+1. **分层架构**：API 路由（不改）→ Gateway 工厂（扩展）→ DeepSeekXxxProvider（新增）→ DeepSeekClient（基础设施）→ DeepSeek API
+2. **降级策略**：LLM 调用失败（网络/超时/HTTP错误/JSON解析失败/Pydantic校验失败）→ 降级到 LocalRule → source_label 标记 `DEEPSEEK` 或降级
+3. **结构化输出校验**：每个 provider 使用 Pydantic 模型校验 LLM 返回的 JSON，防止幻觉
+4. **重试策略**：仅对 5xx 和网络超时重试（指数退避），不对 401/429/400 重试
+
+### 四、新增配置
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DEEPSEEK_API_KEY` | `""` | API 密钥 |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | API 基础 URL |
+| `DEEPSEEK_TIMEOUT_SECONDS` | `30` | HTTP 超时 |
+| `DEEPSEEK_MAX_RETRIES` | `2` | 最大重试 |
+| `DEEPSEEK_TEMPERATURE` | `0.3` | 采样温度 |
+
+启用方式：设置 `REQUIREMENT_DRAFT_PROVIDER=deepseek` + `DEEPSEEK_API_KEY=sk-xxx`
+
+### 五、验收证据
+
+| 验收项 | 命令 | 结果 |
+| --- | --- | --- |
+| 后端测试 | `python -m pytest` | **605 passed, 0 warnings**（原 569 + 新增 36） |
+| 新增测试覆盖 | deepseek_client（11）+ deepseek_providers（25） | 成功/降级/校验失败/错误码映射 |
+
+---
+
 ## SPEC 0005 前端测试：Vitest + RTL 单元测试
 
 **完成日期：** 2026-07-23  

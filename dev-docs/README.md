@@ -49,6 +49,7 @@
 - [decisions/0016-start-spec-0005-controlled-python-execution.md](decisions/0016-start-spec-0005-controlled-python-execution.md)：启动 SPEC 0005 受控 Python 执行切片的决策记录。
 - [decisions/0017-start-spec-0006-outline-and-deliverables.md](decisions/0017-start-spec-0006-outline-and-deliverables.md)：启动 SPEC 0006 大纲与交付物切片的决策记录。
 - [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
+- [decisions/0019-deepseek-llm-integration.md](decisions/0019-deepseek-llm-integration.md)：接入真实 DeepSeek LLM 的决策记录（V1.1.0 SPEC 0007）。
 
 ## V1.0 发布文档
 

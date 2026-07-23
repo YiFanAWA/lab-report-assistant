@@ -280,6 +280,7 @@ SPEC 0004 实际启用的新增后端依赖：
 | `python-pptx` | `1.0.2` | `1.0.2` | PyPI | PPT 生成（SPEC 0006 安装） |
 | `XlsxWriter` | — | `3.2.9` | PyPI | python-pptx 传递依赖（SPEC 0006 安装） |
 | `httpx2` | — | `2.7.0` | PyPI | httpx 后继版本（V1.0 TD-001 清理安装，消除 fastapi.testclient 弃用警告；传递依赖 `httpcore2 2.7.0`、`truststore 0.10.4`） |
+| `httpx` | `0.28.1` | `0.28.1` | PyPI | DeepSeek API HTTP 客户端（SPEC 0007 从 dev 依赖提升为生产依赖） |
 | `pypdf` | `6.13.2` | `6.14.2` | PyPI | PDF 文本读取 |
 | `beautifulsoup4` | `4.15.0` | `4.15.0` | PyPI | HTML 解析 |
 | `playwright` | `1.60.0` | 未安装 | PyPI | 动态网页后备渲染（推迟到后续切片） |
