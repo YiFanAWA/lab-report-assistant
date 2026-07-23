@@ -38,7 +38,7 @@ npm run dev
 ```bash
 cd server
 .venv\Scripts\activate
-python -m worker
+python -m worker.main
 ```
 
 Worker 轮询后台任务表，处理 URL 采集、文档解析、LLM 调用、Python 执行、Word/PPT 生成等异步任务。
@@ -212,7 +212,7 @@ SQLite 在高并发写入时可能锁定。如遇 `database is locked` 错误：
 
 ### Worker 不领取任务
 
-1. 确认 Worker 进程正在运行：`python -m worker`
+1. 确认 Worker 进程正在运行：`python -m worker.main`
 2. 检查数据库连接是否正确
 3. 查看 Worker 控制台输出的 `[Worker]` 日志
 
@@ -272,6 +272,6 @@ python -m scripts.cleanup_expired_data --execute
 
 ## 版本
 
-当前版本：v1.0.0
+当前版本：v1.1.0
 
-详细变更日志见 [dev-docs/changelog-v1.0.0.md](dev-docs/changelog-v1.0.0.md)。
+详细变更日志见 [dev-docs/changelog-v1.1.0.md](dev-docs/changelog-v1.1.0.md)。

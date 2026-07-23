@@ -1,6 +1,6 @@
 """独立 Worker 进程。
 
-启动方式：python -m worker
+启动方式：python -m worker.main
 轮询 background_jobs 表，领取 PENDING 任务并执行。
 """
 
