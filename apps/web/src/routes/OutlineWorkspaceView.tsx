@@ -16,7 +16,8 @@ import {
 } from "../features/outlines/hooks";
 import { buildWordTemplateDownloadUrl } from "../features/outlines/api";
 import { useJob } from "../features/jobs/hooks";
-import type { Outline, OutlineSection } from "../features/outlines/types";
+import type { Outline, OutlineSection, PptConfig } from "../features/outlines/types";
+import { PPT_THEME_COLORS } from "../features/outlines/types";
 
 /** 项目状态展示中文映射。 */
 function statusLabel(s: string) {
@@ -125,6 +126,11 @@ function OutlineCard({
   const [pptErr, setPptErr] = useState<string | null>(null);
   const [wordOk, setWordOk] = useState<string | null>(null);
   const [pptOk, setPptOk] = useState<string | null>(null);
+
+  // SPEC 0011：PPT 配置状态
+  const [pptTargetSlideCount, setPptTargetSlideCount] = useState<string>("");
+  const [pptThemeColor, setPptThemeColor] = useState<string | null>(null);
+  const [pptIncludeCharts, setPptIncludeCharts] = useState(true);
 
   // 跟踪 Word/PPT 生成任务
   const [wordJobId, setWordJobId] = useState<string | null>(null);
@@ -506,12 +512,23 @@ function OutlineCard({
               onClick={() => {
                 setPptErr(null);
                 setPptOk(null);
-                pptMutation.mutate(outline.id, {
-                  onSuccess: (data) => {
-                    setPptJobId(data.job_id);
-                  },
-                  onError: (e) => setPptErr(errorMessage(e, "触发 PPT 生成失败")),
-                });
+                const config: PptConfig = {
+                  target_slide_count: pptTargetSlideCount
+                    ? Number(pptTargetSlideCount)
+                    : null,
+                  theme_color: pptThemeColor,
+                  include_charts: pptIncludeCharts,
+                };
+                pptMutation.mutate(
+                  { outlineId: outline.id, config },
+                  {
+                    onSuccess: (data) => {
+                      setPptJobId(data.job_id);
+                    },
+                    onError: (e) =>
+                      setPptErr(errorMessage(e, "触发 PPT 生成失败")),
+                  }
+                );
               }}
               disabled={pptMutation.isPending || !!pptJobId}
               style={{
@@ -531,6 +548,72 @@ function OutlineCard({
                 : "生成 PPT"}
             </button>
           </div>
+          {/* SPEC 0011：PPT 配置表单 */}
+          {outline.status === "CONFIRMED" && !pptJobId && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.5rem",
+                fontSize: "0.8rem",
+                background: "#f9fafb",
+                borderRadius: "0.25rem",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+                PPT 配置
+              </div>
+              <label style={{ display: "block", marginBottom: "0.25rem" }}>
+                目标页数（5-20，留空默认）：
+                <input
+                  type="number"
+                  min={5}
+                  max={20}
+                  value={pptTargetSlideCount}
+                  onChange={(e) => setPptTargetSlideCount(e.target.value)}
+                  placeholder="如 10"
+                  style={{ width: "4rem", marginLeft: "0.25rem" }}
+                />
+              </label>
+              <label style={{ display: "block", marginBottom: "0.25rem" }}>
+                主题色：
+                <span style={{ marginLeft: "0.5rem", verticalAlign: "middle" }}>
+                  {PPT_THEME_COLORS.map((color) => (
+                    <span
+                      key={color}
+                      role="button"
+                      aria-label={`选择主题色 ${color}`}
+                      onClick={() =>
+                        setPptThemeColor(pptThemeColor === color ? null : color)
+                      }
+                      style={{
+                        display: "inline-block",
+                        width: "1.2rem",
+                        height: "1.2rem",
+                        background: color,
+                        border:
+                          pptThemeColor === color
+                            ? "2px solid #000"
+                            : "1px solid #ccc",
+                        borderRadius: "0.25rem",
+                        marginRight: "0.25rem",
+                        cursor: "pointer",
+                        verticalAlign: "middle",
+                      }}
+                    />
+                  ))}
+                </span>
+              </label>
+              <label style={{ display: "block" }}>
+                <input
+                  type="checkbox"
+                  checked={pptIncludeCharts}
+                  onChange={(e) => setPptIncludeCharts(e.target.checked)}
+                />
+                包含图表页
+              </label>
+            </div>
+          )}
           {wordJobId && wordJob && (
             <p style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: "0.5rem" }}>
               {jobTypeLabel(wordJob.job_type)}：{jobStatusLabel(wordJob.status)}

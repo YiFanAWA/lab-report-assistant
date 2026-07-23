@@ -34,6 +34,7 @@ from app.modules.outlines.contracts import (
     OutlineListResponse,
     GenerateOutlineResponse,
     GenerateDeliverableResponse,
+    GeneratePptRequest,
     WordTemplateResponse,
 )
 
@@ -157,9 +158,12 @@ def generate_word(project_id: str, outline_id: str,
              response_model=GenerateDeliverableResponse,
              status_code=201)
 def generate_ppt(project_id: str, outline_id: str,
+                  body: GeneratePptRequest | None = None,
                   db: Session = Depends(_db)):
+    """触发 PPT 生成（SPEC 0011：支持可选 config 配置）。"""
+    config = body.config.model_dump() if body else None
     job_id, deliverable_id = outline_service.generate_ppt(
-        db, project_id, outline_id)
+        db, project_id, outline_id, config=config)
     return GenerateDeliverableResponse(
         job_id=job_id, deliverable_id=deliverable_id, template_used=False)
 

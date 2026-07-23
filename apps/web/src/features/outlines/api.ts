@@ -10,6 +10,7 @@ import type {
   DeliverableVersionListResponse,
   GenerateOutlineResponse,
   GenerateDeliverableResponse,
+  PptConfig,
   CompleteProjectResponse,
   WordTemplate,
 } from "./types";
@@ -117,14 +118,21 @@ export async function generateWord(
   return handle<GenerateDeliverableResponse>(r);
 }
 
-/** 触发 PPT 生成。返回 job_id 和 deliverable_id。 */
+/** 触发 PPT 生成。返回 job_id 和 deliverable_id。
+ * SPEC 0011：可选 config 配置（目标页数、主题色、图表开关）。
+ */
 export async function generatePpt(
   projectId: string,
-  outlineId: string
+  outlineId: string,
+  config?: PptConfig
 ): Promise<GenerateDeliverableResponse> {
   const r = await fetch(
     `${BASE}/projects/${encodeURIComponent(projectId)}/outline/${encodeURIComponent(outlineId)}/ppt/generate`,
-    { method: "POST" }
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: config ?? {} }),
+    }
   );
   return handle<GenerateDeliverableResponse>(r);
 }

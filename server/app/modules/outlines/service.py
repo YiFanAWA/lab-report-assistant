@@ -43,6 +43,7 @@ from app.modules.outlines.contracts import (
     OutlineListResponse,
     OutlineResponse,
     OutlineSection,
+    PPT_THEME_COLORS,
     UpdateOutlineRequest,
 )
 from app.modules.outlines.models import (
@@ -474,10 +475,16 @@ def generate_word(db: Session, project_id: str, outline_id: str) -> tuple[str, s
     return job.id, deliverable.id
 
 
-def generate_ppt(db: Session, project_id: str, outline_id: str) -> tuple[str, str]:
+def generate_ppt(
+    db: Session, project_id: str, outline_id: str,
+    config: dict | None = None,
+) -> tuple[str, str]:
     """触发 PPT 生成，返回 (job_id, deliverable_id)。
 
     前置条件：outline.status == CONFIRMED。
+
+    SPEC 0011：config 可选，含 target_slide_count/theme_color/include_charts。
+    theme_color 非空时必须在预设色板内。
     """
     project = _ensure_project(db, project_id)
     _ensure_project_ready_for_deliverable(project)
@@ -487,6 +494,15 @@ def generate_ppt(db: Session, project_id: str, outline_id: str) -> tuple[str, st
             code="DELIVERABLE_NOT_GENERATABLE",
             message="大纲未确认，无法生成 PPT",
         )
+
+    # SPEC 0011：校验 PPT 配置
+    if config:
+        theme_color = config.get("theme_color")
+        if theme_color and theme_color not in PPT_THEME_COLORS:
+            raise AppError(
+                code="PPT_CONFIG_INVALID_THEME_COLOR",
+                message=f"主题色 {theme_color} 不在预设色板内",
+            )
 
     deliverable = _create_or_get_deliverable(
         db, project_id, outline_id, DeliverableType.PPT.value)
@@ -498,6 +514,7 @@ def generate_ppt(db: Session, project_id: str, outline_id: str) -> tuple[str, st
         input_data={
             "outline_id": outline_id,
             "deliverable_id": deliverable.id,
+            "config": config or {},
         },
     )
 

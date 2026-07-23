@@ -6,6 +6,19 @@
 from pydantic import BaseModel, Field
 
 
+# --- SPEC 0011 PPT 配置常量 ---
+
+#: PPT 预设主题色板（hex 值集合），用户只能从中选择。
+PPT_THEME_COLORS: set[str] = {
+    "#2563eb",  # 蓝色（默认推荐）
+    "#7c3aed",  # 紫色
+    "#16a34a",  # 绿色
+    "#dc2626",  # 红色
+    "#ea580c",  # 橙色
+    "#475569",  # 灰色
+}
+
+
 # --- 大纲章节合同 ---
 
 
@@ -117,6 +130,38 @@ class GenerateDeliverableResponse(BaseModel):
     job_id: str
     deliverable_id: str
     template_used: bool = False
+
+
+class PptConfig(BaseModel):
+    """PPT 生成配置（SPEC 0011）。
+
+    所有字段可选，未提供时使用默认值。
+    配置不持久化，每次生成时传入。
+    """
+
+    target_slide_count: int | None = Field(
+        default=None,
+        description="目标页数（5-20），None 表示使用默认行为",
+        ge=5,
+        le=20,
+    )
+    theme_color: str | None = Field(
+        default=None,
+        description="主题色 hex 值，None 表示使用默认黑色",
+    )
+    include_charts: bool = Field(
+        default=True,
+        description="是否包含图表页",
+    )
+
+
+class GeneratePptRequest(BaseModel):
+    """触发 PPT 生成请求（SPEC 0011）。
+
+    所有字段可选，不传时使用默认配置。
+    """
+
+    config: PptConfig = Field(default_factory=PptConfig)
 
 
 class WordTemplateResponse(BaseModel):

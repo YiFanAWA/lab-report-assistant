@@ -17,7 +17,7 @@ import {
   getWordTemplate,
   deleteWordTemplate,
 } from "./api";
-import type { UpdateOutlineRequest } from "./types";
+import type { UpdateOutlineRequest, PptConfig } from "./types";
 
 function outlinesKey(projectId: string) {
   return ["outlines", projectId];
@@ -111,11 +111,12 @@ export function useGenerateWord(projectId: string) {
   });
 }
 
-/** 触发 PPT 生成。 */
+/** 触发 PPT 生成。SPEC 0011：支持可选 config 配置。 */
 export function useGeneratePpt(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (outlineId: string) => generatePpt(projectId, outlineId),
+    mutationFn: (args: { outlineId: string; config?: PptConfig }) =>
+      generatePpt(projectId, args.outlineId, args.config),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
       qc.invalidateQueries({ queryKey: ["project", projectId] });

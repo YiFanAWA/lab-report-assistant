@@ -118,6 +118,31 @@ export interface GenerateDeliverableResponse {
   template_used?: boolean;
 }
 
+/** PPT 生成配置（SPEC 0011）。所有字段可选，未提供时使用默认值。 */
+export interface PptConfig {
+  /** 目标页数（5-20），null 表示使用默认行为 */
+  target_slide_count?: number | null;
+  /** 主题色 hex 值，null 表示使用默认黑色 */
+  theme_color?: string | null;
+  /** 是否包含图表页，默认 true */
+  include_charts?: boolean;
+}
+
+/** 触发 PPT 生成请求（SPEC 0011）。 */
+export interface GeneratePptRequest {
+  config?: PptConfig;
+}
+
+/** PPT 预设主题色板（SPEC 0011）。 */
+export const PPT_THEME_COLORS: string[] = [
+  "#2563eb", // 蓝色（默认推荐）
+  "#7c3aed", // 紫色
+  "#16a34a", // 绿色
+  "#dc2626", // 红色
+  "#ea580c", // 橙色
+  "#475569", // 灰色
+];
+
 /** Word 模板响应体（SPEC 0010）。 */
 export interface WordTemplate {
   id: string;

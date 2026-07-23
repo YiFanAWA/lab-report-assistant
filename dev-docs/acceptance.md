@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收；SPEC 0010（Word 模板支持）已完成实现与测试验收，待项目负责人确认收口。  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 进行中：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收；SPEC 0010（Word 模板支持）已完成实现与测试验收；SPEC 0011（PPT 配置选项）已完成实现与测试验收，待项目负责人确认收口。  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。SPEC 0010 新增 18 个后端测试（623 passed）和 8 个前端 API 测试。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。SPEC 0011 新增 23 个后端测试（646 passed，0 warnings）。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -33,7 +33,7 @@
 - [x] 开发环境、包管理器、运行命令和测试命令在实际脚手架创建后确认。
 - [x] 第一切片 SPEC 0001 代码实现与命令/API/代理验收完成，并已由项目负责人确认。
 
-第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
+第一切片已获项目负责人批准进入代码阶段后执行。SPEC 0002 已完成实现、复核验收并由项目负责人确认收口；SPEC 0003 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0004 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0005 已完成实现与端到端验收并由项目负责人确认收口；SPEC 0006 已完成实现与端到端验收并由项目负责人确认收口；V1.0.0 已发布并打 tag v1.0.0。V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与测试验收；SPEC 0009（前端测试覆盖补全）已完成实现与测试验收（411 个测试全部通过）；SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed）；SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试覆盖页数/主题色/图表开关/降级策略/API 校验），待项目负责人确认收口。后续切片开始前，仍需项目负责人确认下一切片 SPEC。
 
 ## 阶段门禁
 
@@ -113,6 +113,7 @@
 - V1.1.0 阶段：SPEC 0007（真实 DeepSeek LLM 接入）已完成实现与后端测试验收（605 passed, 0 warnings），5 个提供者全部替换为 LLM 优先 + LocalRule 降级。
 - V1.1.0 阶段：SPEC 0009（前端测试覆盖补全）已完成实现与完整测试套件验收（411 passed，19 个测试文件，覆盖 8 个 API 模块和 11 个 Workspace 组件）。
 - V1.1.0 阶段：SPEC 0010（Word 模板支持）已完成实现与测试验收（后端 623 passed + 前端 411 passed，新增 18 个后端测试 + 8 个前端 API 测试，覆盖模板 CRUD/渲染器模板渲染/降级策略/Worker 接线/前端 UI 接线），待项目负责人确认收口。
+- V1.1.0 阶段：SPEC 0011（PPT 配置选项）已完成实现与测试验收（后端 646 passed + 前端 411 passed，新增 23 个后端测试，覆盖渲染器页数控制/主题色应用/图表开关/降级策略 + API 请求体解析/校验/错误码），待项目负责人确认收口。
 
 ### 代码阶段停止条件
 
@@ -254,6 +255,20 @@
 | 2026-07-23 | SPEC 0010 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过（含新增 WordTemplate 接口和 4 个 API 函数） | 通过 |
 | 2026-07-23 | SPEC 0010 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，**113 模块**转换，生成 `dist/`（393.37 kB，gzip 106.99 kB） | 通过 |
 | 2026-07-23 | SPEC 0010 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以 API 测试套件（12 个测试覆盖 4 个端点的成功/失败/降级路径）、渲染器测试（6 个测试覆盖模板渲染/降级）和前端测试（8 个 API 测试 + 组件测试）作为替代证据 | 未执行 |
+| 2026-07-23 | SPEC 0011 启动 | 创建 `dev-docs/specs/0011-ppt-config-options.md`，限定 PPT 配置选项范围：目标页数（5-20）、预设 6 色主题色板、全局图表开关、配置不持久化、无模板降级 | 通过 |
+| 2026-07-23 | SPEC 0011 合同层 | `server/app/modules/outlines/contracts.py` 新增 `PPT_THEME_COLORS` 常量集合（6 色）、`PptConfig` Pydantic 模型（`target_slide_count` ge=5/le=20、`theme_color` 可选、`include_charts` 默认 True）、`GeneratePptRequest` 请求体模型 | 通过 |
+| 2026-07-23 | SPEC 0011 渲染器扩展 | `server/app/infrastructure/renderers/ppt_renderer.py` 的 `render()` 新增 `config` 参数；新增 `_parse_theme_color()`（hex 解析异常降级到 None）和 `_apply_theme_color()`（应用到标题 run 的 font.color.rgb）；页数控制采用 `available_slots = max(0, target-2)`（减去标题页和总结页），内容页超过槽位时合并章节、不足时保持实际页数；`include_charts=False` 跳过图表页 | 通过 |
+| 2026-07-23 | SPEC 0011 Service 层 | `server/app/modules/outlines/service.py` 的 `generate_ppt()` 新增 `config` 参数；`theme_color` 不在 `PPT_THEME_COLORS` 预设色板内时抛出 `PPT_CONFIG_INVALID_THEME_COLOR`；config 写入 job `input_data` 不落库 | 通过 |
+| 2026-07-23 | SPEC 0011 API 端点 | `server/app/api/routers/outlines.py` 的 `generate_ppt` 端点新增 `body: GeneratePptRequest \| None = None` 参数（向后兼容无 body）；Pydantic ge/le 校验失败返回 400 + `REQUEST_VALIDATION_ERROR`（app 自定义异常处理器） | 通过 |
+| 2026-07-23 | SPEC 0011 Worker 接线 | `server/worker/handlers.py` 的 `handle_generate_ppt` 新增 `config = data.get("config")` 读取；有 config 时 try 渲染 except AppError 降级 + warning 日志；无 config 时保持现有行为 | 通过 |
+| 2026-07-23 | SPEC 0011 前端接线 | `apps/web/src/features/outlines/{types,api,hooks}.ts` 新增 `PptConfig` 接口 + `PPT_THEME_COLORS` 常量数组 + `generatePpt()` 新增 config 参数 + `useGeneratePpt` mutation 签名改为 `{outlineId, config?}`；`OutlineWorkspaceView.tsx` 新增 PPT 配置表单（页数输入/色板选择/图表开关） | 通过 |
+| 2026-07-23 | SPEC 0011 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest server\tests\test_ppt_config.py -v`，结果为 **23 passed**；覆盖渲染器 15 个测试（页数控制 5 + 主题色 4 + 图表开关 3 + 降级 3）+ API 8 个测试（无 body/有 config/完整 config/无效主题色/页数过小/页数过大/include_charts=false/空 config） | 通过 |
+| 2026-07-23 | SPEC 0011 全量回归测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest server\tests -q`，结果为 **646 passed in 84.77s**（原 623 + 新增 23），0 warnings，无回归 | 通过 |
+| 2026-07-23 | SPEC 0011 数据库迁移验证 | SPEC 0011 无 schema 变更（config 不持久化），运行 `.venv\Scripts\python.exe -m alembic upgrade head` 确认现有迁移（0001-0007）无错误 | 通过 |
+| 2026-07-23 | SPEC 0011 前端类型检查 | `apps/web` 下运行 `npm.cmd run lint`，TypeScript 严格类型检查通过（含新增 PptConfig 接口和 config 参数） | 通过 |
+| 2026-07-23 | SPEC 0011 前端测试 | `apps/web` 下运行 `npm.cmd test -- --run`，结果为 **411 passed**（19 个测试文件），无回归 | 通过 |
+| 2026-07-23 | SPEC 0011 前端构建 | `apps/web` 下运行 `npm.cmd run build`，Vite 构建通过，114 模块转换，生成 `dist/`（394.96 kB，gzip 107.49 kB） | 通过 |
+| 2026-07-23 | SPEC 0011 可视化点击验收 | 当前会话未暴露可调用的 in-app Browser 工具；未做真实浏览器点击或截图，以后端测试套件（23 个测试覆盖渲染器页数/主题色/图表开关/降级 + API 校验）和前端 lint/build/411 测试作为替代证据 | 未执行 |
 
 ## 漂移检查清单
 

@@ -968,14 +968,42 @@ def handle_generate_ppt(db: Session, job) -> dict:
                       / "deliverables" / deliverable_id)
         output_path = output_dir / f"ppt_v{version.version}.pptx"
 
+        # SPEC 0011：读取 PPT 配置
+        config = data.get("config")
         renderer = PptRenderer()
-        renderer.render(
-            project_name=project.name,
-            project_topic=project.topic,
-            outline_sections=sections,
-            execution_artifacts=artifacts,
-            output_path=str(output_path),
-        )
+
+        if config:
+            try:
+                renderer.render(
+                    project_name=project.name,
+                    project_topic=project.topic,
+                    outline_sections=sections,
+                    execution_artifacts=artifacts,
+                    output_path=str(output_path),
+                    config=config,
+                )
+            except AppError as config_err:
+                # 降级到无 config 渲染
+                import logging
+                logging.getLogger(__name__).warning(
+                    "PPT 配置渲染失败，降级到默认渲染：%s (code=%s)",
+                    config_err.message, config_err.code,
+                )
+                renderer.render(
+                    project_name=project.name,
+                    project_topic=project.topic,
+                    outline_sections=sections,
+                    execution_artifacts=artifacts,
+                    output_path=str(output_path),
+                )
+        else:
+            renderer.render(
+                project_name=project.name,
+                project_topic=project.topic,
+                outline_sections=sections,
+                execution_artifacts=artifacts,
+                output_path=str(output_path),
+            )
 
         finished_at = _now()
         duration = (finished_at - started_at).total_seconds()
