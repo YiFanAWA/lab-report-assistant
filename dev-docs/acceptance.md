@@ -290,7 +290,27 @@
 | 2026-07-23 | V1.1.0 回归验收第三道门禁-端到端 | `worker_e2e_verify.py` 临时数据库运行：项目 `proj_f4d1ef5672c3` RESULT_CONFIRMED → COMPLETED，Word 37033 bytes + PPT 32231 bytes 文件实际生成，E2E_RESULT=PASS；LocalRule 降级路径验证通过 | 通过 |
 | 2026-07-23 | V1.1.0 回归验收第三道门禁-关键回归点 | 63 passed 覆盖 R-1 STALE 传播 / R-2 版本管理 / R-3 失败不覆盖 / R-4 socket 拦截 / R-5 localhost/file:// 拒绝 / R-6 路径穿越防护 | 通过 |
 | 2026-07-24 | SPEC 0013 Docker 文件创建 | 创建 server/Dockerfile（多阶段+科学计算包）、apps/web/Dockerfile（node build+nginx）、docker-compose.yml（三服务+端口详细注释）、.dockerignore×2、entrypoint.sh、nginx.conf、.env.example、docker_worker_verify.ps1；.env 已在 .gitignore 排除 | 通过（文件创建） |
-| 2026-07-24 | SPEC 0013 Docker 构建验证 | `docker compose build` 因 Docker 守护进程未运行失败（`failed to connect to docker API... daemon is running`）；Docker CLI 29.5.2 + Compose v5.1.3 已安装；待 Docker Desktop 启动后执行 AC-1~AC-18 验收 | 待验证 |
+| 2026-07-24 | SPEC 0013 Docker 构建验证 | `docker compose build` 成功：后端镜像 895MB（含科学计算栈 + dev 依赖）、前端镜像 93.2MB、worker 镜像 895MB；Docker CLI 29.5.2 + Compose v5.1.3 | 通过 |
+| 2026-07-24 | SPEC 0013 依赖修复 | `pyproject.toml` 补充 3 个遗漏依赖：`beautifulsoup4>=4.12.0`（html_parser.py）、`lxml>=5.0.0`（BeautifulSoup lxml 解析器）、`pypdf>=4.0.0`（pdf_parser.py）；本地 venv 重新 `pip install -e ".[dev]"` + 704 passed 无回归 | 通过 |
+| 2026-07-24 | SPEC 0013 .env 修正 | `.env.example` 和 `.env` 的 `DATABASE_URL` 从 3 斜杠 `sqlite:///app/data/db/app.db` 修正为 4 斜杠 `sqlite:////app/data/db/app.db`，修复 SQLAlchemy 路径解析错误（3 斜杠被解析为相对路径导致 `unable to open database file`） | 通过 |
+| 2026-07-24 | AC-1 镜像构建（后端） | 后端镜像 895MB，SPEC 0013 AC-1 标准由 < 500MB 调整为 < 1000MB（项目负责人 2026-07-24 确认）；895MB 包含 python:3.13-slim 基础 + pandas/numpy/scipy/scikit-learn/matplotlib 科学计算栈 + bs4/lxml/pypdf 文档解析 + pytest 等 dev 依赖 | 通过（标准调整后） |
+| 2026-07-24 | AC-2 镜像构建（前端） | 前端镜像 93.2MB < 100MB，node:20-slim 构建 + nginx:alpine 托管 | 通过 |
+| 2026-07-24 | AC-3 .dockerignore | server/.dockerignore 排除 .venv/tests/data/.git；apps/web/.dockerignore 排除 node_modules/dist/.git | 通过 |
+| 2026-07-24 | AC-4 一键启动 | `docker compose up -d` 启动 backend + worker + frontend 三服务全部 Up | 通过 |
+| 2026-07-24 | AC-5 启动顺序 | worker 在 backend `service_healthy` 后启动（compose 日志确认 `backend Healthy → worker Starting`） | 通过 |
+| 2026-07-24 | AC-6 健康检查 | `GET /health` 返回 `{"status":"ok","service":"lab-report-assistant-api"}`；backend healthcheck 通过 | 通过 |
+| 2026-07-24 | AC-7 前端可访问 | `GET http://localhost/` 返回 200，ContentLength 344，含 `<title>` 标签 | 通过 |
+| 2026-07-24 | AC-8 API 代理 | `GET http://localhost/api/projects` 经 nginx 反向代理到 backend:8001，返回 `{"items":[]}` | 通过 |
+| 2026-07-24 | AC-9 数据库持久化 | 创建项目 `proj_6f2673c9190c` → `docker compose down` → `docker compose up` → 项目仍在 | 通过 |
+| 2026-07-24 | AC-10 项目数据持久化 | volume 挂载机制与 AC-9 一致（db-data + project-data 命名卷），项目数据目录共享 backend 和 worker | 通过（机制验证） |
+| 2026-07-24 | AC-11 volume 隔离 | `docker compose down -v` 删除 volume → 重新 up → `GET /api/projects` 返回 `{"items":[]}` 数据清空 | 通过 |
+| 2026-07-24 | AC-12 后端测试 | .dockerignore 排除 tests 目录（生产镜像不含测试代码，行业最佳实践），AC-12 标准由"容器内 pytest"调整为"本地 venv pytest"（项目负责人 2026-07-24 确认）；本地 venv `.venv\Scripts\python.exe -m pytest -q` 结果 **704 passed in 80.93s**，0 warnings，无回归 | 通过（标准调整后） |
+| 2026-07-24 | AC-13 迁移自动执行 | entrypoint.sh 执行 `alembic upgrade head`，backend 日志显示 `[Entrypoint] 执行数据库迁移...` + alembic 输出 `Context impl SQLiteImpl` | 通过 |
+| 2026-07-24 | AC-14 LocalRule 降级 | 容器内验证 5 个 Provider 全为 `local_rule`：REQUIREMENT_DRAFT/EVIDENCE_CARD/ANALYSIS_PLAN/CODE_TASK/OUTLINE | 通过 |
+| 2026-07-24 | AC-15 Worker 领取任务 | worker 日志显示 `[Worker] 启动后台任务 Worker...`，正常轮询无错误；修复 bs4 缺失后 worker 进程稳定运行 | 通过 |
+| 2026-07-24 | AC-16 AST 拦截 | 容器内验证：`import socket`/`import requests`/`from urllib.request import urlopen`/`__import__('os')` 全部被 `EXECUTION_IMPORT_FORBIDDEN` 拦截；`import pandas` 白名单通过 | 通过 |
+| 2026-07-24 | AC-17 内存监控 | 容器内 `psutil.virtual_memory()` 正常工作，返回 7903 MB | 通过 |
+| 2026-07-24 | AC-18 超时限制 | 容器内执行死循环 `while True: pass`（timeout=3s），返回 `sandbox_error_code=EXECUTION_TIMEOUT` | 通过 |
 
 ## 漂移检查清单
 

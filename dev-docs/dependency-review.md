@@ -346,4 +346,18 @@ AGENTS.md 要求"应用托管受控环境，用户不应手动安装 pandas/nump
 
 ### 9.3 已知限制
 
-- 科学计算包未声明在 `pyproject.toml` dependencies 中，属于已存在债务（开发环境手动安装）。Docker 化通过 Dockerfile 额外安装弥补，但 `pip install -e .` 不会自动安装这些包。后续应考虑在 `pyproject.toml` 添加 `[project.optional-dependencies] analysis` 段。
+- 科学计算包（pandas/numpy/scipy/scikit-learn/matplotlib/psutil）未声明在 `pyproject.toml` dependencies 中，属于已存在债务（开发环境手动安装）。Docker 化通过 Dockerfile 额外安装弥补，但 `pip install -e .` 不会自动安装这些包。后续应考虑在 `pyproject.toml` 添加 `[project.optional-dependencies] analysis` 段。
+
+### 9.4 文档解析依赖修复（2026-07-24，SPEC 0013 实现过程中发现）
+
+Docker 化实现过程中发现 `pyproject.toml` 遗漏了 3 个文档解析直接依赖，导致 Worker 容器启动时 `ModuleNotFoundError: No module named 'bs4'`。已补充到 `pyproject.toml` 的 dependencies 中：
+
+| 包 | 版本约束 | 用途 | 引用位置 |
+| --- | --- | --- | --- |
+| beautifulsoup4 | >=4.12.0 | HTML 文档解析 | `app/infrastructure/parsers/html_parser.py:9` |
+| lxml | >=5.0.0 | BeautifulSoup 的 lxml 解析器后端 | `app/infrastructure/parsers/html_parser.py:26`（`BeautifulSoup(content, "lxml")`） |
+| pypdf | >=4.0.0 | PDF 文档文本提取 | `app/infrastructure/parsers/pdf_parser.py:9` |
+
+**根因：** 这些包在 SPEC 0003（公开资料与证据工作流）实现时手动 `pip install` 但未写入 `pyproject.toml`，本地开发环境能跑但 Docker 镜像构建时 `pip install -e ".[dev]"` 不会安装它们。
+
+**验证：** 本地 venv 重新 `pip install -e ".[dev]"` 后 `pytest -q` 结果 704 passed，0 warnings，无回归。Docker 镜像重新 build 后 Worker 容器正常启动。

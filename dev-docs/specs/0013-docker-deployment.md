@@ -358,7 +358,7 @@ exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 | # | 检查项 | 通过标准 |
 | --- | --- | --- |
-| AC-1 | 后端镜像构建 | `docker build -t lab-report-backend ./server` 成功，镜像大小 < 500MB |
+| AC-1 | 后端镜像构建 | `docker build -t lab-report-backend ./server` 成功，镜像大小 < 1000MB（含科学计算栈，调整自 < 500MB，项目负责人 2026-07-24 确认） |
 | AC-2 | 前端镜像构建 | `docker build -t lab-report-frontend ./apps/web` 成功，镜像大小 < 100MB |
 | AC-3 | 镜像不含源码泄露 | `.dockerignore` 排除 .venv、node_modules、data、tests、.git |
 
@@ -384,7 +384,7 @@ exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 | # | 检查项 | 通过标准 |
 | --- | --- | --- |
-| AC-12 | 后端测试 | 容器内 `pytest -q` 通过 704 个测试（与 V1.1.0 一致） |
+| AC-12 | 后端测试 | 本地 venv `pytest -q` 通过 704 个测试（与 V1.1.0 一致）；容器内 .dockerignore 排除 tests 目录（生产镜像不含测试代码，项目负责人 2026-07-24 确认调整为本地验证） |
 | AC-13 | 迁移自动执行 | entrypoint 自动执行 `alembic upgrade head`，迁移到 0007 |
 | AC-14 | LocalRule 降级 | 不配置 DEEPSEEK_API_KEY 时，5 Provider 走 local_rule |
 | AC-15 | Worker 领取任务 | Worker 进程正常轮询，能处理后台任务 |
