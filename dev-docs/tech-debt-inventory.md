@@ -86,6 +86,7 @@
 | TD-001 | fastapi.testclient httpx 弃用提示 | SPEC 0002 | 2026-07-22 | 安装 `httpx2 2.7.0`，`pyproject.toml` dev 依赖新增 `httpx2>=2.0.0`；验证 569 passed, 0 warnings。详见 [tech-debt-cleanup-plan.md](tech-debt-cleanup-plan.md) §六 |
 | TD-002 | pandas datetime 推断 UserWarning | SPEC 0004 | 2026-07-22 | `dataset_parser.py:96` 添加 `format="mixed"`；验证 569 passed, 0 warnings。详见 [tech-debt-cleanup-plan.md](tech-debt-cleanup-plan.md) §六 |
 | TD-003 | 浏览器点击截图验收未执行 | SPEC 0002 | 2026-07-22 | V1.0 端到端验收用 browser_use agent 完成浏览器验收，截图保存至 `dev-docs/e2e-screenshots/`（home-full.png、home-viewport.png），详见 [e2e-acceptance-report-v1.0.md](e2e-acceptance-report-v1.0.md) |
+| TD-007 | openpyxl 未声明在 pyproject.toml dependencies | SPEC 0004 | 2026-07-24 | SPEC 0015 CI 首次推送后 backend job exit code 2，排查发现 `test_dataset_parser.py` 导入 `openpyxl` 失败。修复：`pyproject.toml` dependencies 新增 `openpyxl>=3.1.0`；Docker 容器内验证 729 passed。与 TD-004 同类问题，但 openpyxl 直接被 app 代码导入，故直接补入主 dependencies 而非 optional-dependencies |
 
 ---
 
@@ -126,7 +127,7 @@
 | 阻断问题 | 0 | — |
 | 可记录债务（TD-004/005/006） | 3 | 否 |
 | 产品边界限制（L2-L15） | 14 | 否（按版本规划） |
-| 已关闭债务（TD-001/002/003） | 0（均已关闭） | 否 |
+| 已关闭债务（TD-001/002/003/007） | 0（均已关闭） | 否 |
 | 代码 TODO/FIXME | 0 | 否 |
 
-**结论：** 项目当前无阻断性技术债务。3 个可记录债务均为文档准确性或依赖声明问题，不影响主链路功能。最大的功能缺口是 LLM 调用缓存（L9）和 CI 流水线（L10），已分别通过 SPEC 0014 和 SPEC 0015 草案承接。
+**结论：** 项目当前无阻断性技术债务。3 个可记录债务均为文档准确性或依赖声明问题，不影响主链路功能。SPEC 0014（LLM 调用缓存，L9）和 SPEC 0015（CI 流水线，L10）已实现与验收，待 SPEC 0015 CI 推送后 AC-2~6 全部通过即收口。

@@ -326,6 +326,10 @@
 | 2026-07-24 | SPEC 0015 本地预演-后端 | 本地模拟 CI 后端命令：`pip install -e ".[dev]"` + 科学计算包 + `DATABASE_URL=sqlite:///./ci_test.db alembic upgrade head` + `pytest -q` → 729 passed（与 SPEC 0014 验收一致） | 通过 |
 | 2026-07-24 | SPEC 0015 本地预演-前端 | 本地模拟 CI 前端命令：`apps/web` 下 `npm install` + `npm run lint`（tsc 通过）+ `npm run build`（114 模块，dist/ 394.96 kB） | 通过 |
 | 2026-07-24 | SPEC 0015 AC-2~6 待推送验证 | AC-2（push 触发）/ AC-3（backend job 绿色）/ AC-4（迁移）/ AC-5（frontend job 绿色）/ AC-6（build）需推送 ci.yml 到 master 后通过 GitHub Actions 实际运行验证；本地预演已确认命令正确性 | 待推送验证 |
+| 2026-07-24 | SPEC 0015 首次 CI 推送 | push `5186a64` 到 origin/master 触发 GitHub Actions Run #1（run_id=30093807184）；AC-2 push 触发 ✅、AC-4 迁移通过 ✅、AC-5 frontend job 绿色 ✅（23s）、AC-6 build 成功 ✅；AC-3 backend job 失败（exit code 2，5s），frontend job 全 6 步 success | 部分通过 |
+| 2026-07-24 | SPEC 0015 CI 失败排查 | backend job step 6 "运行后端测试" exit code 2，仅 5s；用 Docker 后端镜像（Linux）复现：`test_dataset_parser.py` 导入 `openpyxl` 失败（ModuleNotFoundError）；根因：`openpyxl` 自 SPEC 0004 起被 app 代码直接导入但未声明在 `pyproject.toml` dependencies（TD-007，与 TD-004 同类）；本地 Windows 因 `.venv` 已手动安装 openpyxl 未暴露 | 通过（根因确认） |
+| 2026-07-24 | SPEC 0015 TD-007 修复 | `pyproject.toml` dependencies 新增 `openpyxl>=3.1.0`；Docker 容器内 `.venv/bin/pip install openpyxl` 后挂载最新 app+tests 代码运行 `pytest -q` → 729 passed in 52.77s；确认 openpyxl 是唯一缺失依赖 | 通过 |
+| 2026-07-24 | SPEC 0015 修复后本地验证 | 本地 Windows `server` 下 `DATABASE_URL=sqlite:///./ci_test.db .venv\Scripts\python.exe -m pytest -q` → 729 passed in 72.61s（与 SPEC 0014 验收一致，0 回归） | 通过 |
 
 ## 漂移检查清单
 

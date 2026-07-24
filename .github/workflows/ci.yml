@@ -34,6 +34,7 @@ jobs:
           pip install -e ".[dev]"
           # TD-004：科学计算包未声明在 pyproject.toml dependencies
           # CI 额外安装以跑通测试，TD-004 清理后改为 pip install -e ".[dev,analysis]"
+          # 注意：openpyxl 已于 SPEC 0015 修复时补入 pyproject.toml，无需额外安装
           pip install pandas==3.0.3 numpy==2.5.1 scipy==1.18.0 \
                       scikit-learn==1.9.0 matplotlib==3.11.0 psutil==7.2.2
 
