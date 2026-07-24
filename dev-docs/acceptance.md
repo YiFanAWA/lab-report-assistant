@@ -330,6 +330,7 @@
 | 2026-07-24 | SPEC 0015 CI 失败排查 | backend job step 6 "运行后端测试" exit code 2，仅 5s；用 Docker 后端镜像（Linux）复现：`test_dataset_parser.py` 导入 `openpyxl` 失败（ModuleNotFoundError）；根因：`openpyxl` 自 SPEC 0004 起被 app 代码直接导入但未声明在 `pyproject.toml` dependencies（TD-007，与 TD-004 同类）；本地 Windows 因 `.venv` 已手动安装 openpyxl 未暴露 | 通过（根因确认） |
 | 2026-07-24 | SPEC 0015 TD-007 修复 | `pyproject.toml` dependencies 新增 `openpyxl>=3.1.0`；Docker 容器内 `.venv/bin/pip install openpyxl` 后挂载最新 app+tests 代码运行 `pytest -q` → 729 passed in 52.77s；确认 openpyxl 是唯一缺失依赖 | 通过 |
 | 2026-07-24 | SPEC 0015 修复后本地验证 | 本地 Windows `server` 下 `DATABASE_URL=sqlite:///./ci_test.db .venv\Scripts\python.exe -m pytest -q` → 729 passed in 72.61s（与 SPEC 0014 验收一致，0 回归） | 通过 |
+| 2026-07-24 | SPEC 0015 CI Run #2 全绿 | push `64f2eb4`（TD-007 修复）触发 Run #2（run_id=30108228016）；backend job 全 6 步 success（76s，含安装 openpyxl + 迁移 + 729 tests passed in 33s）；frontend job 全 6 步 success（33s）；**AC-1~6 全部验证通过** | 通过 |
 
 ## 漂移检查清单
 
