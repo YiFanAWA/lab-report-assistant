@@ -18,6 +18,7 @@ import httpx
 import pytest
 
 from app.infrastructure.llm.deepseek_client import DeepSeekClient, DeepSeekError
+from app.infrastructure.llm.llm_cache import LLMCache
 
 
 def _make_response(status_code: int, body: dict | str | None = None) -> httpx.Response:
@@ -236,3 +237,104 @@ class TestDeepSeekClientInit:
             base_url="https://api.deepseek.com/"
         )
         assert client._base_url == "https://api.deepseek.com"
+
+
+class TestDeepSeekClientCache:
+    """缓存接入测试（SPEC 0014）。"""
+
+    def test_cache为None时不查缓存(self):
+        """cache=None 时行为与 SPEC 0007 完全一致，不查不写缓存。"""
+        client = DeepSeekClient(api_key="sk-test", max_retries=0, cache=None)
+        with patch("httpx.Client") as mock_client_cls:
+            mock_http = MagicMock()
+            mock_http.post.return_value = _make_chat_response("hello")
+            mock_client_cls.return_value.__enter__.return_value = mock_http
+
+            result = client.chat_completion(messages=[{"role": "user", "content": "hi"}])
+
+            assert result == "hello"
+            mock_http.post.assert_called_once()
+
+    def test_缓存命中跳过HTTP调用(self, tmp_path):
+        """缓存命中时不发起 HTTP，直接返回缓存内容。"""
+        cache = LLMCache(str(tmp_path / "cache.db"))
+        # 预写入缓存
+        messages = [{"role": "user", "content": "hi"}]
+        cache_key = LLMCache.compute_key("deepseek-chat", messages, None, 0.3)
+        cache.set(cache_key, "cached response", model="deepseek-chat")
+
+        client = DeepSeekClient(api_key="sk-test", max_retries=0, cache=cache)
+        with patch("httpx.Client") as mock_client_cls:
+            mock_http = MagicMock()
+            mock_client_cls.return_value.__enter__.return_value = mock_http
+
+            result = client.chat_completion(messages=messages, temperature=0.3)
+
+            assert result == "cached response"
+            # HTTP 不应被调用
+            mock_http.post.assert_not_called()
+
+    def test_缓存未命中调用HTTP并写入(self, tmp_path):
+        """未命中时调用 HTTP，成功后写入缓存，下次命中。"""
+        cache = LLMCache(str(tmp_path / "cache.db"))
+        client = DeepSeekClient(
+            api_key="sk-test", max_retries=0, cache=cache, model="deepseek-chat"
+        )
+        messages = [{"role": "user", "content": "hi"}]
+
+        with patch("httpx.Client") as mock_client_cls:
+            mock_http = MagicMock()
+            mock_http.post.return_value = _make_chat_response("fresh response")
+            mock_client_cls.return_value.__enter__.return_value = mock_http
+
+            result = client.chat_completion(messages=messages, temperature=0.3)
+
+            assert result == "fresh response"
+            mock_http.post.assert_called_once()
+
+        # 验证缓存已写入
+        cache_key = LLMCache.compute_key("deepseek-chat", messages, None, 0.3)
+        assert cache.get(cache_key) == "fresh response"
+
+    def test_缓存写入失败不阻断主流程(self, tmp_path, monkeypatch):
+        """缓存写入异常应不阻断，仍返回 content。"""
+        cache = LLMCache(str(tmp_path / "cache.db"))
+
+        # 模拟 set 抛异常
+        def _raise_set(*args, **kwargs):
+            raise RuntimeError("模拟写入失败")
+
+        monkeypatch.setattr(cache, "set", _raise_set)
+
+        client = DeepSeekClient(api_key="sk-test", max_retries=0, cache=cache)
+        with patch("httpx.Client") as mock_client_cls:
+            mock_http = MagicMock()
+            mock_http.post.return_value = _make_chat_response("content")
+            mock_client_cls.return_value.__enter__.return_value = mock_http
+
+            # 不应抛异常
+            result = client.chat_completion(messages=[{"role": "user", "content": "hi"}])
+
+            assert result == "content"
+
+    def test_缓存过期后重新调用HTTP(self, tmp_path):
+        """TTL 过期后应重新调用 HTTP。"""
+        cache = LLMCache(str(tmp_path / "cache.db"), ttl_seconds=0)
+        messages = [{"role": "user", "content": "hi"}]
+        cache_key = LLMCache.compute_key("deepseek-chat", messages, None, 0.3)
+        # 写入（TTL=0 立即过期）
+        cache.set(cache_key, "old response", model="deepseek-chat")
+
+        client = DeepSeekClient(
+            api_key="sk-test", max_retries=0, cache=cache, model="deepseek-chat"
+        )
+        with patch("httpx.Client") as mock_client_cls:
+            mock_http = MagicMock()
+            mock_http.post.return_value = _make_chat_response("new response")
+            mock_client_cls.return_value.__enter__.return_value = mock_http
+
+            result = client.chat_completion(messages=messages, temperature=0.3)
+
+            # 过期缓存未命中，调用 HTTP
+            assert result == "new response"
+            mock_http.post.assert_called_once()

@@ -17,6 +17,8 @@ import logging
 
 import httpx
 
+from app.infrastructure.llm.llm_cache import LLMCache
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,7 @@ class DeepSeekClient:
         model: str = "deepseek-chat",
         timeout_seconds: int = 30,
         max_retries: int = 2,
+        cache: LLMCache | None = None,
     ):
         if not api_key:
             raise DeepSeekError(
@@ -58,6 +61,7 @@ class DeepSeekClient:
         self._model = model
         self._timeout_seconds = timeout_seconds
         self._max_retries = max_retries
+        self._cache = cache
 
     def chat_completion(
         self,
@@ -78,6 +82,17 @@ class DeepSeekClient:
         异常：
         - DeepSeekError（code, message）—— 所有错误统一为结构化错误
         """
+        # 缓存查询（SPEC 0014）：cache=None 时跳过，行为与现有完全一致
+        cache_key = None
+        if self._cache is not None:
+            cache_key = LLMCache.compute_key(
+                self._model, messages, response_format, temperature
+            )
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                logger.info(f"LLM 缓存命中, key={cache_key[:12]}...")
+                return cached
+
         url = f"{self._base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -129,7 +144,14 @@ class DeepSeekClient:
 
             # HTTP 状态码处理
             if resp.status_code == 200:
-                return self._extract_content(resp)
+                content = self._extract_content(resp)
+                # 缓存写入（SPEC 0014）：失败不阻断主流程
+                if cache_key is not None and self._cache is not None:
+                    try:
+                        self._cache.set(cache_key, content, model=self._model)
+                    except Exception as e:
+                        logger.warning(f"LLM 缓存写入失败，降级到无缓存: {e}")
+                return content
 
             # 不可恢复的错误（不重试）
             if resp.status_code == 401:
@@ -202,8 +224,17 @@ def create_client_from_settings() -> DeepSeekClient:
     """从 settings 创建 DeepSeekClient 实例。
 
     供 Gateway 工厂函数使用。如果 API Key 未配置，抛出 DeepSeekError。
+    根据 LLM_CACHE_ENABLED 决定是否注入缓存（SPEC 0014）。
     """
     from app.core.config import settings
+
+    cache = None
+    # TTL<=0 视为禁用（SPEC 0014 §5.2）
+    if settings.llm_cache_enabled and settings.llm_cache_ttl_seconds > 0:
+        cache = LLMCache(
+            db_path=settings.llm_cache_db_path,
+            ttl_seconds=settings.llm_cache_ttl_seconds,
+        )
 
     return DeepSeekClient(
         api_key=settings.deepseek_api_key,
@@ -211,4 +242,5 @@ def create_client_from_settings() -> DeepSeekClient:
         model=settings.llm_model,
         timeout_seconds=settings.deepseek_timeout_seconds,
         max_retries=settings.deepseek_max_retries,
+        cache=cache,
     )

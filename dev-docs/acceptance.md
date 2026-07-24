@@ -311,6 +311,17 @@
 | 2026-07-24 | AC-16 AST 拦截 | 容器内验证：`import socket`/`import requests`/`from urllib.request import urlopen`/`__import__('os')` 全部被 `EXECUTION_IMPORT_FORBIDDEN` 拦截；`import pandas` 白名单通过 | 通过 |
 | 2026-07-24 | AC-17 内存监控 | 容器内 `psutil.virtual_memory()` 正常工作，返回 7903 MB | 通过 |
 | 2026-07-24 | AC-18 超时限制 | 容器内执行死循环 `while True: pass`（timeout=3s），返回 `sandbox_error_code=EXECUTION_TIMEOUT` | 通过 |
+| 2026-07-24 | SPEC 0014 LLMCache 实现 | 新建 `server/app/infrastructure/llm/llm_cache.py`：LLMCache 类含 compute_key（SHA256 规范化 JSON）/ get（惰性淘汰 TTL）/ set（INSERT OR REPLACE + 异常不抛错）/ _ensure_table（CREATE TABLE IF NOT EXISTS + WAL 模式 + 自动建目录）；独立 SQLite 文件，不走 Alembic | 通过 |
+| 2026-07-24 | SPEC 0014 缓存 key 验证 | `test_llm_cache.py` 20 个测试全部通过：相同输入产生相同 key / messages 字段顺序不影响 key（sort_keys）/ 不同 model/temperature/response_format/content 产生不同 key / key 是 64 位十六进制 SHA256 / 中文 content 稳定性 | 通过 |
+| 2026-07-24 | SPEC 0014 读写与 TTL | test_llm_cache.py 覆盖：空缓存 get 返回 None / set 后 get 命中 / 相同 key 覆盖（INSERT OR REPLACE）/ 多 key 互不干扰 / TTL=0 过期返回 None / TTL=3600 未过期正常返回 | 通过 |
+| 2026-07-24 | SPEC 0014 异常降级 | test_llm_cache.py 覆盖：查询异常返回 None 不抛错 / 写入异常不抛错（monkeypatch 模拟 _connect 抛 RuntimeError）；test_deepseek_client.py 覆盖缓存写入失败不阻断主流程 | 通过 |
+| 2026-07-24 | SPEC 0014 自动建表 | test_llm_cache.py 覆盖：首次访问自动建表 / 目录不存在自动创建（nested/deeper/cache.db）/ 重复初始化幂等 / 缓存表不依赖 alembic 迁移（直接查 sqlite_master 确认 llm_call_cache 表存在） | 通过 |
+| 2026-07-24 | SPEC 0014 DeepSeekClient 接入 | `deepseek_client.py` 注入 cache 参数（默认 None 零回归）；chat_completion 调用前查缓存（命中跳过 HTTP）/ 调用后写缓存（失败降级）；create_client_from_settings 根据 LLM_CACHE_ENABLED 且 TTL>0 创建 cache；test_deepseek_client.py 5 个缓存接入测试通过 | 通过 |
+| 2026-07-24 | SPEC 0014 配置项 | `config.py` 新增 3 个配置项：llm_cache_enabled（默认 false，非法值降级）/ llm_cache_ttl_seconds（默认 86400，非数字降级，<=0 视为禁用）/ llm_cache_db_path（默认 server/data/llm_cache/llm_cache.db）；`.env.example` 新增 3 个变量（Docker 路径 /app/data/llm_cache/llm_cache.db） | 通过 |
+| 2026-07-24 | SPEC 0014 后端测试 | `server` 下运行 `.venv\Scripts\python.exe -m pytest -q`，结果 **729 passed in 75.14s**（原 704 + 新增 25：test_llm_cache 20 + test_deepseek_client 缓存接入 5），0 warnings，无回归 | 通过 |
+| 2026-07-24 | SPEC 0014 数据库迁移 | 临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 0007（word_templates）；缓存表 llm_call_cache 通过 CREATE TABLE IF NOT EXISTS 自动建表，未进入业务 Alembic 迁移（SPEC 0014 §2.3 决策验证） | 通过 |
+| 2026-07-24 | SPEC 0014 前端 lint | `apps/web` 下运行 `npm.cmd run lint`，结果为 `tsc --noEmit` 通过（SPEC 0014 不改前端，无回归） | 通过 |
+| 2026-07-24 | SPEC 0014 前端 build | `apps/web` 下运行 `npm.cmd run build`，结果为 Vite 构建通过，114 模块转换，生成 `dist/`（394.96 kB，gzip 107.49 kB），与 V1.1.0 一致 | 通过 |
 
 ## 漂移检查清单
 

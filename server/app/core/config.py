@@ -212,5 +212,55 @@ class Settings:
         except (TypeError, ValueError):
             return 0
 
+    @property
+    def llm_cache_enabled(self) -> bool:
+        """是否启用 LLM 调用缓存（SPEC 0014）。
+
+        - true：启用（cache 注入 DeepSeekClient）
+        - false/空/其他：禁用（默认，行为与 SPEC 0007 一致）
+        """
+        raw = os.getenv("LLM_CACHE_ENABLED", "false")
+        if raw.lower() == "true":
+            return True
+        if raw.lower() in ("false", ""):
+            return False
+        # 非法值降级到禁用
+        import logging
+        logging.getLogger(__name__).warning(
+            f"LLM_CACHE_ENABLED 非法值 '{raw}'，降级到 false（禁用）"
+        )
+        return False
+
+    @property
+    def llm_cache_ttl_seconds(self) -> int:
+        """缓存有效期秒数（SPEC 0014）。
+
+        - 默认 86400（1 天）
+        - 非数字降级到 86400
+        - <=0 表示禁用（create_client_from_settings 不创建 cache）
+        - 浮点数截断为整数
+        """
+        raw = os.getenv("LLM_CACHE_TTL_SECONDS", "86400")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            import logging
+            logging.getLogger(__name__).warning(
+                f"LLM_CACHE_TTL_SECONDS 非法值 '{raw}'，降级到 86400"
+            )
+            return 86400
+
+    @property
+    def llm_cache_db_path(self) -> str:
+        """缓存 SQLite 文件路径（SPEC 0014）。
+
+        默认 server/data/llm_cache/llm_cache.db，独立于业务数据库。
+        空值使用默认路径。
+        """
+        raw = os.getenv("LLM_CACHE_DB_PATH", "")
+        if raw:
+            return raw
+        return str(PROJECT_ROOT / "data" / "llm_cache" / "llm_cache.db")
+
 
 settings = Settings()
