@@ -6,7 +6,7 @@
 
 - 阶段：代码阶段
 - 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全，411 个测试全部通过）、SPEC 0010（Word 模板支持，后端 623 + 前端 411）、SPEC 0011（PPT 配置选项，后端 646 + 前端 411，新增 23 个后端测试）、SPEC 0012（数据保留周期配置，后端 704 passed，新增 58 个测试）均已由项目负责人确认收口。V1.1.0 端到端回归验收三道门禁全部通过（commit `e0d37ec`）
-- 下一阶段入口：V1.2.0 SPEC 0013（Docker 化部署）已由项目负责人确认收口（commit `c210911` 已推送 origin/master）。SPEC 0014（LLM 调用缓存）已完成实现与验收。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
+- 下一阶段入口：V1.2.0 SPEC 0013（Docker 化部署）已由项目负责人确认收口（commit `c210911` 已推送 origin/master）。SPEC 0014（LLM 调用缓存）已完成实现与验收。SPEC 0015（GitHub Actions CI 流水线）已完成实现与本地预演验收，待 push 触发 Actions 验证 AC-2~6。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
 
 ## 工程入口
 
@@ -51,12 +51,14 @@
 - [decisions/0018-frontend-test-framework.md](decisions/0018-frontend-test-framework.md)：引入 Vitest + React Testing Library 前端测试框架的决策记录。
 - [decisions/0019-deepseek-llm-integration.md](decisions/0019-deepseek-llm-integration.md)：接入真实 DeepSeek LLM 的决策记录（V1.1.0 SPEC 0007）。
 - [decisions/0020-start-spec-0014-llm-cache.md](decisions/0020-start-spec-0014-llm-cache.md)：启动 SPEC 0014 LLM 调用缓存切片的决策记录。
+- [decisions/0021-start-spec-0015-github-actions-ci.md](decisions/0021-start-spec-0015-github-actions-ci.md)：启动 SPEC 0015 GitHub Actions CI 流水线切片的决策记录。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 - [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。
 - [specs/0012-data-retention.md](specs/0012-data-retention.md)：V1.1.0 数据保留周期配置 SPEC（DATA_RETENTION_DAYS 环境变量、清理脚本、RUNNING job 保护、级联删除）。
 - [specs/0013-docker-deployment.md](specs/0013-docker-deployment.md)：V1.2.0 Docker 化部署 SPEC（多阶段镜像构建、docker-compose 三服务编排、volume 数据持久化、nginx 前端托管、不改变业务代码），已由项目负责人确认收口（commit `c210911`）。
 - [specs/0014-llm-call-cache.md](specs/0014-llm-call-cache.md)：V1.2.0 LLM 调用缓存 SPEC（独立 SQLite 存储、DeepSeekClient 接入、SHA256 key、默认关闭、不走 Alembic），已完成实现与验收。
+- [specs/0015-github-actions-ci.md](specs/0015-github-actions-ci.md)：V1.2.0 GitHub Actions CI 流水线 SPEC（master 触发、后端 pytest + 前端 lint/build 两 Job 并行、不触碰业务代码），已完成实现与本地预演验收。
 
 ## V1.0 发布文档
 

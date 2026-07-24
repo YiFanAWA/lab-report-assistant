@@ -322,6 +322,10 @@
 | 2026-07-24 | SPEC 0014 数据库迁移 | 临时 SQLite 文件运行 `.venv\Scripts\python.exe -m alembic upgrade head`，迁移到 0007（word_templates）；缓存表 llm_call_cache 通过 CREATE TABLE IF NOT EXISTS 自动建表，未进入业务 Alembic 迁移（SPEC 0014 §2.3 决策验证） | 通过 |
 | 2026-07-24 | SPEC 0014 前端 lint | `apps/web` 下运行 `npm.cmd run lint`，结果为 `tsc --noEmit` 通过（SPEC 0014 不改前端，无回归） | 通过 |
 | 2026-07-24 | SPEC 0014 前端 build | `apps/web` 下运行 `npm.cmd run build`，结果为 Vite 构建通过，114 模块转换，生成 `dist/`（394.96 kB，gzip 107.49 kB），与 V1.1.0 一致 | 通过 |
+| 2026-07-24 | SPEC 0015 ci.yml 创建 | 新建 `.github/workflows/ci.yml`：触发 push/PR to master；backend Job（Python 3.13 + pip install + 科学计算包额外安装弥补 TD-004 + alembic upgrade + pytest）；frontend Job（Node 20 + working-directory apps/web + npm install + lint + build）；两 Job 并行；不使用 Secrets | 通过（文件创建） |
+| 2026-07-24 | SPEC 0015 本地预演-后端 | 本地模拟 CI 后端命令：`pip install -e ".[dev]"` + 科学计算包 + `DATABASE_URL=sqlite:///./ci_test.db alembic upgrade head` + `pytest -q` → 729 passed（与 SPEC 0014 验收一致） | 通过 |
+| 2026-07-24 | SPEC 0015 本地预演-前端 | 本地模拟 CI 前端命令：`apps/web` 下 `npm install` + `npm run lint`（tsc 通过）+ `npm run build`（114 模块，dist/ 394.96 kB） | 通过 |
+| 2026-07-24 | SPEC 0015 AC-2~6 待推送验证 | AC-2（push 触发）/ AC-3（backend job 绿色）/ AC-4（迁移）/ AC-5（frontend job 绿色）/ AC-6（build）需推送 ci.yml 到 master 后通过 GitHub Actions 实际运行验证；本地预演已确认命令正确性 | 待推送验证 |
 
 ## 漂移检查清单
 
