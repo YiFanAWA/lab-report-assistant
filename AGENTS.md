@@ -200,8 +200,8 @@ npm.cmd run build
 
 当前已知非阻断债务：
 
-- SPEC 0002 后端测试中存在第三方 `fastapi.testclient` 对 `httpx` 的弃用提示，已在 `dev-docs/acceptance.md` 记录为非本轮阻断债务。
-- 当前会话未暴露可调用的 in-app Browser 工具，因此 SPEC 0002 未完成真实浏览器点击截图验收，已用 Vite 页面可访问和 `/api` 代理主链路作为替代证据。
+- SPEC 0002 后端测试中存在第三方 `fastapi.testclient` 对 `httpx` 的弃用提示，已在 `dev-docs/acceptance.md` 记录为非本轮阻断债务（TD-001 已于 2026-07-22 关闭：安装 `httpx2 2.7.0` 并在 dev 依赖新增 `httpx2>=2.0.0`，验证 569 passed 0 warnings）。
+- V1.0 端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `dev-docs/e2e-acceptance-report-v1.0.md`（TD-003 已关闭；TD-005 本身已于 SPEC 0016 清理本章节过时表述）。
 
 ## 文档规则
 

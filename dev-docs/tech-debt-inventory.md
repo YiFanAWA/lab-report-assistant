@@ -1,7 +1,7 @@
-# 技术债务总清单（截至 V1.2.0 发布）
+# 技术债务总清单（截至 V1.3.0 发布）
 
 > **文档日期：** 2026-07-25  
-> **当前版本：** V1.2.0 已发布并打 tag v1.2.0（SPEC 0013 Docker 化 + SPEC 0014 LLM 缓存 + SPEC 0015 CI 流水线全部收口）  
+> **当前版本：** V1.3.0 已发布并打 tag v1.3.0（SPEC 0016 技术债务清理 TD-004/005/006/008 全部收口）  
 > **维护规则：** 本文档汇总项目当前所有已知技术债务。每次切片收口后必须更新。债务清理后移入"已关闭债务"章节并保留证据。
 
 ---
@@ -19,51 +19,9 @@
 
 ## 二、当前活跃债务（可记录债务，非阻断）
 
-### TD-004：科学计算包未声明在 `pyproject.toml` dependencies
+> V1.3.0 SPEC 0016 已清理全部 4 个可记录债务（TD-004/005/006/008），当前无活跃债务。
 
-| 属性 | 值 |
-| --- | --- |
-| **引入切片** | SPEC 0004 / SPEC 0005 |
-| **严重程度** | 低（不影响本地开发，影响 Docker 镜像构建） |
-| **来源** | [dependency-review.md](dependency-review.md) §9.3 |
-| **现状** | pandas/numpy/scipy/scikit-learn/matplotlib/psutil 在本地开发环境手动 `pip install`，未写入 `pyproject.toml` 的 `dependencies`。SPEC 0013 Docker 化时通过 Dockerfile 额外固定版本安装弥补，但 `pip install -e .` 不会自动安装 |
-| **临时缓解** | Dockerfile 显式 `pip install pandas==3.0.3 ...` |
-| **建议处理入口** | V1.2.0 后续或 V1.3.0：在 `pyproject.toml` 新增 `[project.optional-dependencies] analysis` 段，声明科学计算包，让 `pip install -e ".[analysis]"` 一键安装 |
-| **阻断当前目标** | 否 |
-
-### TD-005：AGENTS.md "当前已知非阻断债务"表述过时
-
-| 属性 | 值 |
-| --- | --- |
-| **引入切片** | 立项阶段 |
-| **严重程度** | 低（文档准确性问题，不影响代码） |
-| **来源** | [AGENTS.md](../AGENTS.md) "测试与验收"章节 |
-| **现状** | AGENTS.md 仍记载"当前会话未暴露可调用的 in-app Browser 工具，因此 SPEC 0002 未完成真实浏览器点击截图验收"。但 TD-003 已于 2026-07-22 清理：V1.0 端到端验收时用 browser_use agent 完成浏览器验收，截图在 `dev-docs/e2e-screenshots/`，详见 [e2e-acceptance-report-v1.0.md](e2e-acceptance-report-v1.0.md) |
-| **建议处理入口** | 下次 AGENTS.md 修订时更新该章节，引用 e2e-acceptance-report-v1.0.md 作为浏览器验收证据 |
-| **阻断当前目标** | 否 |
-
-### TD-006：acceptance.md 各 SPEC "可视化点击验收"历史记录与 V1.0 整体验收状态不一致
-
-| 属性 | 值 |
-| --- | --- |
-| **引入切片** | SPEC 0001 ~ SPEC 0012 收口记录 |
-| **严重程度** | 低（历史快照，非遗漏） |
-| **来源** | [acceptance.md](acceptance.md) L148/L157/L175/L187/L199/L213/L243/L259/L273/L282 |
-| **现状** | 各 SPEC 收口时记录"可视化点击验收：未执行"是当时的事实快照。V1.0 整体端到端验收（2026-07-22）用 browser_use agent 补做了浏览器验收（TD-003 关闭）。收口记录不回溯修改历史，但可能让读者误以为浏览器验收从未做 |
-| **建议处理入口** | 不回溯修改各 SPEC 收口记录（保留历史快照）。在 acceptance.md 顶部"当前限制"说明中明确：V1.0 整体验收已补做浏览器验收，详见 e2e-acceptance-report-v1.0.md |
-| **阻断当前目标** | 否 |
-
-### TD-008：worker_e2e_verify.py 硬编码日志标题为"V1.0"
-
-| 属性 | 值 |
-| --- | --- |
-| **引入切片** | V1.0 端到端验收 |
-| **严重程度** | 低（脚本输出标题问题，不影响验证逻辑） |
-| **来源** | `server/worker_e2e_verify.py` 硬编码日志标题 `"# V1.0 Worker 端到端验证日志"` |
-| **现状** | V1.1.0 和 V1.2.0 回归测试执行 `worker_e2e_verify.py` 时，输出的日志标题仍是"V1.0 Worker 端到端验证日志"，需手动修正标题为对应版本。V1.2.0 已手动修正日志标题为"V1.2.0 Worker 端到端验证日志（V1.2.0 回归测试）" |
-| **临时缓解** | 每次回归执行后手动修正日志标题 |
-| **建议处理入口** | V1.3.0 或 SPEC 0016 修复 TD-004/005/006 时附带：将脚本硬编码标题改为接受命令行参数或自动从环境变量读取版本号 |
-| **阻断当前目标** | 否 |
+无活跃债务。
 
 ---
 
@@ -99,6 +57,10 @@
 | TD-002 | pandas datetime 推断 UserWarning | SPEC 0004 | 2026-07-22 | `dataset_parser.py:96` 添加 `format="mixed"`；验证 569 passed, 0 warnings。详见 [tech-debt-cleanup-plan.md](tech-debt-cleanup-plan.md) §六 |
 | TD-003 | 浏览器点击截图验收未执行 | SPEC 0002 | 2026-07-22 | V1.0 端到端验收用 browser_use agent 完成浏览器验收，截图保存至 `dev-docs/e2e-screenshots/`（home-full.png、home-viewport.png），详见 [e2e-acceptance-report-v1.0.md](e2e-acceptance-report-v1.0.md) |
 | TD-007 | openpyxl 未声明在 pyproject.toml dependencies | SPEC 0004 | 2026-07-24 | SPEC 0015 CI 首次推送后 backend job exit code 2，排查发现 `test_dataset_parser.py` 导入 `openpyxl` 失败。修复：`pyproject.toml` dependencies 新增 `openpyxl>=3.1.0`；Docker 容器内验证 729 passed。与 TD-004 同类问题，但 openpyxl 直接被 app 代码导入，故直接补入主 dependencies 而非 optional-dependencies |
+| TD-004 | 科学计算包未声明在 `pyproject.toml` dependencies | SPEC 0004 / SPEC 0005 | 2026-07-25 | SPEC 0016 在 `pyproject.toml` 新增 `[project.optional-dependencies] analysis` 段声明 pandas/numpy/scipy/scikit-learn/matplotlib/psutil（版本下限与 Dockerfile 对齐）；Dockerfile 改用 `pip install -e ".[dev,analysis]"` 一次安装；Docker 容器内验证 `import pandas, numpy, scipy, sklearn, matplotlib, psutil` 全部成功；后端 736 passed 0 warnings。详见 [dependency-review.md](dependency-review.md) §9.2 |
+| TD-005 | AGENTS.md "当前已知非阻断债务"表述过时 | 立项阶段 | 2026-07-25 | SPEC 0016 更新 AGENTS.md "当前已知非阻断债务"章节：移除"未暴露可调用的 in-app Browser 工具"过时表述，引用 `e2e-acceptance-report-v1.0.md` 作为浏览器验收证据；`git diff` 验证只涉及该章节，规则条款未变。详见 [AGENTS.md](../AGENTS.md) 第 201-204 行 |
+| TD-006 | acceptance.md 各 SPEC "可视化点击验收"历史记录与 V1.0 整体验收状态不一致 | SPEC 0001 ~ SPEC 0012 收口记录 | 2026-07-25 | SPEC 0016 在 acceptance.md 顶部"当前限制"之后新增"浏览器验收状态说明"小节，明确 V1.0 已补做浏览器验收；`git diff` 验证各 SPEC 收口记录未回溯修改。详见 [acceptance.md](acceptance.md) 第 6-7 行 |
+| TD-008 | worker_e2e_verify.py 硬编码日志标题为"V1.0" | V1.0 端到端验收 | 2026-07-25 | SPEC 0016 为 `server/worker_e2e_verify.py` 添加 `parse_args()` 函数，支持 `--version` 和 `--output` 命令行参数及 `WORKER_E2E_VERSION` 环境变量；默认值 "V1.0" 保持向后兼容；新增 `server/tests/test_worker_e2e_verify.py` 7 个单元测试全部通过。详见 [specs/0016-tech-debt-cleanup-004-005-006-008.md](specs/0016-tech-debt-cleanup-004-005-006-008.md) §六 |
 
 ---
 
@@ -137,9 +99,9 @@
 | 类别 | 数量 | 阻断当前目标 |
 | --- | --- | --- |
 | 阻断问题 | 0 | — |
-| 可记录债务（TD-004/005/006/008） | 4 | 否 |
+| 可记录债务 | 0 | 否（V1.3.0 SPEC 0016 已清理全部 4 个） |
 | 产品边界限制（L2-L15） | 14 | 否（按版本规划） |
-| 已关闭债务（TD-001/002/003/007） | 0（均已关闭） | 否 |
+| 已关闭债务（TD-001/002/003/004/005/006/007/008） | 8（均已关闭） | 否 |
 | 代码 TODO/FIXME | 0 | 否 |
 
-**结论：** 项目当前无阻断性技术债务。4 个可记录债务均为文档准确性、依赖声明或脚本输出问题，不影响主链路功能。V1.2.0 已发布并打 tag v1.2.0，SPEC 0013/0014/0015 全部收口。下一阶段方向：修复 TD-004/005/006（暂定 SPEC 0016）。
+**结论：** 项目当前无阻断性技术债务，无活跃可记录债务。V1.3.0 已发布并打 tag v1.3.0，SPEC 0016 技术债务清理全部收口（TD-004/005/006/008 全部关闭）。下一阶段方向待项目负责人规划。

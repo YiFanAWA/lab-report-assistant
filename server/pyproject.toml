@@ -25,6 +25,17 @@ dev = [
   "httpx>=0.24.0",
   "httpx2>=2.0.0",
 ]
+# 科学计算包（TD-004 已清理，SPEC 0016）：应用代码不直接导入，由用户代码通过 python_executor 运行时调用
+# 安装方式：pip install -e ".[analysis]" 或 pip install -e ".[dev,analysis]"
+# 版本下限与 server/Dockerfile 第 23-29 行固定版本一致（避免引入新版本兼容风险）
+analysis = [
+  "pandas>=3.0.3",
+  "numpy>=2.5.1",
+  "scipy>=1.18.0",
+  "scikit-learn>=1.9.0",
+  "matplotlib>=3.11.0",
+  "psutil>=7.2.2",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

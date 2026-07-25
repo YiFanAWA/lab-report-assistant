@@ -1,8 +1,10 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008）已由项目负责人确认收口。
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 729 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试）。V1.2.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）；后端 729 测试 + worker_e2e 端到端 E2E_RESULT=PASS + 关键回归点 63 passed；CI Run #2（`64f2eb4`）和 Run #3（`e203ac2`）均 completed+success。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 736 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试 + SPEC 0016 worker_e2e_verify 7 个新增测试）。V1.3.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）；后端 736 测试 + Docker 容器内科学计算包导入验证通过 + Docker 镜像构建成功。
+>
+> **浏览器验收状态说明（TD-006 已于 SPEC 0016 清理）：** V1.0 整体端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `e2e-acceptance-report-v1.0.md`（home-full.png、home-viewport.png）。后续各 SPEC 收口记录中的"可视化点击验收：未执行"为当时收口时的事实快照，不回溯修改；V1.0 之后的新切片若有 UI 变化，应按 AGENTS.md "UI 行为变化应做浏览器点击或截图验收"执行。
 
 ## 启动门禁
 
@@ -343,6 +345,17 @@
 | 2026-07-25 | V1.2.0 回归测试-SPEC 0014 LLM 缓存 | `pytest tests/test_llm_cache.py tests/test_deepseek_client.py -v` | 25 个测试全部通过（test_llm_cache 20 + test_deepseek_client 缓存接入 5），0 warnings | ✅ |
 | 2026-07-25 | V1.2.0 回归测试-SPEC 0015 CI 流水线 | GitHub REST API 查询 Run #2（`64f2eb4`）和 Run #3（`e203ac2`） | 均 completed + conclusion=success；AC-1~10 全部通过；TD-007 openpyxl 修复在 CI 中正确生效（Run #1 failure → Run #2/#3 success） | ✅ |
 | 2026-07-25 | V1.2.0 项目负责人确认收口 | 项目负责人确认 SPEC 0013/0014/0015 收口并发布 V1.2.0，要求打 tag v1.2.0 并 push | 通过 |
+| 2026-07-25 | V1.3.0 回归测试-后端全量 | `server/.venv/Scripts/python.exe -m pytest -q` | **736 passed in 61.44s, 0 warnings**（729 原有 + 7 新增 TD-008 worker_e2e_verify 测试） | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-008 单元测试 | `pytest tests/test_worker_e2e_verify.py -v` | 7 个测试全部通过（默认值/--version/--output/环境变量/参数优先级/--help），0 warnings | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-前端 lint | `npm.cmd run lint`（apps/web 下） | `tsc --noEmit` 通过，无类型错误 | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-前端 build | `npm.cmd run build`（apps/web 下） | Vite 构建通过，114 模块转换，`dist/` 394.96 kB，gzip 107.49 kB | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-数据库迁移 | `.venv\Scripts\python.exe -m alembic upgrade head` | 迁移成功（无数据库变更，本切片无 Alembic 迁移） | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-004 pyproject.toml | `pip install --dry-run -e ".[analysis]"` | analysis 段依赖解析正确，所有包版本已满足（pandas/numpy/scipy/scikit-learn/matplotlib/psutil） | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-004 Docker 镜像构建 | `docker compose build backend` | 镜像构建成功（exit 0），`lab-report-assistant-backend:latest` 已构建 | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-004 Docker 容器导入 | `docker run --rm lab-report-assistant-backend:latest .venv/bin/python -c "import pandas, numpy, scipy, sklearn, matplotlib, psutil"` | **all imports ok**（pandas 3.0.5, numpy 2.5.1, scipy 1.18.0, sklearn 1.9.0, matplotlib 3.11.1, psutil 7.2.2） | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-005 AGENTS.md diff | `git diff AGENTS.md` | 只涉及"当前已知非阻断债务"章节（第 203-204 行），规则条款未变；AC-7/AC-8 通过 | ✅ |
+| 2026-07-25 | V1.3.0 回归测试-TD-006 acceptance.md diff | `git diff dev-docs/acceptance.md` | 只涉及顶部"当前限制"段落和状态行，各 SPEC 收口记录未回溯修改；AC-9/AC-10 通过 | ✅ |
+| 2026-07-25 | V1.3.0 项目负责人确认收口 | 项目负责人确认 SPEC 0016 收口并发布 V1.3.0，要求打 tag v1.3.0 并 push | 通过 |
 
 ## 漂移检查清单
 

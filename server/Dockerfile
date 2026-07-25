@@ -15,18 +15,11 @@ COPY scripts/ scripts/
 
 # 创建 venv 并安装依赖
 # Linux 容器 venv 路径为 .venv/bin/（非 Windows 的 .venv/Scripts/）
+# TD-004 已清理（SPEC 0016）：科学计算包声明在 pyproject.toml [project.optional-dependencies] analysis
+# Docker 镜像需要完整分析依赖（容器内执行用户 Python 代码），使用 .[dev,analysis] 一次安装
 RUN python -m venv .venv && \
     .venv/bin/pip install --no-cache-dir --upgrade pip && \
-    .venv/bin/pip install --no-cache-dir -e ".[dev]" && \
-    # 额外安装科学计算包（AGENTS.md 要求应用托管受控环境，用户不应手动安装分析依赖）
-    # 版本与开发环境一致，确保容器内外行为一致
-    .venv/bin/pip install --no-cache-dir \
-        pandas==3.0.3 \
-        numpy==2.5.1 \
-        scipy==1.18.0 \
-        scikit-learn==1.9.0 \
-        matplotlib==3.11.0 \
-        psutil==7.2.2
+    .venv/bin/pip install --no-cache-dir -e ".[dev,analysis]"
 
 # ===== 阶段 2：运行时（runtime）=====
 FROM python:3.13-slim AS runtime

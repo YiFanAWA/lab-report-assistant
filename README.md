@@ -16,12 +16,17 @@
 cd server
 python -m venv .venv
 .venv\Scripts\activate
+# LocalRule 模式（无需分析包，最小依赖）
 pip install -e ".[dev]"
+# 或：完整模式（含科学计算包，支持真实执行用户 Python 代码）
+pip install -e ".[dev,analysis]"
 .venv\Scripts\python.exe -m alembic upgrade head
 .venv\Scripts\python.exe -m uvicorn app.main:app --port 8001
 ```
 
 后端默认运行在 `http://localhost:8001`。
+
+> **说明：** `analysis` 可选依赖包含 pandas/numpy/scipy/scikit-learn/matplotlib/psutil，由用户代码通过 Python 执行器运行时调用。LocalRule 模式（无 analysis）可用于无网络或最小依赖场景；真实执行用户 Python 代码需安装完整模式。
 
 ### 2. 启动前端
 
@@ -70,7 +75,7 @@ docker compose up -d
 | 服务 | 容器内端口 | 宿主机端口 | 说明 |
 | --- | --- | --- | --- |
 | frontend（nginx） | 80 | 80 | 前端入口，`/api` 请求反向代理到 backend |
-| backend（uvicorn） | 8001 | 8001 | 与 `config.py` 默认值一致，729 测试基于此端口 |
+| backend（uvicorn） | 8001 | 8001 | 与 `config.py` 默认值一致，736 测试基于此端口 |
 | worker | — | — | 后台任务进程，不对外暴露端口 |
 
 > 端口被占用时，修改 `docker-compose.yml` 中 `ports` 的左侧数字（宿主机端口），容器内端口保持不变。
@@ -339,6 +344,6 @@ python -m scripts.cleanup_expired_data --execute
 
 ## 版本
 
-当前版本：v1.2.0
+当前版本：v1.3.0
 
-详细变更日志见 [dev-docs/changelog-v1.2.0.md](dev-docs/changelog-v1.2.0.md)。
+详细变更日志见 [dev-docs/changelog-v1.2.0.md](dev-docs/changelog-v1.2.0.md)（V1.3.0 为技术债务清理切片，无新增功能，变更记录见 [dev-docs/acceptance.md](dev-docs/acceptance.md) V1.3.0 回归测试记录）。

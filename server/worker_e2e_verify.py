@@ -1,4 +1,4 @@
-"""V1.0 Worker 端到端验证脚本。
+"""Worker 端到端验证脚本（TD-008 已清理：支持 --version 和 --output 参数）。
 
 完整验证 SPEC 0006 状态机流转：
 1. 创建项目
@@ -15,8 +15,16 @@
 12. 验证最终状态：COMPLETED
 
 输出完整运行日志。
+
+参数：
+  --version VERSION    日志标题中的版本号（默认 V1.0，可通过环境变量 WORKER_E2E_VERSION 覆盖）
+  --output PATH        日志输出文件路径（默认 dev-docs/worker-e2e-log.md）
+
+示例：
+  python worker_e2e_verify.py --version V1.3.0 --output ../dev-docs/worker-e2e-log-v1.3.0-regression.md
 """
 
+import argparse
 import json
 import os
 import sys
@@ -31,6 +39,28 @@ SERVER_DIR = r"d:\java_project\lab-report-assistant\server"
 LOG_FILE = r"d:\java_project\lab-report-assistant\dev-docs\worker-e2e-log.md"
 
 
+def parse_args():
+    """解析命令行参数。
+
+    优先级：命令行参数 > 环境变量 > 默认值。
+    默认值保持 "V1.0" 和 LOG_FILE，向后兼容现有调用方式。
+    """
+    parser = argparse.ArgumentParser(
+        description="Worker 端到端验证脚本（支持 --version 和 --output 参数）"
+    )
+    parser.add_argument(
+        "--version",
+        default=os.environ.get("WORKER_E2E_VERSION", "V1.0"),
+        help="日志标题中的版本号（默认 V1.0，可通过环境变量 WORKER_E2E_VERSION 覆盖）"
+    )
+    parser.add_argument(
+        "--output",
+        default=LOG_FILE,
+        help=f"日志输出文件路径（默认 {LOG_FILE}）"
+    )
+    return parser.parse_args()
+
+
 def log(msg: str):
     """打印并记录日志。"""
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -40,8 +70,11 @@ def log(msg: str):
 
 
 def main():
+    args = parse_args()
+    log_file = args.output
+
     log_lines = []
-    log_lines.append(log("# V1.0 Worker 端到端验证日志"))
+    log_lines.append(log(f"# {args.version} Worker 端到端验证日志"))
     log_lines.append(log(""))
     log_lines.append(log(f"**执行时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
     log_lines.append(log(f"**Python：** {VENV_PYTHON}"))
@@ -61,7 +94,7 @@ def main():
         log_lines.append(log("✅ 数据库迁移成功"))
     else:
         log_lines.append(log(f"❌ 数据库迁移失败：{result.stderr}"))
-        write_log(log_lines)
+        write_log(log_lines, log_file)
         return 1
     log_lines.append(log(""))
 
@@ -283,15 +316,15 @@ finally:
     log_lines.append(log("```"))
 
     # 写入日志文件
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        f.write("\n".join(log_lines))
+    write_log(log_lines, log_file)
 
-    print(f"\n日志已保存到: {LOG_FILE}")
+    print(f"\n日志已保存到: {log_file}")
     return 0 if "E2E_RESULT=PASS" in result.stdout else 1
 
 
-def write_log(lines):
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
+def write_log(lines, file_path):
+    """写入日志文件到指定路径。"""
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 

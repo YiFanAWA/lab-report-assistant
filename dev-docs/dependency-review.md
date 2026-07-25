@@ -331,22 +331,28 @@ V1.2.0 Docker 化部署引入的基础设施镜像，不新增 Python/Node.js �
 | `node:20-slim` | 前端构建阶段 | Node 20 LTS，支持 Vite 6 构建 |
 | `nginx:alpine` | 前端静态托管 + API 反向代理 | 仅托管静态文件和反向代理，无需 Python/Node 运行时，alpine 体积小 |
 
-### 9.2 科学计算包（Docker 镜像内额外安装）
+### 9.2 科学计算包（已声明在 pyproject.toml optional-dependencies，TD-004 已于 SPEC 0016 清理）
 
-AGENTS.md 要求"应用托管受控环境，用户不应手动安装 pandas/numpy/matplotlib"。这些包不在 `pyproject.toml` 的 dependencies 中（开发环境手动安装），Docker 镜像构建时额外固定版本安装：
+AGENTS.md 要求"应用托管受控环境，用户不应手动安装 pandas/numpy/matplotlib"。这些包由用户代码通过 `python_executor` 运行时调用，应用代码不直接导入，因此声明在 `[project.optional-dependencies] analysis` 段（而非主 `dependencies`），让用户选择安装模式：
 
-| 包 | 版本 | 用途 |
+| 包 | 版本约束 | 用途 |
 | --- | --- | --- |
-| pandas | 3.0.3 | 数据分析 |
-| numpy | 2.5.1 | 数值计算 |
-| scipy | 1.18.0 | 统计检验 |
-| scikit-learn | 1.9.0 | 机器学习 |
-| matplotlib | 3.11.0 | 图表生成 |
-| psutil | 7.2.2 | 执行沙箱内存监控 |
+| pandas | >=3.0.3 | 数据分析 |
+| numpy | >=2.5.1 | 数值计算 |
+| scipy | >=1.18.0 | 统计检验 |
+| scikit-learn | >=1.9.0 | 机器学习 |
+| matplotlib | >=3.11.0 | 图表生成 |
+| psutil | >=7.2.2 | 执行沙箱内存监控 |
+
+安装方式：
+
+- LocalRule 模式（最小依赖）：`pip install -e ".[dev]"`
+- 完整模式（含科学计算包，支持真实执行用户 Python 代码）：`pip install -e ".[dev,analysis]"`
+- Docker 镜像自动安装完整依赖：Dockerfile 使用 `pip install -e ".[dev,analysis]"`
 
 ### 9.3 已知限制
 
-- 科学计算包（pandas/numpy/scipy/scikit-learn/matplotlib/psutil）未声明在 `pyproject.toml` dependencies 中，属于已存在债务（开发环境手动安装）。Docker 化通过 Dockerfile 额外安装弥补，但 `pip install -e .` 不会自动安装这些包。后续应考虑在 `pyproject.toml` 添加 `[project.optional-dependencies] analysis` 段。
+- ~~科学计算包未声明在 `pyproject.toml` dependencies 中~~（**TD-004 已于 SPEC 0016 关闭**：已声明在 `[project.optional-dependencies] analysis` 段，Dockerfile 改用 `pip install -e ".[dev,analysis]"` 一次安装）。
 
 ### 9.4 文档解析依赖修复（2026-07-24，SPEC 0013 实现过程中发现）
 
