@@ -32,6 +32,7 @@ vi.mock("../../features/requirements/hooks", () => ({
   useAddDocxSource: vi.fn(),
   useCurrentPlan: vi.fn(),
   useGeneratePlan: vi.fn(),
+  useStreamGeneratePlan: vi.fn(),
   useUpdatePlan: vi.fn(),
   useConfirmPlan: vi.fn(),
 }));
@@ -43,6 +44,7 @@ import {
   useAddDocxSource,
   useCurrentPlan,
   useGeneratePlan,
+  useStreamGeneratePlan,
   useUpdatePlan,
   useConfirmPlan,
 } from "../../features/requirements/hooks";
@@ -60,6 +62,7 @@ const mockedUseAddTextSource = vi.mocked(useAddTextSource);
 const mockedUseAddDocxSource = vi.mocked(useAddDocxSource);
 const mockedUseCurrentPlan = vi.mocked(useCurrentPlan);
 const mockedUseGeneratePlan = vi.mocked(useGeneratePlan);
+const mockedUseStreamGeneratePlan = vi.mocked(useStreamGeneratePlan);
 const mockedUseUpdatePlan = vi.mocked(useUpdatePlan);
 const mockedUseConfirmPlan = vi.mocked(useConfirmPlan);
 
@@ -189,6 +192,17 @@ function setupMocks(options: {
   mockedUseGeneratePlan.mockReturnValue(makeMutationMock() as any);
   mockedUseUpdatePlan.mockReturnValue(makeMutationMock() as any);
   mockedUseConfirmPlan.mockReturnValue(makeMutationMock() as any);
+
+  // SPEC 0018：流式生成 hook 默认返回非流式状态
+  mockedUseStreamGeneratePlan.mockReturnValue({
+    streaming: false,
+    chunks: "",
+    result: null,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  } as any);
 }
 
 /** 用路由上下文渲染组件。 */

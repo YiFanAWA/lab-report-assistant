@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008）已由项目负责人确认收口。V1.4.0 已发布并打 tag v1.4.0：SPEC 0017（单用户前端实时编辑反馈）已由项目负责人确认收口。
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008）已由项目负责人确认收口。V1.4.0 已发布并打 tag v1.4.0：SPEC 0017（单用户前端实时编辑反馈）已由项目负责人确认收口。V2.0.0 已发布并打 tag v2.0.0：SPEC 0018（流式 LLM 输出，任务单生成 SSE 流式化）已由项目负责人确认收口。
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 434 个测试（22 个测试文件，含 SPEC 0017 新增 23 个 hooks 层乐观更新测试），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 736 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试 + SPEC 0016 worker_e2e_verify 7 个新增测试）。V1.4.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 396.63 kB，gzip 108.01 kB）；后端 736 测试零回归（本切片不修改后端）。
+> 当前限制：代码阶段已正式启动。前端测试套件为 468 个测试（25 个测试文件，含 SPEC 0018 新增 34 个流式 LLM 输出测试：stream-sse 18 + api-stream 6 + hooks-stream 10），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 783 个测试（0 warnings，含 SPEC 0018 流式 LLM 输出 47 个新增测试：DeepSeekClient 流式 18 + Provider 流式 7 + Service 流式 11 + API SSE 11）。V2.0.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，115 模块转换，dist/ 400.27 kB，gzip 109.09 kB）；后端 alembic upgrade head 无变化（SPEC 0018 不修改数据库 schema）。
 >
 > **浏览器验收状态说明（TD-006 已于 SPEC 0016 清理；TD-009 在 SPEC 0017 引入）：** V1.0 整体端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `e2e-acceptance-report-v1.0.md`（home-full.png、home-viewport.png）。后续各 SPEC 收口记录中的"可视化点击验收：未执行"为当时收口时的事实快照，不回溯修改；V1.0 之后的新切片若有 UI 变化，应按 AGENTS.md "UI 行为变化应做浏览器点击或截图验收"执行。SPEC 0017 已用 browser_use agent 完成真实浏览器点击验收（PASS：保存按钮"已保存 ✓"绿色 #16a34a 提示正常显示，1.5s 后自动消失），但截图未持久化到磁盘（browser_take_screenshot 工具限制），记录为非阻断债务 TD-009，后续修复入口见 [tech-debt-inventory.md](tech-debt-inventory.md)。
 >
@@ -376,6 +376,26 @@
 | 2026-07-25 | AC-26 文档回写 | 更新 `dev-docs/README.md`（顶部状态行追加 V1.4.0 + 当前阶段 + SPEC 0017 索引）、`dev-docs/acceptance.md`（顶部状态行 + 当前限制 + 验收记录表追加 SPEC 0017 15 条记录）、`dev-docs/implementation-plan.md`（顶部说明 + 执行门禁追加 V1.4.0）、`dev-docs/specs/0017-frontend-realtime-edit-feedback.md`（状态字段从"草案"改为"已实现并由项目负责人确认收口"+ 顶部新增"实现收口说明"）、`dev-docs/decisions/0023-start-spec-0017-frontend-realtime-edit-feedback.md`（验收证据章节回写）、新建 `dev-docs/changelog-v1.4.0.md`、更新 `dev-docs/tech-debt-inventory.md`（追加 TD-009） | ✅ |
 | 2026-07-25 | AC-27 版本收口 | 完成 git commit "完成 SPEC 0017 单用户前端实时编辑反馈"（中文），push 到 origin/master，打 tag v1.4.0 并 push --tags | 通过（待执行） |
 | 2026-07-25 | V1.4.0 项目负责人确认收口 | 项目负责人确认 SPEC 0017 收口并发布 V1.4.0，要求打 tag v1.4.0 并 push | 通过 |
+| 2026-07-25 | SPEC 0018 决策记录 0024 创建 | 启动 SPEC 0018 流式 LLM 输出切片的决策记录，方向：API SSE + Gateway 直调，仅改造任务单生成，保留原同步端点兼容，不引入 WebSocket/长轮询，不引入新依赖，不修改数据库 schema | 通过 |
+| 2026-07-25 | AC-1~5 DeepSeekClient 流式调用 | `tests/test_deepseek_client_stream.py` 18 个测试通过：流式成功（yield 顺序正确）/ 缓存命中（一次性 yield 完整字符串）/ 缓存写入（完成后 cache.set 被调用）/ 首 chunk 前失败（抛 DeepSeekError 不写缓存）/ 中途失败（已 yield chunk 不写缓存） | ✅ |
+| 2026-07-25 | AC-6~8 Provider 流式调用 | `tests/test_deepseek_requirement_provider_stream.py` 7 个测试通过：stream_draft 成功（yield 顺序正确，JSON 校验通过）/ 首 chunk 前降级（降级到 LocalRule，拆分多 chunk yield fallback JSON）/ 中途失败（抛异常，已 yield chunks 保留） | ✅ |
+| 2026-07-25 | AC-9~11 Service 流式调用 | `tests/test_requirements_service_stream.py` 11 个测试通过：stream_generate_plan 成功（RequirementPlan 保存 + StreamDoneEvent）/ 中途失败（StreamErrorEvent + 不保存 RequirementPlan）/ 兼容 LocalRule（provider 不支持 stream_draft 时降级为一次性 yield） | ✅ |
+| 2026-07-25 | AC-12~13 API SSE 端点 | `tests/test_requirements_stream_api.py` 11 个测试通过：返回 `text/event-stream` + 事件格式正确（chunk/done/error）/ source_id 无效时返回 AppError（REQUIREMENT_SOURCE_NOT_FOUND 404）/ 不存在的 project_id 返回 404 | ✅ |
+| 2026-07-25 | AC-14 前端 streamSSE 解析 | `apps/web/src/shared/__tests__/stream-sse.test.ts` 18 个测试通过：单事件块/多事件块/跨 chunk 拼接/默认 message 事件/多行 data 拼接/注释行跳过/空行跳过/冒号后空格剥离（SSE 规范仅剥离一个）/尾部不完整块/空 body/POST+JSON body/AbortSignal 传递/HTTP 4xx 5xx 透传/fetch reject/空响应体 | ✅ |
+| 2026-07-25 | AC-15 前端 useStreamGeneratePlan | `apps/web/src/features/requirements/__tests__/hooks-stream.test.tsx` 10 个测试通过：chunk 累积/done 事件设置 result 并清空 chunks + invalidate plan query/start 重置旧状态/error 事件保留 partial_text/非 AbortError 映射为 STREAM_NETWORK_ERROR/AbortError 不设 error/cancel 通过 AbortSignal 中断/reset 重置/初始状态正确 | ✅ |
+| 2026-07-25 | AC-16 前端 UI 流式展示 | `RequirementWorkspaceView.test.tsx` 35 个测试全部通过（含新增 useStreamGeneratePlan mock）；UI 改造新增"流式生成任务单"按钮 + 流式展示区（带边框灰色背景）+ "取消"按钮 + `<pre>` chunk 累积 + "流式生成完成 ✓ [源]"提示 + 错误展示 + 降级标记 | ✅ |
+| 2026-07-25 | AC-17 原同步端点零回归 | `POST /plans/generate` 同步端点未修改，`tests/test_requirement_api.py` 6 个测试 + `tests/test_requirement_service.py` 12 个测试全部通过，零回归 | ✅ |
+| 2026-07-25 | AC-18 后端测试通过 | `server` 下 `.venv\Scripts\python.exe -m pytest` 结果 **783 passed in 124.54s, 0 warnings**（736 原有 + 47 新增：test_deepseek_client_stream 18 + test_deepseek_requirement_provider_stream 7 + test_requirements_service_stream 11 + test_requirements_stream_api 11） | ✅ |
+| 2026-07-25 | AC-19 前端测试通过 | `apps/web` 下 `npm test -- --run` 结果 **468 passed**（25 个测试文件，434 原有 + 34 新增：stream-sse 18 + api-stream 6 + hooks-stream 10） | ✅ |
+| 2026-07-25 | AC-20 TypeScript 类型检查 | `apps/web` 下 `npm run lint` 结果为 `tsc --noEmit` 通过，无类型错误 | ✅ |
+| 2026-07-25 | AC-21 Vite 构建 | `apps/web` 下 `npm run build` 结果为 Vite 构建通过，115 模块转换，生成 `dist/`（400.27 kB，gzip 109.09 kB） | ✅ |
+| 2026-07-25 | AC-22 Alembic 无变化 | `server` 下 `.venv\Scripts\python.exe -m alembic upgrade head` 执行成功，无新增迁移文件（SPEC 0018 不修改数据库 schema，流式 chunk 不持久化） | ✅ |
+| 2026-07-25 | AC-23 数据库零改动 | `git diff server/alembic/` 无变化，`git diff server/app/infrastructure/database/` 无变化 | ✅ |
+| 2026-07-25 | AC-24 不引入新依赖 | `git diff server/pyproject.toml` 无依赖变化；`git diff apps/web/package.json` 无依赖变化。流式能力由 httpx `client.stream()` + 浏览器原生 `fetch + ReadableStream` 提供 | ✅ |
+| 2026-07-25 | AC-25 浏览器验收 | 启动后端（uvicorn port 8001）+ 前端 Vite dev server，用 browser_use agent 执行真实浏览器点击验收：创建项目 → 进入实验要求工作台 → 添加实验要求来源 → 确认"生成任务单候选"和"流式生成任务单"两个按钮存在 → 点击"流式生成任务单" → **观察到流式展示区出现（带边框灰色背景）+ "取消"按钮 + chunk 文本在 `<pre>` 标签中逐步累积 + 流式完成后显示"流式生成完成 ✓ [LOCAL_RULE]"提示**；后端 API 验证任务单已保存（`GET /api/projects/{id}/requirements/plan` 返回 CANDIDATE 状态）。**截图未持久化到磁盘（browser_take_screenshot 工具限制，TD-009 延续），验收结论 PASS** | ✅ |
+| 2026-07-25 | AC-26 不破坏 owner 边界 | API 路由层只做 SSE 协议映射（`StreamingResponse` + `_serialize_sse_event`），业务真相在 `req_service.stream_generate_plan`；provider 层只返回候选，不拥有业务状态；前端 hook 只展示状态不私造状态机，done 事件后 `invalidateQueries` 用后端真相覆盖 | ✅ |
+| 2026-07-25 | AC-27 文档回写 | 更新 `dev-docs/README.md`（顶部状态行追加 V2.0.0 + SPEC 0018 索引 + 决策 0024）、`dev-docs/acceptance.md`（顶部状态行 + 当前限制 + 验收记录表追加 SPEC 0018 记录）、`dev-docs/implementation-plan.md`（追加 V2.0.0）、`dev-docs/decisions/0024-start-spec-0018-streaming-llm-output.md`（验收证据章节回写）、新建 `dev-docs/changelog-v2.0.0.md` | ✅ |
+| 2026-07-25 | AC-28 版本收口 | 完成 git commit "完成 SPEC 0018 流式 LLM 输出"（中文），push 到 origin/master，打 tag v2.0.0 并 push --tags | 通过（待执行） |
 
 ## 漂移检查清单
 

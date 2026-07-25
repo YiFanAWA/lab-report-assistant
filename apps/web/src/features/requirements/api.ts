@@ -4,6 +4,7 @@ import type {
   RequirementPlanResponse,
   RequirementPlanPayload,
 } from "./types";
+import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 
 const BASE = "/api";
 
@@ -68,6 +69,25 @@ export async function generatePlan(
     body: JSON.stringify({ source_id: sourceId }),
   });
   return handle<RequirementPlanResponse>(r);
+}
+
+/**
+ * 流式生成任务单（SPEC 0018）。
+ *
+ * 返回异步迭代器，逐个 yield SSE 事件。
+ * 调用方负责处理 chunk / done / error 事件。
+ *
+ * @param projectId 项目 ID
+ * @param sourceId 要求来源 ID
+ * @param signal 可选的 AbortSignal，用于取消流式
+ */
+export async function* streamGeneratePlan(
+  projectId: string,
+  sourceId: string,
+  signal?: AbortSignal
+): AsyncGenerator<SSEEvent, void, unknown> {
+  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/requirements/plans/stream-generate`;
+  yield* streamSSE(url, { source_id: sourceId }, signal);
 }
 
 export async function fetchCurrentPlan(projectId: string): Promise<RequirementPlanResponse> {

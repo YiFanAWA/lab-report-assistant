@@ -2,7 +2,9 @@
 
 import hashlib
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Generator
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
@@ -23,6 +25,37 @@ from app.modules.requirements.status import (
     CandidateSource,
     ChangeType,
 )
+
+
+# --- SPEC 0018 流式事件类型 ---
+
+
+@dataclass
+class StreamChunkEvent:
+    """流式 chunk 事件，承载一个 LLM 生成的内容片段。"""
+
+    text: str
+
+
+@dataclass
+class StreamDoneEvent:
+    """流式完成事件，承载任务单保存后的元信息。"""
+
+    plan_id: str
+    candidate_source: str
+    fallback_used: bool
+
+
+@dataclass
+class StreamErrorEvent:
+    """流式错误事件，承载失败时的错误信息和已生成的部分文本。"""
+
+    error_code: str
+    message: str
+    partial_text: str
+
+
+StreamEvent = StreamChunkEvent | StreamDoneEvent | StreamErrorEvent
 
 
 def _hash_text(text: str) -> str:
@@ -170,6 +203,130 @@ def generate_plan(db: Session, project_id: str, req: GeneratePlanRequest,
     db.commit()
     db.refresh(plan)
     return plan
+
+
+def stream_generate_plan(
+    db: Session, project_id: str, req: GeneratePlanRequest, provider
+) -> Generator[StreamEvent, None, None]:
+    """流式生成任务单。
+
+    SPEC 0018 流式 LLM 输出。
+
+    流程（分段持有 db session，避免 SQLite 写锁阻塞）：
+    1. Phase 1 校验（持有 db）：校验 project + source 归属
+    2. Phase 2 流式生成（关闭 db，不持有连接）：调用 provider.stream_draft()
+    3. Phase 3 JSON 校验：用 Pydantic 校验完整 JSON
+    4. Phase 4 保存（重新打开 db）：保存 RequirementPlan + 推进 project.status
+
+    中途失败：yield StreamErrorEvent（保留 partial_text），不保存 RequirementPlan。
+
+    兼容不支持 stream_draft 的 provider（LocalRule）：调用 draft() 一次性 yield。
+
+    yield StreamEvent：StreamChunkEvent / StreamDoneEvent / StreamErrorEvent。
+    """
+    from app.infrastructure.database.engine import SessionLocal
+
+    # Phase 1: 校验（持有 db）
+    project = _ensure_project(db, project_id)
+    source = get_source(db, req.source_id)
+    if source.project_id != project_id:
+        raise AppError(
+            code="REQUIREMENT_SOURCE_NOT_FOUND",
+            message="要求来源不属于该项目",
+        )
+    requirement_text = source.original_text
+    db.close()  # 显式关闭，避免流式期间持有连接
+
+    # Phase 2: 流式生成（不持有 db）
+    chunks: list[str] = []
+    fallback_used = False
+    try:
+        if hasattr(provider, "stream_draft"):
+            for chunk in provider.stream_draft(requirement_text):
+                chunks.append(chunk)
+                yield StreamChunkEvent(text=chunk)
+        else:
+            # 兼容 LocalRule provider（不支持流式）
+            payload = provider.draft(requirement_text)
+            full_json = payload.model_dump_json()
+            # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+            for i in range(0, len(full_json), 50):
+                piece = full_json[i:i + 50]
+                chunks.append(piece)
+                yield StreamChunkEvent(text=piece)
+    except Exception as e:
+        # 流式中途失败
+        partial_text = "".join(chunks)
+        yield StreamErrorEvent(
+            error_code=getattr(e, "code", "STREAM_FAILED"),
+            message=str(e) or e.__class__.__name__,
+            partial_text=partial_text,
+        )
+        return
+
+    # Phase 3: 校验完整 JSON
+    raw = "".join(chunks)
+    try:
+        from app.modules.llm.deepseek_requirement_provider import (
+            DeepSeekRequirementResponse,
+            deepseek_response_to_payload,
+        )
+        parsed = DeepSeekRequirementResponse.model_validate_json(raw)
+        payload = deepseek_response_to_payload(parsed)
+    except Exception as e:
+        yield StreamErrorEvent(
+            error_code="DEEPSEEK_JSON_PARSE_ERROR",
+            message=f"流式生成的 JSON 校验失败: {e}",
+            partial_text=raw,
+        )
+        return
+
+    # Phase 4: 保存（重新打开 db）
+    db2 = SessionLocal()
+    try:
+        old = (
+            db2.query(RequirementPlan)
+            .filter(
+                RequirementPlan.project_id == project_id,
+                RequirementPlan.status == PlanStatus.CANDIDATE.value,
+            )
+            .all()
+        )
+        for p in old:
+            p.status = PlanStatus.STALE.value
+
+        candidate_source_val = provider.source_label()
+        plan = RequirementPlan(
+            project_id=project_id,
+            source_id=source.id,
+            status=PlanStatus.CANDIDATE.value,
+            payload_json=payload.model_dump_json(),
+            candidate_source=candidate_source_val,
+        )
+        db2.add(plan)
+        project2 = _ensure_project(db2, project_id)
+        project2.status = ProjectStatus.REQUIREMENT_PARSED.value
+        _add_change(
+            db2, project_id,
+            ChangeType.REQUIREMENT_PLAN_GENERATED.value,
+            f"流式生成任务单候选（{candidate_source_val}）",
+        )
+        db2.commit()
+        db2.refresh(plan)
+
+        yield StreamDoneEvent(
+            plan_id=plan.id,
+            candidate_source=candidate_source_val,
+            fallback_used=fallback_used,
+        )
+    except Exception as e:
+        yield StreamErrorEvent(
+            error_code="PLAN_SAVE_FAILED",
+            message=f"任务单保存失败: {e}",
+            partial_text=raw,
+        )
+    finally:
+        db2.close()
 
 
 def get_current_plan(db: Session, project_id: str) -> RequirementPlan | None:

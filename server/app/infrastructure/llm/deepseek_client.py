@@ -14,6 +14,7 @@
 import json
 import time
 import logging
+from typing import Generator
 
 import httpx
 
@@ -218,6 +219,126 @@ class DeepSeekClient:
                 code="DEEPSEEK_RESPONSE_FORMAT_ERROR",
                 message=f"响应格式异常：{e}",
             ) from e
+
+    def stream_chat_completion(
+        self,
+        messages: list[dict],
+        response_format: dict | None = None,
+        temperature: float = 0.3,
+    ) -> Generator[str, None, None]:
+        """流式调用 DeepSeek chat/completions，逐 chunk yield content。
+
+        SPEC 0018 流式 LLM 输出。
+
+        行为：
+        - 缓存命中时一次性 yield 完整字符串（模拟瞬时生成）
+        - 流式完成后写入缓存（与同步路径共享 SPEC 0014 LLM 缓存）
+        - 流式中途失败不写入缓存
+        - 不重试（流式重试语义复杂，首 chunk 前失败由 provider 降级）
+
+        参数与 chat_completion 一致。
+
+        异常：
+        - DeepSeekError（code, message）—— 首 chunk 前失败由 provider 降级，
+          中途失败由 provider 透传由上层 service 转 StreamErrorEvent。
+        """
+        # 缓存查询（SPEC 0014 共享缓存）
+        cache_key = None
+        if self._cache is not None:
+            cache_key = LLMCache.compute_key(
+                self._model, messages, response_format, temperature
+            )
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                logger.info(f"LLM 缓存命中（流式），key={cache_key[:12]}...")
+                yield cached
+                return
+
+        url = f"{self._base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+        payload: dict = {
+            "model": self._model,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True,
+        }
+        if response_format is not None:
+            payload["response_format"] = response_format
+
+        accumulated: list[str] = []
+        try:
+            with httpx.Client(timeout=self._timeout_seconds) as client:
+                with client.stream("POST", url, json=payload, headers=headers) as resp:
+                    # HTTP 状态码处理（首 chunk 前）
+                    if resp.status_code == 401:
+                        raise DeepSeekError(
+                            code="DEEPSEEK_AUTH_ERROR",
+                            message="API Key 鉴权失败",
+                        )
+                    if resp.status_code == 429:
+                        raise DeepSeekError(
+                            code="DEEPSEEK_RATE_LIMITED",
+                            message="请求被限流",
+                        )
+                    if 400 <= resp.status_code < 500:
+                        raise DeepSeekError(
+                            code="DEEPSEEK_CLIENT_ERROR",
+                            message=f"客户端错误（{resp.status_code}）",
+                        )
+                    if resp.status_code >= 500:
+                        raise DeepSeekError(
+                            code="DEEPSEEK_SERVER_ERROR",
+                            message=f"服务端错误（{resp.status_code}）",
+                        )
+
+                    # 流式读取 SSE 行
+                    for line in resp.iter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+                        data = line[6:]
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk_data = json.loads(data)
+                            delta = (
+                                chunk_data.get("choices", [{}])[0]
+                                .get("delta", {})
+                                .get("content", "")
+                            )
+                            if delta:
+                                accumulated.append(delta)
+                                yield delta
+                        except (json.JSONDecodeError, KeyError, IndexError) as e:
+                            logger.warning(f"流式 chunk 解析失败，跳过: {e}")
+                            continue
+        except httpx.TimeoutException as e:
+            raise DeepSeekError(
+                code="DEEPSEEK_TIMEOUT",
+                message=f"流式请求超时（{self._timeout_seconds}s）：{e}",
+            ) from e
+        except httpx.ConnectError as e:
+            raise DeepSeekError(
+                code="DEEPSEEK_CONNECTION_ERROR",
+                message=f"流式连接失败：{e}",
+            ) from e
+        except httpx.HTTPError as e:
+            # 已 yield 的 chunk 保留，异常由上层捕获
+            raise DeepSeekError(
+                code="DEEPSEEK_HTTP_ERROR",
+                message=f"流式 HTTP 错误：{e}",
+            ) from e
+
+        # 流式完成后写入缓存（失败不阻断主流程，且只在有内容时写入）
+        if cache_key is not None and self._cache is not None and accumulated:
+            try:
+                self._cache.set(
+                    cache_key, "".join(accumulated), model=self._model
+                )
+            except Exception as e:
+                logger.warning(f"LLM 缓存写入失败（流式），降级到无缓存: {e}")
 
 
 def create_client_from_settings() -> DeepSeekClient:

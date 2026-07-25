@@ -7,6 +7,7 @@ import {
   useAddDocxSource,
   useCurrentPlan,
   useGeneratePlan,
+  useStreamGeneratePlan,
   useUpdatePlan,
   useConfirmPlan,
 } from "../features/requirements/hooks";
@@ -76,10 +77,12 @@ export function RequirementWorkspaceView() {
   const addSource = useAddTextSource(pid);
   const addDocx = useAddDocxSource(pid);
   const generate = useGeneratePlan(pid);
+  const streamGenerate = useStreamGeneratePlan(pid);
   const updatePlan = useUpdatePlan(pid);
   const confirm = useConfirmPlan(pid);
 
   const [genErr, setGenErr] = useState<string | null>(null);
+  const [streamErr, setStreamErr] = useState<string | null>(null);
   const [editErr, setEditErr] = useState<string | null>(null);
   const [editOk, setEditOk] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -196,20 +199,101 @@ export function RequirementWorkspaceView() {
 
           {/* 生成任务单 */}
           <div style={{ marginTop: "1rem" }}>
-            <button
-              onClick={() => {
-                setGenErr(null);
-                const srcId = sources![0].id;
-                generate.mutate(srcId, {
-                  onError: (e) => setGenErr(errorMessage(e, "生成失败")),
-                });
-              }}
-              disabled={generate.isPending}
-              style={{ padding: "0.5rem 1rem" }}
-            >
-              {generate.isPending ? "生成中…" : "生成任务单候选"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  setGenErr(null);
+                  const srcId = sources![0].id;
+                  generate.mutate(srcId, {
+                    onError: (e) => setGenErr(errorMessage(e, "生成失败")),
+                  });
+                }}
+                disabled={generate.isPending || streamGenerate.streaming}
+                style={{ padding: "0.5rem 1rem" }}
+              >
+                {generate.isPending ? "生成中…" : "生成任务单候选"}
+              </button>
+              <button
+                onClick={() => {
+                  setStreamErr(null);
+                  const srcId = sources![0].id;
+                  streamGenerate.start(srcId);
+                }}
+                disabled={generate.isPending || streamGenerate.streaming}
+                style={{ padding: "0.5rem 1rem" }}
+              >
+                {streamGenerate.streaming ? "流式生成中…" : "流式生成任务单"}
+              </button>
+            </div>
             {genErr && <p style={{ color: "#c00", fontSize: "0.85rem" }}>{genErr}</p>}
+
+            {/* SPEC 0018：流式生成展示区 */}
+            {streamGenerate.streaming && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "1rem",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "0.375rem",
+                  background: "#f9fafb",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                    正在逐 chunk 生成…
+                  </span>
+                  <button
+                    onClick={streamGenerate.cancel}
+                    style={{
+                      padding: "0.3rem 0.8rem",
+                      fontSize: "0.85rem",
+                      color: "#c00",
+                      background: "transparent",
+                      border: "1px solid #c00",
+                      borderRadius: "0.25rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    fontSize: "0.85rem",
+                    lineHeight: 1.5,
+                    margin: 0,
+                    maxHeight: "300px",
+                    overflow: "auto",
+                  }}
+                >
+                  {streamGenerate.chunks}
+                </pre>
+              </div>
+            )}
+            {streamGenerate.result && (
+              <p style={{ color: "#16a34a", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                流式生成完成 ✓ [{streamGenerate.result.candidate_source}
+                {streamGenerate.result.fallback_used ? "（降级）" : ""}]
+              </p>
+            )}
+            {streamGenerate.error && (
+              <p style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                流式生成失败：{streamGenerate.error.message}
+                {streamGenerate.error.partial_text && (
+                  <span style={{ color: "#92400e" }}>（已保留部分生成内容）</span>
+                )}
+              </p>
+            )}
+            {streamErr && <p style={{ color: "#c00", fontSize: "0.85rem" }}>{streamErr}</p>}
           </div>
         </section>
       )}

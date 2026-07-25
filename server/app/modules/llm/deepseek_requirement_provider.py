@@ -6,6 +6,7 @@ LLM 调用失败时降级到 LocalRuleRequirementDraftProvider。
 
 import json
 import logging
+from typing import Generator
 
 from pydantic import BaseModel, ValidationError
 
@@ -149,6 +150,60 @@ class DeepSeekRequirementDraftProvider:
             payload = self._fallback.draft(requirement_text)
             return self._mark_fallback(payload)
 
+    def stream_draft(
+        self, requirement_text: str
+    ) -> Generator[str, None, None]:
+        """流式调用 DeepSeek 拆解实验要求，逐 chunk yield content。
+
+        SPEC 0018 流式 LLM 输出。
+
+        降级策略：
+        - 首 chunk 前失败：降级到 LocalRule，一次性 yield fallback JSON（拆分多 chunk 模拟流式）
+        - 中途失败：已 yield 的 chunks 保留，抛 DeepSeekError 由上层 service 转 StreamErrorEvent
+
+        yield 内容：LLM 流式 chunk（首 chunk 后保证至少有一个 chunk）
+        """
+        chunks: list[str] = []
+        started = False
+        try:
+            for chunk in self._client.stream_chat_completion(
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_user_prompt(requirement_text)},
+                ],
+                response_format={"type": "json_object"},
+                temperature=self._temperature,
+            ):
+                started = True
+                chunks.append(chunk)
+                yield chunk
+        except Exception as e:
+            if not started:
+                # 首 chunk 前失败，降级到 LocalRule
+                logger.warning(
+                    f"DeepSeek 流式任务单失败，降级到 LocalRule: {e}"
+                )
+                fallback_payload = self._fallback.draft(requirement_text)
+                fallback_json = fallback_payload.model_dump_json()
+                # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+                for i in range(0, len(fallback_json), 50):
+                    yield fallback_json[i:i + 50]
+                return
+            # 中途失败，已 yield 的 chunks 保留，抛异常由上层 service 转 StreamErrorEvent
+            raise
+
+        # 流式完成，校验完整 JSON
+        raw = "".join(chunks)
+        try:
+            self._parse_and_validate(raw)
+        except DeepSeekError:
+            raise
+        except Exception as e:
+            raise DeepSeekError(
+                code="DEEPSEEK_JSON_PARSE_ERROR",
+                message=f"流式生成的 JSON 校验失败: {e}",
+            ) from e
+
     def _parse_and_validate(self, raw: str) -> DeepSeekRequirementResponse:
         """解析 JSON 并用 Pydantic 校验结构。"""
         try:
@@ -162,29 +217,7 @@ class DeepSeekRequirementDraftProvider:
 
     def _to_payload(self, resp: DeepSeekRequirementResponse) -> RequirementPlanPayload:
         """将校验后的 LLM 响应转为业务 Payload。"""
-        return RequirementPlanPayload(
-            topic=resp.topic,
-            experiment_type=resp.experiment_type,
-            research_subject=resp.research_subject,
-            required_tasks=[self._to_task(t) for t in resp.required_tasks],
-            recommended_tasks=[self._to_task(t) for t in resp.recommended_tasks],
-            optional_tasks=[self._to_task(t) for t in resp.optional_tasks],
-            out_of_scope_tasks=[self._to_task(t) for t in resp.out_of_scope_tasks],
-            unknown_items=[self._to_task(t) for t in resp.unknown_items],
-            data_requirements=resp.data_requirements,
-            method_requirements=resp.method_requirements,
-            chart_requirements=resp.chart_requirements,
-            report_requirements=resp.report_requirements,
-            presentation_requirements=resp.presentation_requirements,
-            acceptance_criteria=resp.acceptance_criteria,
-            replication_level=ReplicationLevel(
-                level=resp.replication_level.level,
-                label=resp.replication_level.label,
-                supported_in_v1=resp.replication_level.supported_in_v1,
-                reason=resp.replication_level.reason,
-                suggested_scope=resp.replication_level.suggested_scope,
-            ),
-        )
+        return deepseek_response_to_payload(resp)
 
     def _to_task(self, t: DeepSeekTask) -> RequirementTask:
         """将 LLM 任务转为业务任务。"""
@@ -202,3 +235,75 @@ class DeepSeekRequirementDraftProvider:
         降级时不修改 payload 内容，service 层通过 source_label() 返回值判断。
         """
         return payload
+
+
+def deepseek_response_to_payload(resp: DeepSeekRequirementResponse) -> RequirementPlanPayload:
+    """将校验后的 LLM 响应转为业务 Payload。
+
+    唯一 owner 的公共转换函数（SPEC 0018 流式输出复用）。
+    同步路径（provider._to_payload）和流式路径（service.stream_generate_plan）共用此函数，
+    避免业务真相分散。
+    """
+    return RequirementPlanPayload(
+        topic=resp.topic,
+        experiment_type=resp.experiment_type,
+        research_subject=resp.research_subject,
+        required_tasks=[
+            RequirementTask(
+                title=t.title,
+                description=t.description,
+                task_type=t.task_type,
+                reason=t.reason,
+                source_quote=t.source_quote,
+            ) for t in resp.required_tasks
+        ],
+        recommended_tasks=[
+            RequirementTask(
+                title=t.title,
+                description=t.description,
+                task_type=t.task_type,
+                reason=t.reason,
+                source_quote=t.source_quote,
+            ) for t in resp.recommended_tasks
+        ],
+        optional_tasks=[
+            RequirementTask(
+                title=t.title,
+                description=t.description,
+                task_type=t.task_type,
+                reason=t.reason,
+                source_quote=t.source_quote,
+            ) for t in resp.optional_tasks
+        ],
+        out_of_scope_tasks=[
+            RequirementTask(
+                title=t.title,
+                description=t.description,
+                task_type=t.task_type,
+                reason=t.reason,
+                source_quote=t.source_quote,
+            ) for t in resp.out_of_scope_tasks
+        ],
+        unknown_items=[
+            RequirementTask(
+                title=t.title,
+                description=t.description,
+                task_type=t.task_type,
+                reason=t.reason,
+                source_quote=t.source_quote,
+            ) for t in resp.unknown_items
+        ],
+        data_requirements=resp.data_requirements,
+        method_requirements=resp.method_requirements,
+        chart_requirements=resp.chart_requirements,
+        report_requirements=resp.report_requirements,
+        presentation_requirements=resp.presentation_requirements,
+        acceptance_criteria=resp.acceptance_criteria,
+        replication_level=ReplicationLevel(
+            level=resp.replication_level.level,
+            label=resp.replication_level.label,
+            supported_in_v1=resp.replication_level.supported_in_v1,
+            reason=resp.replication_level.reason,
+            suggested_scope=resp.replication_level.suggested_scope,
+        ),
+    )
