@@ -5,6 +5,8 @@
 > 当前限制：代码阶段已正式启动。前端测试套件为 434 个测试（22 个测试文件，含 SPEC 0017 新增 23 个 hooks 层乐观更新测试），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 736 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试 + SPEC 0016 worker_e2e_verify 7 个新增测试）。V1.4.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 396.63 kB，gzip 108.01 kB）；后端 736 测试零回归（本切片不修改后端）。
 >
 > **浏览器验收状态说明（TD-006 已于 SPEC 0016 清理；TD-009 在 SPEC 0017 引入）：** V1.0 整体端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `e2e-acceptance-report-v1.0.md`（home-full.png、home-viewport.png）。后续各 SPEC 收口记录中的"可视化点击验收：未执行"为当时收口时的事实快照，不回溯修改；V1.0 之后的新切片若有 UI 变化，应按 AGENTS.md "UI 行为变化应做浏览器点击或截图验收"执行。SPEC 0017 已用 browser_use agent 完成真实浏览器点击验收（PASS：保存按钮"已保存 ✓"绿色 #16a34a 提示正常显示，1.5s 后自动消失），但截图未持久化到磁盘（browser_take_screenshot 工具限制），记录为非阻断债务 TD-009，后续修复入口见 [tech-debt-inventory.md](tech-debt-inventory.md)。
+>
+> **CI 配置修复（2026-07-25，P0 补丁）：** V1.4.0 发布后评估发现 CI 流水线（SPEC 0015）存在两项 P0 缺陷并已修复：(1) 后端依赖安装从硬编码 `pip install pandas==3.0.3...`（6 行）改为 `pip install -e ".[dev,analysis]"`（1 行），验证 TD-004 清理后的 pyproject.toml 依赖声明正确性；(2) 前端 job 新增 `npm test -- --run` 步骤，让 434 个前端单元测试参与 CI 把关（此前 CI 只运行 tsc --noEmit 和 build，不拦截前端测试回归）。本地预演：`pip install --dry-run -e ".[dev,analysis]"` 依赖解析成功；前端 vitest 434 passed。
 
 ## 启动门禁
 
