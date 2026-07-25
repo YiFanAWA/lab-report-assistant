@@ -70,7 +70,7 @@ docker compose up -d
 | 服务 | 容器内端口 | 宿主机端口 | 说明 |
 | --- | --- | --- | --- |
 | frontend（nginx） | 80 | 80 | 前端入口，`/api` 请求反向代理到 backend |
-| backend（uvicorn） | 8001 | 8001 | 与 `config.py` 默认值一致，704 测试基于此端口 |
+| backend（uvicorn） | 8001 | 8001 | 与 `config.py` 默认值一致，729 测试基于此端口 |
 | worker | — | — | 后台任务进程，不对外暴露端口 |
 
 > 端口被占用时，修改 `docker-compose.yml` 中 `ports` 的左侧数字（宿主机端口），容器内端口保持不变。
@@ -339,6 +339,6 @@ python -m scripts.cleanup_expired_data --execute
 
 ## 版本
 
-当前版本：v1.1.0
+当前版本：v1.2.0
 
-详细变更日志见 [dev-docs/changelog-v1.1.0.md](dev-docs/changelog-v1.1.0.md)。
+详细变更日志见 [dev-docs/changelog-v1.2.0.md](dev-docs/changelog-v1.2.0.md)。

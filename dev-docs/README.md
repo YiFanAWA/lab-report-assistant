@@ -5,8 +5,8 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全，411 个测试全部通过）、SPEC 0010（Word 模板支持，后端 623 + 前端 411）、SPEC 0011（PPT 配置选项，后端 646 + 前端 411，新增 23 个后端测试）、SPEC 0012（数据保留周期配置，后端 704 passed，新增 58 个测试）均已由项目负责人确认收口。V1.1.0 端到端回归验收三道门禁全部通过（commit `e0d37ec`）
-- 下一阶段入口：V1.2.0 SPEC 0013（Docker 化部署）已由项目负责人确认收口（commit `c210911` 已推送 origin/master）。SPEC 0014（LLM 调用缓存）已完成实现与验收。SPEC 0015（GitHub Actions CI 流水线）已完成实现与 CI 验收（AC-1~6 全部通过，Run #2 全绿）。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
+- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全，411 个测试全部通过）、SPEC 0010（Word 模板支持，后端 623 + 前端 411）、SPEC 0011（PPT 配置选项，后端 646 + 前端 411，新增 23 个后端测试）、SPEC 0012（数据保留周期配置，后端 704 passed，新增 58 个测试）均已由项目负责人确认收口。V1.1.0 端到端回归验收三道门禁全部通过（commit `e0d37ec`）。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署，commit `c210911`）、SPEC 0014（LLM 调用缓存，commit `31ec6cd`，后端 729 passed 新增 25 测试）、SPEC 0015（GitHub Actions CI 流水线，commit `e203ac2`，CI Run #2/#3 全绿）均已由项目负责人确认收口。V1.2.0 端到端回归验收三道门禁全部通过（后端 729 + 前端 411 + worker_e2e E2E_RESULT=PASS + 关键回归点 63 passed）
+- 下一阶段入口：项目负责人 2026-07-25 确认下一阶段方向为修复可记录债务 TD-004/005/006（暂定 SPEC 0016）。按 AGENTS.md 阶段闸，先编写并确认 SPEC 0016 后再进入实现。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
 
 ## 工程入口
 
@@ -72,6 +72,13 @@
 - [changelog-v1.1.0.md](changelog-v1.1.0.md)：V1.1.0 详细变更日志（6 个 SPEC 新增功能、5 个 Bug 修复、架构改进、升级指南）。
 - [v1.1.0-regression-test-plan.md](v1.1.0-regression-test-plan.md)：V1.1.0 回归测试执行计划（三道门禁 + 6 个 SPEC 专项回归 + 执行记录）。
 - [worker-e2e-log-v1.1.0-regression.md](worker-e2e-log-v1.1.0-regression.md)：V1.1.0 发布后端到端回归验证日志（worker_e2e_verify.py 临时数据库运行结果）。
+
+## V1.2 发布文档
+
+- [release-checklist-v1.2.0.md](release-checklist-v1.2.0.md)：V1.2.0 发布清单（发布前状态检查、发布物清单、3 个 SPEC 摘要、标签操作、下一阶段方向）。
+- [changelog-v1.2.0.md](changelog-v1.2.0.md)：V1.2.0 详细变更日志（3 个 SPEC 新增功能、3 个 Bug 修复、架构改进、升级指南）。
+- [v1.2.0-regression-test-plan.md](v1.2.0-regression-test-plan.md)：V1.2.0 回归测试执行计划（三道门禁 + 3 个 SPEC 专项回归 + TD-007 修复验证 + 执行记录）。
+- [worker-e2e-log-v1.2.0-regression.md](worker-e2e-log-v1.2.0-regression.md)：V1.2.0 发布后端到端回归验证日志（worker_e2e_verify.py 临时数据库运行结果，E2E_RESULT=PASS）。
 
 ## 变更规则
 

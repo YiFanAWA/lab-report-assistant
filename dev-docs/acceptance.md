@@ -1,8 +1,8 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。  
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。  
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 704 个测试（0 warnings）。V1.1.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
+> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 729 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试）。V1.2.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）；后端 729 测试 + worker_e2e 端到端 E2E_RESULT=PASS + 关键回归点 63 passed；CI Run #2（`64f2eb4`）和 Run #3（`e203ac2`）均 completed+success。当前会话未暴露可调用的 in-app Browser 工具，以 Vitest 单元测试套件和 API 测试套件作为替代证据，未完成真实浏览器点击截图验收。
 
 ## 启动门禁
 
@@ -331,6 +331,18 @@
 | 2026-07-24 | SPEC 0015 TD-007 修复 | `pyproject.toml` dependencies 新增 `openpyxl>=3.1.0`；Docker 容器内 `.venv/bin/pip install openpyxl` 后挂载最新 app+tests 代码运行 `pytest -q` → 729 passed in 52.77s；确认 openpyxl 是唯一缺失依赖 | 通过 |
 | 2026-07-24 | SPEC 0015 修复后本地验证 | 本地 Windows `server` 下 `DATABASE_URL=sqlite:///./ci_test.db .venv\Scripts\python.exe -m pytest -q` → 729 passed in 72.61s（与 SPEC 0014 验收一致，0 回归） | 通过 |
 | 2026-07-24 | SPEC 0015 CI Run #2 全绿 | push `64f2eb4`（TD-007 修复）触发 Run #2（run_id=30108228016）；backend job 全 6 步 success（76s，含安装 openpyxl + 迁移 + 729 tests passed in 33s）；frontend job 全 6 步 success（33s）；**AC-1~6 全部验证通过** | 通过 |
+| 2026-07-25 | SPEC 0015 CI Run #3 持续绿色 | push `e203ac2`（最终文档回写）触发 Run #3（GitHub REST API 查询：head_sha=e203ac28e99298969abc0d9bb209c98b4de7281d, status=completed, conclusion=success, event=push）；证实 CI 持续绿色，无回归 | 通过 |
+| 2026-07-25 | V1.2.0 回归测试-后端全量 | `server/.venv/Scripts/python.exe -m pytest -q` | **729 passed in 79.72s, 0 warnings** | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-前端全量 | `apps/web` 下 `npm.cmd test -- --run` | **411 passed**（19 个测试文件） | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-前端 lint | `npm.cmd run lint` | `tsc --noEmit` 通过，无类型错误 | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-前端 build | `npm.cmd run build` | Vite 构建通过，114 模块转换，`dist/` 394.96 kB，gzip 107.49 kB | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-数据库迁移 | 临时 SQLite `DATABASE_URL=sqlite:///./.tmp/v1.2.0-verify.db .venv\Scripts\python.exe -m alembic upgrade head` | 迁移到 0007 无错误，7 个迁移（0001-0007）全部可从零执行 | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-Worker 端到端 | `python worker_e2e_verify.py`（临时数据库 `./.tmp/v1.2.0-e2e-verify.db` + 临时数据目录 `./.tmp/v1.2.0-e2e-data`） | 项目 `proj_43779acfba88` 从 RESULT_CONFIRMED → COMPLETED；Word v1 SUCCEEDED 37033 bytes；PPT v1 SUCCEEDED 32231 bytes；Word/PPT 文件实际生成；**E2E_RESULT=PASS**；日志见 [worker-e2e-log-v1.2.0-regression.md](worker-e2e-log-v1.2.0-regression.md) | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-关键回归点 | `pytest tests/ -k "stale or sandbox or socket or path_traversal or localhost or file_scheme or version" -v` | **63 passed, 666 deselected in 7.12s**，覆盖 R-1 STALE 传播链 / R-2 交付物版本管理 / R-3 失败不覆盖成功 / R-4 socket 拦截 / R-5 localhost/file:// 拒绝 / R-6 路径穿越防护 | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-SPEC 0013 Docker 引用 | 引用 SPEC 0013 验收记录（commit `c210911`） | AC-1~18 全部通过（V1.2.0 不重新构建 Docker 镜像，引用收口证据） | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-SPEC 0014 LLM 缓存 | `pytest tests/test_llm_cache.py tests/test_deepseek_client.py -v` | 25 个测试全部通过（test_llm_cache 20 + test_deepseek_client 缓存接入 5），0 warnings | ✅ |
+| 2026-07-25 | V1.2.0 回归测试-SPEC 0015 CI 流水线 | GitHub REST API 查询 Run #2（`64f2eb4`）和 Run #3（`e203ac2`） | 均 completed + conclusion=success；AC-1~10 全部通过；TD-007 openpyxl 修复在 CI 中正确生效（Run #1 failure → Run #2/#3 success） | ✅ |
+| 2026-07-25 | V1.2.0 项目负责人确认收口 | 项目负责人确认 SPEC 0013/0014/0015 收口并发布 V1.2.0，要求打 tag v1.2.0 并 push | 通过 |
 
 ## 漂移检查清单
 
