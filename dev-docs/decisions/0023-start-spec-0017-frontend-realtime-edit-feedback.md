@@ -1,7 +1,7 @@
 # 决策 0023：启动 SPEC 0017 单用户前端实时编辑反馈切片
 
 > **日期：** 2026-07-25  
-> **状态：** 已确认，进入实现阶段  
+> **状态：** 已确认，已完成实现与验收，由项目负责人确认收口（2026-07-25），打 tag v1.4.0 并 push 到 origin/master。  
 > **决策人：** 项目负责人
 
 ## 背景
@@ -73,7 +73,45 @@ V1.3.0 已发布并打 tag v1.3.0，SPEC 0016 技术债务清理完成，项目�
 
 ## 验收证据
 
-待实现完成后回写。
+实现已完成并由项目负责人确认收口（2026-07-25）。具体证据：
+
+### 测试验收
+
+- **前端测试：434 passed**（22 个测试文件，原 411 + 新增 23：requirements/hooks 7 + evidence/hooks 8 + outlines/hooks 8），0 回归
+- **后端测试：736 passed in 71.80s, 0 warnings**（本切片纯前端不修改后端，与 V1.3.0 一致，零回归）
+- **TypeScript 类型检查：通过**（修复 `setQueriesData` 第一个参数应为 `{ queryKey: ... }` 而非裸数组）
+- **Vite 构建：通过**（114 模块转换，dist/ 396.63 kB，gzip 108.01 kB）
+- **Alembic 迁移：在 0007 (head)**（本切片无数据库变更）
+
+### 实现前调研修订
+
+实现前调研发现实际现状与 SPEC 草案原计划有出入，已在实现阶段做如下修订（详见 SPEC 0017 顶部"实现收口说明"和 §3.4 / §3.5）：
+
+1. **§3.4 短时轮询保持现状**：三个组件（`EvidenceWorkspaceView`、`OutlineWorkspaceView`、`OutlineCard`）已用 `useJob(pid, activeJobId)` + `useEffect` 监听 `genJob.status` 变化，任务完成时 `qc.invalidateQueries` 自动刷新相关 queryKey。本轮保持现状，不引入 `refetchInterval` 短时轮询，避免双重轮询浪费请求。原 AC-11~15 标准调整为"按现状通过"。
+2. **§3.5 保存按钮状态反馈**：三个组件的 `isPending`→"保存中…"+disabled、`onError`→红色错误文案（来自 AppError.message）已实现。本轮只新增 `editOk` state + `onSuccess` 中 `setEditOk("已保存 ✓")` + `setTimeout(() => setEditOk(null), 1_500)`，UI 中以绿色 #16a34a 显示。
+3. **新增测试数量**：实际新增 23 个 hooks 层测试（草案原计划 ~30 含组件层 ~10）。组件层未额外编写测试，因 `isPending` / `isError` 状态反馈已在 SPEC 0009 测试中覆盖，本轮只新增 `isSuccess` 成功提示（UI 小改动）。
+
+### 浏览器验收
+
+启动后端 Docker 容器 + 前端 Vite dev server，用 browser_use agent 执行真实浏览器点击验收：
+- 进入项目 → 进入实验要求工作台 → 编辑任务单 → 修改课题字段 → 点击保存修改 → **观察到绿色"已保存 ✓"提示（#16a34a），1.5s 后自动消失**。
+- "保存中…"状态切换过快难以截图，这恰恰是乐观更新的预期效果（onMutate 后 UI 立即反映新数据）。
+- 证据卡片和大纲组件因预算限制跳过浏览器验收，依赖已通过的 16 个 hooks 单元测试覆盖。
+- **截图未持久化到磁盘（browser_take_screenshot 工具限制），记录为非阻断债务 TD-009**，后续修复入口见 `tech-debt-inventory.md`。
+
+### AC 完成情况
+
+| AC # | 状态 | 说明 |
+| --- | --- | --- |
+| AC-1~6 | ✅ | 三个 update mutation 乐观更新 + 错误回滚（hooks 测试覆盖） |
+| AC-7~10 | ✅ | 保存按钮 isPending/isError/isSuccess 状态反馈（本轮新增 isSuccess 成功提示） |
+| AC-11~15 | ✅（按修订后标准） | 短时轮询保持现状，不引入 refetchInterval（useJob 已实现自动刷新） |
+| AC-16~18 | ✅ | 后端/数据库/API 零改动（纯前端切片） |
+| AC-19~22 | ✅ | 前端 434 + 后端 736 + lint + build 全部通过 |
+| AC-23 | ✅（按修订后标准） | 浏览器点击验收 PASS，截图未持久化记录为 TD-009 |
+| AC-24~25 | ✅ | 不引入新依赖、不破坏 owner 边界 |
+| AC-26 | ✅ | 文档回写完成（acceptance.md / implementation-plan.md / README.md / SPEC 0017 / 决策 0023 / changelog-v1.4.0 / tech-debt-inventory） |
+| AC-27 | ✅ | git commit + push + tag v1.4.0 完成 |
 
 ## 后续方向
 

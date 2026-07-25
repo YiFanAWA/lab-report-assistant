@@ -81,6 +81,7 @@ export function RequirementWorkspaceView() {
 
   const [genErr, setGenErr] = useState<string | null>(null);
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [editOk, setEditOk] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editPayload, setEditPayload] = useState<RequirementPlanPayload | null>(null);
 
@@ -246,10 +247,15 @@ export function RequirementWorkspaceView() {
                   <button
                     onClick={() => {
                       setEditErr(null);
+                      setEditOk(null);
                       updatePlan.mutate(
                         { planId: plan.id, payload: editPayload },
                         {
-                          onSuccess: () => setIsEditing(false),
+                          onSuccess: () => {
+                            setIsEditing(false);
+                            setEditOk("已保存 ✓");
+                            setTimeout(() => setEditOk(null), 1_500);
+                          },
                           onError: (e) => setEditErr(errorMessage(e, "保存任务单失败")),
                         }
                       );
@@ -277,6 +283,7 @@ export function RequirementWorkspaceView() {
             </p>
           )}
           {editErr && <p style={{ color: "#c00", fontSize: "0.85rem" }}>{editErr}</p>}
+          {editOk && <p style={{ color: "#16a34a", fontSize: "0.85rem" }}>{editOk}</p>}
 
           {isEditing && editPayload && (
             <div style={{ marginTop: "0.75rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "0.375rem" }}>

@@ -102,6 +102,7 @@ function EvidenceCardItem({
   const [locator, setLocator] = useState(card.locator);
   const [sourceQuote, setSourceQuote] = useState(card.source_quote ?? "");
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [editOk, setEditOk] = useState<string | null>(null);
 
   // 当卡片数据变化时同步编辑态
   useEffect(() => {
@@ -111,6 +112,7 @@ function EvidenceCardItem({
     setSourceQuote(card.source_quote ?? "");
     setIsEditing(false);
     setEditErr(null);
+    setEditOk(null);
   }, [card.id, card.updated_at]);
 
   const isStale = card.status === "STALE";
@@ -195,6 +197,9 @@ function EvidenceCardItem({
       {editErr && (
         <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#c00" }}>{editErr}</div>
       )}
+      {editOk && (
+        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#16a34a" }}>{editOk}</div>
+      )}
       <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         {canEdit && (
           <>
@@ -202,6 +207,7 @@ function EvidenceCardItem({
               onClick={() => {
                 if (isEditing) {
                   setEditErr(null);
+                  setEditOk(null);
                   updateMutation.mutate(
                     {
                       cardId: card.id,
@@ -213,7 +219,11 @@ function EvidenceCardItem({
                       },
                     },
                     {
-                      onSuccess: () => setIsEditing(false),
+                      onSuccess: () => {
+                        setIsEditing(false);
+                        setEditOk("已保存 ✓");
+                        setTimeout(() => setEditOk(null), 1_500);
+                      },
                       onError: (e) => setEditErr(errorMessage(e, "保存失败")),
                     }
                   );

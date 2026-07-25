@@ -69,7 +69,36 @@ export function useUpdateOutline(projectId: string) {
       outlineId: string;
       payload: UpdateOutlineRequest;
     }) => updateOutline(projectId, outlineId, payload),
-    onSuccess: () => {
+    onMutate: async ({ outlineId, payload }) => {
+      // SPEC 0017 §3.3：取消正在进行的 GET，避免覆盖乐观更新
+      const listKeyPrefix = [...outlinesKey(projectId), "list"];
+      await qc.cancelQueries({ queryKey: listKeyPrefix });
+      // 保存所有匹配 list 变体的快照（含 queryKey）用于回滚
+      const snapshots = qc.getQueriesData<any>({ queryKey: listKeyPrefix });
+      // 乐观更新所有匹配的列表变体（status 不同也会被批量更新）
+      qc.setQueriesData<any>({ queryKey: listKeyPrefix }, (old: any) => {
+        if (!old) return old;
+        const items = Array.isArray(old) ? old : old.items;
+        if (!Array.isArray(items)) return old;
+        const next = items.map((outline: any) =>
+          outline.id === outlineId
+            ? { ...outline, sections: payload.sections }
+            : outline
+        );
+        return Array.isArray(old) ? next : { ...old, items: next };
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      // SPEC 0017 §2.4：错误时回滚到 onMutate 前的快照
+      if (context?.snapshots) {
+        for (const [queryKey, snapshot] of context.snapshots) {
+          qc.setQueryData(queryKey, snapshot);
+        }
+      }
+    },
+    onSettled: () => {
+      // SPEC 0017 §2.4：无论成功失败，最终都 invalidate 触发真相刷新
       qc.invalidateQueries({ queryKey: [...outlinesKey(projectId), "list"] });
     },
   });

@@ -5,8 +5,8 @@
 ## 当前阶段
 
 - 阶段：代码阶段
-- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全，411 个测试全部通过）、SPEC 0010（Word 模板支持，后端 623 + 前端 411）、SPEC 0011（PPT 配置选项，后端 646 + 前端 411，新增 23 个后端测试）、SPEC 0012（数据保留周期配置，后端 704 passed，新增 58 个测试）均已由项目负责人确认收口。V1.1.0 端到端回归验收三道门禁全部通过（commit `e0d37ec`）。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署，commit `c210911`）、SPEC 0014（LLM 调用缓存，commit `31ec6cd`，后端 729 passed 新增 25 测试）、SPEC 0015（GitHub Actions CI 流水线，commit `e203ac2`，CI Run #2/#3 全绿）均已由项目负责人确认收口。V1.2.0 端到端回归验收三道门禁全部通过（后端 729 + 前端 411 + worker_e2e E2E_RESULT=PASS + 关键回归点 63 passed）。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008，后端 736 passed 新增 7 测试，Docker 容器内科学计算包导入验证通过）已由项目负责人确认收口。当前无活跃可记录债务。
-- 下一阶段入口：V1.3.0 SPEC 0016 技术债务清理已收口，项目当前无活跃可记录债务。下一阶段方向待项目负责人规划。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
+- 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全，411 个测试全部通过）、SPEC 0010（Word 模板支持，后端 623 + 前端 411）、SPEC 0011（PPT 配置选项，后端 646 + 前端 411，新增 23 个后端测试）、SPEC 0012（数据保留周期配置，后端 704 passed，新增 58 个测试）均已由项目负责人确认收口。V1.1.0 端到端回归验收三道门禁全部通过（commit `e0d37ec`）。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署，commit `c210911`）、SPEC 0014（LLM 调用缓存，commit `31ec6cd`，后端 729 passed 新增 25 测试）、SPEC 0015（GitHub Actions CI 流水线，commit `e203ac2`，CI Run #2/#3 全绿）均已由项目负责人确认收口。V1.2.0 端到端回归验收三道门禁全部通过（后端 729 + 前端 411 + worker_e2e E2E_RESULT=PASS + 关键回归点 63 passed）。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008，后端 736 passed 新增 7 测试，Docker 容器内科学计算包导入验证通过）已由项目负责人确认收口。V1.4.0 已发布并打 tag v1.4.0：SPEC 0017（单用户前端实时编辑反馈，纯前端切片，前端 434 passed 新增 23 测试 + 后端 736 passed 零回归）已由项目负责人确认收口。当前活跃可记录债务：TD-009（SPEC 0017 浏览器验收截图未持久化，非阻断）。
+- 下一阶段入口：V1.4.0 SPEC 0017 已收口，项目当前活跃可记录债务为 TD-009（非阻断）。下一阶段方向待项目负责人规划。技术债务总清单见 [tech-debt-inventory.md](tech-debt-inventory.md)
 
 ## 工程入口
 
@@ -53,6 +53,7 @@
 - [decisions/0020-start-spec-0014-llm-cache.md](decisions/0020-start-spec-0014-llm-cache.md)：启动 SPEC 0014 LLM 调用缓存切片的决策记录。
 - [decisions/0021-start-spec-0015-github-actions-ci.md](decisions/0021-start-spec-0015-github-actions-ci.md)：启动 SPEC 0015 GitHub Actions CI 流水线切片的决策记录。
 - [decisions/0022-start-spec-0016-tech-debt-cleanup.md](decisions/0022-start-spec-0016-tech-debt-cleanup.md)：启动 SPEC 0016 技术债务清理切片（TD-004/005/006/008）的决策记录。
+- [decisions/0023-start-spec-0017-frontend-realtime-edit-feedback.md](decisions/0023-start-spec-0017-frontend-realtime-edit-feedback.md)：启动 SPEC 0017 单用户前端实时编辑反馈切片的决策记录（方向 A，不引入多用户协作、不引入 WebSocket/SSE 实时通信基础设施）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 - [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。
@@ -61,6 +62,11 @@
 - [specs/0014-llm-call-cache.md](specs/0014-llm-call-cache.md)：V1.2.0 LLM 调用缓存 SPEC（独立 SQLite 存储、DeepSeekClient 接入、SHA256 key、默认关闭、不走 Alembic），已完成实现与验收。
 - [specs/0015-github-actions-ci.md](specs/0015-github-actions-ci.md)：V1.2.0 GitHub Actions CI 流水线 SPEC（master 触发、后端 pytest + 前端 lint/build 两 Job 并行、不触碰业务代码），已完成实现与 CI 验收（AC-1~6 全部通过）。
 - [specs/0016-tech-debt-cleanup-004-005-006-008.md](specs/0016-tech-debt-cleanup-004-005-006-008.md)：V1.3.0 技术债务清理 SPEC（TD-004 科学计算包声明、TD-005 AGENTS.md 债务清单更新、TD-006 acceptance.md 浏览器验收说明、TD-008 worker_e2e_verify.py 参数化），已完成实现与验收（AC-1~20 全部通过）。
+- [specs/0017-frontend-realtime-edit-feedback.md](specs/0017-frontend-realtime-edit-feedback.md)：V1.4.0 单用户前端实时编辑反馈 SPEC（三个 update mutation 乐观更新 + 错误回滚 + onSettled invalidate；保存按钮新增"已保存 ✓"成功提示；§3.4 短时轮询经实现前调研保持现状不重复实现；纯前端切片不修改后端），已完成实现与验收（前端 434 passed 新增 23 测试 + 后端 736 零回归）。
+
+## V1.4 发布文档
+
+- [changelog-v1.4.0.md](changelog-v1.4.0.md)：V1.4.0 详细变更日志（SPEC 0017 单用户前端实时编辑反馈：乐观更新、错误回滚、保存成功提示）。
 
 ## V1.0 发布文档
 

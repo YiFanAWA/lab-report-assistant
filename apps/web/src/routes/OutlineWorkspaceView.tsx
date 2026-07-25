@@ -122,6 +122,7 @@ function OutlineCard({
   const [isEditing, setIsEditing] = useState(false);
   const [sectionsDraft, setSectionsDraft] = useState<OutlineSection[]>([]);
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [editOk, setEditOk] = useState<string | null>(null);
   const [wordErr, setWordErr] = useState<string | null>(null);
   const [pptErr, setPptErr] = useState<string | null>(null);
   const [wordOk, setWordOk] = useState<string | null>(null);
@@ -146,6 +147,7 @@ function OutlineCard({
     setSectionsDraft(outline.sections.map((s) => ({ ...s })));
     setIsEditing(false);
     setEditErr(null);
+    setEditOk(null);
   }, [outline.id, outline.updated_at, outline.sections]);
 
   // Word 生成任务完成时刷新
@@ -358,6 +360,11 @@ function OutlineCard({
           {editErr}
         </div>
       )}
+      {editOk && (
+        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#16a34a" }}>
+          {editOk}
+        </div>
+      )}
 
       {/* 操作按钮 */}
       <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -384,6 +391,8 @@ function OutlineCard({
                       onSuccess: () => {
                         setIsEditing(false);
                         setEditErr(null);
+                        setEditOk("已保存 ✓");
+                        setTimeout(() => setEditOk(null), 1_500);
                       },
                       onError: (e) => setEditErr(errorMessage(e, "保存失败")),
                     }

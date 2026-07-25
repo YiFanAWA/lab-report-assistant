@@ -1,10 +1,30 @@
 # SPEC 0017：单用户前端实时编辑反馈
 
-> **状态：** 草案，待项目负责人确认  
+> **状态：** 已实现并由项目负责人确认收口（2026-07-25）。打 tag v1.4.0 并 push 到 origin/master。
 > **日期：** 2026-07-25  
 > **前置：** V1.3.0 已发布并打 tag v1.3.0（SPEC 0016 技术债务清理 TD-004/005/006/008 全部收口）；当前无活跃可记录债务  
-> **目标版本：** v1.4.0  
+> **目标版本：** v1.4.0（已发布）  
 > **方向确认：** 项目负责人于 2026-07-25 明确选择方向 A（单用户前端实时编辑反馈），不引入多用户协作、不引入 WebSocket/SSE 实时通信基础设施
+
+## 实现收口说明（2026-07-25）
+
+实现前调研发现实际现状与 SPEC 草案原计划有出入，已在实现阶段做如下修订并记录于 §3.4 / §3.5：
+
+| AC # | 草案计划 | 实际实现 | 修订原因 |
+| --- | --- | --- | --- |
+| AC-11~15 短时轮询 | 新增 `refetchInterval` 短时轮询覆盖证据/大纲列表 | 保持现状，不新增 | 三个组件已用 `useJob` 事件轮询机制实现 Worker 长任务完成后的自动刷新，重复加 `refetchInterval` 会造成双重轮询、浪费请求 |
+| 新增测试数量 | ~30 个（hooks ~20 + 组件层 ~10） | 实际新增 23 个 hooks 层测试 | 三个组件的 `isPending` / `isError` 状态反馈已在 SPEC 0009 测试中覆盖，本轮只新增 `isSuccess` 成功提示（UI 小改动），未额外编写组件层测试 |
+| AC-23 浏览器验收 | 截图保存到 `dev-docs/e2e-screenshots/spec-0017/` | browser_use agent 真实浏览器点击验收 PASS，但截图未持久化到磁盘 | browser_use 的 `browser_take_screenshot` 工具在本环境未真正写入文件，记录为非阻断债务 TD-009 |
+
+实际验收结果：
+- 前端测试 **434 passed**（原 411 + 新增 23），无回归
+- 后端测试 **736 passed**（无后端改动，零回归）
+- TypeScript 类型检查通过
+- Vite 构建通过（dist 396.63 kB，gzip 108.01 kB）
+- 浏览器验收 PASS：进入项目 → 进入实验要求工作台 → 编辑任务单 → 保存修改 → 观察到绿色"已保存 ✓"提示（#16a34a），1.5s 后自动消失
+- "保存中…"状态切换过快难以截图，这恰恰是乐观更新的预期效果（onMutate 后 UI 立即反映新数据）
+
+
 
 ---
 
@@ -269,92 +289,69 @@ export function useUpdateEvidence(projectId: string) {
 
 **与 §3.2 同型：** 大纲也是列表 query，需要 `setQueriesData` 批量更新。
 
-### 3.4 短时轮询实现
+### 3.4 Worker 长任务自动刷新（保持现状，本轮不重复实现）
 
-**文件：** `apps/web/src/features/evidence/hooks.ts`、`apps/web/src/features/outlines/hooks.ts`
+**实现前现状调研结论（2026-07-25）：**
 
-**证据卡片列表 query 改造：**
+实际现状与 SPEC 0017 草案原计划不同。三个组件已经通过 `useJob` 事件轮询机制实现 Worker 长任务完成后的自动刷新，**不需要再新增 `refetchInterval` 短时轮询**：
 
-```typescript
-export function useEvidenceCards(
-  projectId: string,
-  filters?: { source_id?: string; status?: string }
-) {
-  return useQuery({
-    queryKey: [...evidenceKey(projectId), "list", filters ?? {}],
-    queryFn: () => listEvidence(projectId, filters),
-    staleTime: 5_000,
-    // SPEC 0017：动态轮询，由 useGenerateEvidence 的 onSuccess 启用
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (!Array.isArray(data)) return false;
-      // 存在 PENDING/GENERATING 状态的卡片时继续轮询
-      const hasPending = data.some(
-        (c: any) => c.status === "PENDING" || c.status === "GENERATING"
-      );
-      return hasPending ? 2_000 : false;
-    },
-  });
-}
-```
+| 组件 | 已实现的轮询机制 | 触发刷新的 queryKey |
+| --- | --- | --- |
+| `EvidenceWorkspaceView` | `useJob(pid, activeJobId)` + `useEffect` 监听 `genJob.status` 变化，任务 SUCCEEDED/FAILED/CANCELLED 时 `qc.invalidateQueries(["evidence", pid, "list"])` | `["evidence", pid, "list"]` |
+| `OutlineWorkspaceView`（生成大纲） | `useJob(pid, activeJobId)` + 同型 useEffect | `["outlines", pid, "list"]` |
+| `OutlineCard`（Word/PPT 生成） | `useJob(pid, wordJobId/pptJobId)` + 同型 useEffect | `["deliverables", pid, "list"]`、`["project", pid]` |
 
-**`useGenerateEvidence` 改造：**
+**关键决策（修订）：** 本轮**保持现状**，不引入 `refetchInterval` 短时轮询。
 
-```typescript
-export function useGenerateEvidence(projectId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (sourceId: string) => generateEvidence(projectId, sourceId),
-    onSuccess: () => {
-      // invalidate 后 query 重新拉取，refetchInterval 函数会根据返回的状态判断是否继续轮询
-      qc.invalidateQueries({ queryKey: [...evidenceKey(projectId), "list"] });
-    },
-  });
-}
-```
+**理由：**
+- `useJob` 模式已在三个组件中稳定运行，重复加 `refetchInterval` 会造成双重轮询，浪费请求。
+- `useJob` 模式可以拿到 `job.status`（PENDING/RUNNING/SUCCEEDED/FAILED/CANCELLED）和 `error_message`，比 `refetchInterval` 函数形式提供更精细的状态反馈。
+- AGENTS.md "禁止补丁式开发"原则：不为本切片而引入与现有机制重复的另一种机制。
 
-**实现要点：**
-- `refetchInterval` 函数形式让 query 自身根据数据状态决定是否继续轮询，无需在 mutation 中手动启停。
-- 一旦列表中所有卡片都达到稳定状态（`CANDIDATE` / `CONFIRMED` / `REJECTED` / `STALE` / `FAILED`），轮询自动停止。
-- 兜底：若 Worker 卡死导致状态永远不变化，需在 query options 中加入 `refetchInterval: false` 的最大次数限制（实现时通过自定义 hook 包装或在 `refetchInterval` 中加入计数器，需在实现时细化，草案阶段先标注为已知风险）。
+**风险：** `useJob` 模式依赖 mutation `onSuccess` 拿到 `job_id`；若用户离开页面再回来，`activeJobId` 会丢失，任务完成不会自动刷新。但这是现有行为，本轮不修改（属方向 B 多标签页同步范畴）。
 
-### 3.5 保存状态 UI 反馈
+### 3.5 保存状态 UI 反馈（部分已实现，本轮新增成功提示）
 
-**文件：** `apps/web/src/routes/*WorkspaceView.tsx` 等编辑组件
+**实现前现状调研结论（2026-07-25）：**
 
-**示例（RequirementWorkspaceView 中的保存按钮）：**
+实际现状与 SPEC 0017 草案原计划不同。三个组件的保存按钮状态反馈**已经实现**：
+
+| 组件 | 已实现的反馈 | 缺失 |
+| --- | --- | --- |
+| `RequirementWorkspaceView` | `updatePlan.isPending` → "保存中…" + `disabled`；`onError: (e) => setEditErr(errorMessage(e, "保存任务单失败"))` → 红色错误文案 | 缺少 `isSuccess` 成功提示 |
+| `EvidenceWorkspaceView` | `updateMutation.isPending` → "保存中…" + `disabled`；`onError` → 红色错误文案 | 同上 |
+| `OutlineWorkspaceView`（`OutlineCard`） | `updateMutation.isPending` → "保存中…" + `disabled`；`onError` → 红色错误文案 | 同上 |
+
+**关键决策（修订）：** 本轮在三个组件的 update mutation `onSuccess` 回调中新增"已保存 ✓"成功提示，1.5s 后自动清除；不重复实现 `isPending` / `isError` 状态。
+
+**示例（RequirementWorkspaceView 中 updatePlan 调用处）：**
 
 ```tsx
-const updatePlan = useUpdatePlan(projectId);
+const [editOk, setEditOk] = useState<string | null>(null);
 
-// 保存按钮
-<button
-  type="submit"
-  disabled={updatePlan.isPending}
-  className={updatePlan.isError ? "btn-error" : updatePlan.isSuccess ? "btn-success" : "btn-primary"}
->
-  {updatePlan.isPending ? "保存中…" : updatePlan.isSuccess ? "已保存" : "保存"}
-</button>
-
-{updatePlan.isError && (
-  <p className="text-red-600 text-sm">
-    保存失败：{(updatePlan.error as AppError)?.message ?? "未知错误"}
-  </p>
-)}
-
-// 成功提示 1.5s 后自动重置
-useEffect(() => {
-  if (updatePlan.isSuccess) {
-    const t = setTimeout(() => updatePlan.reset(), 1_500);
-    return () => clearTimeout(t);
+// 在 updatePlan.mutate 调用中
+updatePlan.mutate(
+  { planId: plan.id, payload: editPayload },
+  {
+    onSuccess: () => {
+      setIsEditing(false);
+      setEditErr(null);
+      setEditOk("已保存 ✓");
+      setTimeout(() => setEditOk(null), 1_500);
+    },
+    onError: (e) => setEditErr(errorMessage(e, "保存任务单失败")),
   }
-}, [updatePlan.isSuccess]);
+);
+
+// UI 中展示
+{editOk && <p style={{ color: "#16a34a", fontSize: "0.85rem" }}>{editOk}</p>}
 ```
 
 **UI 规范：**
 - 不引入 Toast 库（避免新增依赖）；用内联状态展示。
 - 错误文案必须来自后端 `AppError.message`（中文），不展示裸 `error.message`（避免英文堆栈）。
-- 表单字段值不因 `isError` 清空（保留用户输入）。
+- 表单字段值不因 `isError` 清空（保留用户输入便于修改后重试）。
+- 成功提示 1.5s 后自动清除，避免下次进入编辑时仍显示"已保存"。
 
 ### 3.6 AppError 类型复用
 

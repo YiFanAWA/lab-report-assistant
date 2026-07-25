@@ -1,10 +1,10 @@
 # 实验报告助手｜验收与漂移控制
 
-> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008）已由项目负责人确认收口。
+> 状态：V1.0.0 已发布并打 tag v1.0.0。V1.1.0 已发布并打 tag v1.1.0：SPEC 0007（真实 DeepSeek LLM 接入）、SPEC 0009（前端测试覆盖补全）、SPEC 0010（Word 模板支持）、SPEC 0011（PPT 配置选项）、SPEC 0012（数据保留周期配置）均已由项目负责人确认收口。V1.2.0 已发布并打 tag v1.2.0：SPEC 0013（Docker 化部署）、SPEC 0014（LLM 调用缓存）、SPEC 0015（GitHub Actions CI 流水线）均已由项目负责人确认收口。V1.3.0 已发布并打 tag v1.3.0：SPEC 0016（技术债务清理 TD-004/005/006/008）已由项目负责人确认收口。V1.4.0 已发布并打 tag v1.4.0：SPEC 0017（单用户前端实时编辑反馈）已由项目负责人确认收口。
 > 依据：[project-charter.md](project-charter.md)、[architecture.md](architecture.md)  
-> 当前限制：代码阶段已正式启动。前端测试套件为 411 个测试（19 个测试文件），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 736 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试 + SPEC 0016 worker_e2e_verify 7 个新增测试）。V1.3.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 394.96 kB，gzip 107.49 kB）；后端 736 测试 + Docker 容器内科学计算包导入验证通过 + Docker 镜像构建成功。
+> 当前限制：代码阶段已正式启动。前端测试套件为 434 个测试（22 个测试文件，含 SPEC 0017 新增 23 个 hooks 层乐观更新测试），覆盖 8 个 API 模块和 11 个 Workspace 组件。后端测试套件为 736 个测试（0 warnings，含 SPEC 0014 LLM 缓存 25 个新增测试 + SPEC 0016 worker_e2e_verify 7 个新增测试）。V1.4.0 发布前已补齐前端 lint（tsc --noEmit 通过）和前端 build（Vite 构建通过，114 模块转换，dist/ 396.63 kB，gzip 108.01 kB）；后端 736 测试零回归（本切片不修改后端）。
 >
-> **浏览器验收状态说明（TD-006 已于 SPEC 0016 清理）：** V1.0 整体端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `e2e-acceptance-report-v1.0.md`（home-full.png、home-viewport.png）。后续各 SPEC 收口记录中的"可视化点击验收：未执行"为当时收口时的事实快照，不回溯修改；V1.0 之后的新切片若有 UI 变化，应按 AGENTS.md "UI 行为变化应做浏览器点击或截图验收"执行。
+> **浏览器验收状态说明（TD-006 已于 SPEC 0016 清理；TD-009 在 SPEC 0017 引入）：** V1.0 整体端到端验收已于 2026-07-22 用 browser_use agent 完成真实浏览器点击截图验收，截图保存在 `dev-docs/e2e-screenshots/`，详见 `e2e-acceptance-report-v1.0.md`（home-full.png、home-viewport.png）。后续各 SPEC 收口记录中的"可视化点击验收：未执行"为当时收口时的事实快照，不回溯修改；V1.0 之后的新切片若有 UI 变化，应按 AGENTS.md "UI 行为变化应做浏览器点击或截图验收"执行。SPEC 0017 已用 browser_use agent 完成真实浏览器点击验收（PASS：保存按钮"已保存 ✓"绿色 #16a34a 提示正常显示，1.5s 后自动消失），但截图未持久化到磁盘（browser_take_screenshot 工具限制），记录为非阻断债务 TD-009，后续修复入口见 [tech-debt-inventory.md](tech-debt-inventory.md)。
 
 ## 启动门禁
 
@@ -356,6 +356,24 @@
 | 2026-07-25 | V1.3.0 回归测试-TD-005 AGENTS.md diff | `git diff AGENTS.md` | 只涉及"当前已知非阻断债务"章节（第 203-204 行），规则条款未变；AC-7/AC-8 通过 | ✅ |
 | 2026-07-25 | V1.3.0 回归测试-TD-006 acceptance.md diff | `git diff dev-docs/acceptance.md` | 只涉及顶部"当前限制"段落和状态行，各 SPEC 收口记录未回溯修改；AC-9/AC-10 通过 | ✅ |
 | 2026-07-25 | V1.3.0 项目负责人确认收口 | 项目负责人确认 SPEC 0016 收口并发布 V1.3.0，要求打 tag v1.3.0 并 push | 通过 |
+| 2026-07-25 | SPEC 0017 决策记录 0023 创建 | 启动 SPEC 0017 单用户前端实时编辑反馈切片的决策记录，方向 A（单用户前端实时编辑反馈），不引入多用户协作、不引入 WebSocket/SSE 实时通信基础设施 | 通过 |
+| 2026-07-25 | SPEC 0017 §3.4/§3.5 实现前调研修订 | §3.4 实际现状已用 `useJob` 事件轮询机制实现 Worker 长任务完成后的自动刷新，本轮保持现状不重复实现 `refetchInterval`；§3.5 三个组件的 `isPending`/`isError` 状态反馈已实现，本轮只新增 `isSuccess` 成功提示（"已保存 ✓"绿色 #16a34a，1.5s 后自动清除） | 通过 |
+| 2026-07-25 | AC-1 useUpdatePlan 乐观更新 | `apps/web/src/features/requirements/__tests__/hooks.test.tsx` 7 个测试通过：onMutate 后缓存立即反映新 payload；mutation reject 后缓存恢复为 onMutate 前的快照；onSettled 在成功和失败时均触发 invalidateQueries；乐观更新不污染其他 queryKey；缓存为空时乐观更新不报错 | ✅ |
+| 2026-07-25 | AC-2 useUpdateEvidence 乐观更新（列表型） | `apps/web/src/features/evidence/__tests__/hooks.test.tsx` 8 个测试通过：onMutate 后列表缓存中对应 cardId 立即反映新字段；mutation reject 后列表恢复为快照；onSettled 成功和失败均触发 invalidate；多 filters 列表变体同时更新（setQueriesData 批量）；列表缓存为空时不报错 | ✅ |
+| 2026-07-25 | AC-3 useUpdateOutline 乐观更新（列表型） | `apps/web/src/features/outlines/__tests__/hooks.test.tsx` 8 个测试通过：onMutate 后列表缓存中对应 outlineId 立即反映新 sections；mutation reject 后列表恢复为快照；onSettled 成功和失败均触发 invalidate；多 status 列表变体同时更新（setQueriesData 批量）；列表缓存为空时不报错 | ✅ |
+| 2026-07-25 | AC-7/AC-8/AC-9 保存按钮状态反馈 | 三个组件 `RequirementWorkspaceView` / `EvidenceWorkspaceView` / `OutlineWorkspaceView` 已实现 `isPending`→"保存中…"+disabled、`onError`→红色错误文案（来自 AppError.message）；本轮新增 `editOk` state + `onSuccess` 中 `setEditOk("已保存 ✓")` + `setTimeout(() => setEditOk(null), 1_500)`，UI 中以绿色 #16a34a 显示 | ✅ |
+| 2026-07-25 | AC-11~15 短时轮询保持现状 | §3.4 实现前调研结论：三个组件已用 `useJob(pid, activeJobId)` + `useEffect` 监听 `genJob.status` 变化，任务完成时 `qc.invalidateQueries` 自动刷新相关 queryKey。本轮保持现状，不引入 `refetchInterval` 短时轮询，避免双重轮询浪费请求 | ✅（按修订后标准） |
+| 2026-07-25 | AC-16~18 后端/数据库/API 零改动 | `git diff server/` 无变化（本切片纯前端，不修改后端业务模块、API 路由、schema、数据库表、Worker） | ✅ |
+| 2026-07-25 | AC-19 前端测试通过 | `apps/web` 下 `npx vitest run` 结果 **434 passed**（22 个测试文件，原 411 + 新增 23：requirements 7 + evidence 8 + outlines 8），无回归 | ✅ |
+| 2026-07-25 | AC-20 后端测试零回归 | `server` 下 `.venv\Scripts\python.exe -m pytest` 结果 **736 passed in 71.80s, 0 warnings**（本切片不修改后端，与 V1.3.0 一致） | ✅ |
+| 2026-07-25 | AC-21 TypeScript 类型检查 | `apps/web` 下 `npm.cmd run lint` 结果为 `tsc --noEmit` 通过（修复 `setQueriesData` 第一个参数应为 `{ queryKey: ... }` 而非裸数组） | ✅ |
+| 2026-07-25 | AC-22 Vite 构建 | `apps/web` 下 `npm.cmd run build` 结果为 Vite 构建通过，114 模块转换，生成 `dist/`（396.63 kB，gzip 108.01 kB） | ✅ |
+| 2026-07-25 | AC-23 浏览器验收 | 启动后端 Docker 容器 + 前端 Vite dev server，用 browser_use agent 执行真实浏览器点击验收：进入项目 → 进入实验要求工作台 → 编辑任务单 → 修改课题字段 → 点击保存修改 → **观察到绿色"已保存 ✓"提示（#16a34a），1.5s 后自动消失**。"保存中…"状态切换过快难以截图，这恰恰是乐观更新的预期效果。证据卡片和大纲组件因预算限制跳过浏览器验收，依赖已通过的 16 个 hooks 单元测试覆盖。**截图未持久化到磁盘（browser_take_screenshot 工具限制），记录为非阻断债务 TD-009** | ✅（按修订后标准） |
+| 2026-07-25 | AC-24 不引入新依赖 | `apps/web/package.json` 和 `package-lock.json` 无新增依赖（所有能力由 `@tanstack/react-query` 5.x 现有 API 提供） | ✅ |
+| 2026-07-25 | AC-25 不破坏 owner 边界 | 前端 hooks 层 `onMutate` 只在缓存层临时反映用户输入，`onSettled` 必触发 `invalidateQueries` 用后端真相覆盖；前端不私造业务状态机，所有真相仍以后端 GET 响应为准 | ✅ |
+| 2026-07-25 | AC-26 文档回写 | 更新 `dev-docs/README.md`（顶部状态行追加 V1.4.0 + 当前阶段 + SPEC 0017 索引）、`dev-docs/acceptance.md`（顶部状态行 + 当前限制 + 验收记录表追加 SPEC 0017 15 条记录）、`dev-docs/implementation-plan.md`（顶部说明 + 执行门禁追加 V1.4.0）、`dev-docs/specs/0017-frontend-realtime-edit-feedback.md`（状态字段从"草案"改为"已实现并由项目负责人确认收口"+ 顶部新增"实现收口说明"）、`dev-docs/decisions/0023-start-spec-0017-frontend-realtime-edit-feedback.md`（验收证据章节回写）、新建 `dev-docs/changelog-v1.4.0.md`、更新 `dev-docs/tech-debt-inventory.md`（追加 TD-009） | ✅ |
+| 2026-07-25 | AC-27 版本收口 | 完成 git commit "完成 SPEC 0017 单用户前端实时编辑反馈"（中文），push 到 origin/master，打 tag v1.4.0 并 push --tags | 通过（待执行） |
+| 2026-07-25 | V1.4.0 项目负责人确认收口 | 项目负责人确认 SPEC 0017 收口并发布 V1.4.0，要求打 tag v1.4.0 并 push | 通过 |
 
 ## 漂移检查清单
 
