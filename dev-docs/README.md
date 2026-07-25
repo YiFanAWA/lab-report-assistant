@@ -68,7 +68,7 @@
 
 ## V2.0 发布文档
 
-- [changelog-v2.0.0.md](changelog-v2.0.0.md)：V2.0.0 详细变更日志（SPEC 0018 流式 LLM 输出：SSE 流式任务单生成、降级策略、分段 db session、前端流式展示与取消）。
+- [changelog-v2.0.0.md](changelog-v2.0.0.md)：V2.0.0 详细发布说明（SPEC 0018 流式 LLM 输出：SSE 流式任务单生成、降级策略、分段 db session、前端流式展示与取消；CI P0 修复：前端单元测试参与 CI + 后端依赖声明安装）。
 
 ## V1.4 发布文档
 
