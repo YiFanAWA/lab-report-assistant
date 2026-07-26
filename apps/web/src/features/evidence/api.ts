@@ -7,6 +7,7 @@ import type {
   CompleteEvidenceResponse,
 } from "./types";
 import type { GenerateEvidenceResponse } from "../jobs/types";
+import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 
 const BASE = "/api";
 
@@ -33,6 +34,26 @@ export async function generateEvidence(
     { method: "POST" }
   );
   return handle<GenerateEvidenceResponse>(r);
+}
+
+/**
+ * 流式生成证据卡片（SPEC 0020）。
+ *
+ * 返回异步迭代器，逐个 yield SSE 事件。
+ * 调用方负责处理 chunk / done / error 事件。
+ * 复用 SPEC 0018 的 streamSSE 工具。
+ *
+ * @param projectId 项目 ID
+ * @param sourceId 来源 ID
+ * @param signal 可选的 AbortSignal，用于取消流式
+ */
+export async function* streamGenerateEvidence(
+  projectId: string,
+  sourceId: string,
+  signal?: AbortSignal
+): AsyncGenerator<SSEEvent, void, unknown> {
+  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/sources/${encodeURIComponent(sourceId)}/evidence/stream-generate`;
+  yield* streamSSE(url, {}, signal);
 }
 
 /** 获取证据卡片列表。可选 source_id 和 status 筛选。 */

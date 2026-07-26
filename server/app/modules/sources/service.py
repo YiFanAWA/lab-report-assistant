@@ -5,8 +5,11 @@ API、Worker、提示词只能调用本服务，不能直接修改来源或证�
 """
 
 import ipaddress
+import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Generator
 from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
@@ -676,3 +679,189 @@ def save_evidence_card_drafts(db: Session, project_id: str, source_id: str,
                     f"生成证据卡片候选 {len(cards)} 张")
     db.flush()
     return cards
+
+
+# --- 证据卡片流式生成（SPEC 0020） ---
+
+
+@dataclass
+class StreamEvidenceChunkEvent:
+    """流式 chunk 事件，携带 LLM 返回的文本片段。"""
+
+    text: str
+
+
+@dataclass
+class StreamEvidenceDoneEvent:
+    """流式完成事件，携带保存结果摘要。"""
+
+    card_count: int
+    candidate_source: str
+    fallback_used: bool
+
+
+@dataclass
+class StreamEvidenceErrorEvent:
+    """流式错误事件，携带已生成的 partial_text 供前端展示。"""
+
+    error_code: str
+    message: str
+    partial_text: str
+
+
+StreamEvidenceEvent = (
+    StreamEvidenceChunkEvent
+    | StreamEvidenceDoneEvent
+    | StreamEvidenceErrorEvent
+)
+
+
+def stream_generate_evidence_cards(
+    db: Session, project_id: str, source_id: str, provider
+) -> Generator[StreamEvidenceEvent, None, None]:
+    """流式生成证据卡片。
+
+    SPEC 0020 证据卡片生成流式化。
+
+    流程（分段持有 db session，避免 SQLite 写锁阻塞，复用 SPEC 0019 模式）：
+    1. Phase 1 校验（持有 db）：校验 project 状态 + 来源 PARSED + 取 ParsedDocument.parsed_text
+    2. Phase 2 流式生成（关闭 db，不持有连接）：调用 provider.stream_draft()
+    3. Phase 3 JSON 校验：用 DeepSeekEvidenceResponse 校验完整 JSON
+    4. Phase 4 保存（重新打开 db）：save_evidence_card_drafts + 写变更记录
+
+    中途失败：yield StreamEvidenceErrorEvent（保留 partial_text），不保存 EvidenceCard。
+
+    兼容不支持 stream_draft 的 provider（LocalRule/Fake）：调用 draft() 一次性 yield。
+
+    yield StreamEvidenceEvent：StreamEvidenceChunkEvent / StreamEvidenceDoneEvent / StreamEvidenceErrorEvent。
+    """
+    # Phase 1: 校验（持有 db）
+    project = _ensure_project(db, project_id)
+    _ensure_project_ready_for_sources(project)
+
+    source = get_source_by_id_and_project(db, project_id, source_id)
+    if source.status != SourceStatus.PARSED.value:
+        raise AppError(
+            code="EVIDENCE_SOURCE_NOT_PARSED",
+            message="来源未解析，无法生成证据卡片",
+            field="source_id",
+        )
+
+    pd = (
+        db.query(ParsedDocument)
+        .filter(ParsedDocument.source_id == source_id)
+        .first()
+    )
+    if not pd:
+        raise AppError(
+            code="EVIDENCE_SOURCE_NOT_PARSED",
+            message="来源未解析，无法生成证据卡片",
+            field="source_id",
+        )
+
+    parsed_text = pd.parsed_text
+    pd_id = pd.id
+    db.close()  # 显式关闭，避免流式期间持有连接
+
+    # Phase 2: 流式生成（不持有 db）
+    chunks: list[str] = []
+    fallback_used = False
+    try:
+        if hasattr(provider, "stream_draft"):
+            for chunk in provider.stream_draft(parsed_text):
+                chunks.append(chunk)
+                yield StreamEvidenceChunkEvent(text=chunk)
+        else:
+            # 兼容只支持同步的 provider（LocalRule/Fake）
+            drafts = provider.draft(parsed_text)
+            # 手动序列化为 JSON（EvidenceCardDraft 是 dataclass，不是 Pydantic 模型）
+            full_json = json.dumps({
+                "cards": [
+                    {
+                        "summary": d.summary,
+                        "evidence_type": d.evidence_type,
+                        "locator": d.locator,
+                        "source_quote": d.source_quote,
+                    }
+                    for d in drafts
+                ]
+            }, ensure_ascii=False)
+            # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+            for i in range(0, len(full_json), 50):
+                piece = full_json[i:i + 50]
+                chunks.append(piece)
+                yield StreamEvidenceChunkEvent(text=piece)
+    except Exception as e:
+        # 流式中途失败
+        partial_text = "".join(chunks)
+        yield StreamEvidenceErrorEvent(
+            error_code=getattr(e, "code", "EVIDENCE_STREAM_FAILED"),
+            message=str(e) or e.__class__.__name__,
+            partial_text=partial_text,
+        )
+        return
+
+    # Phase 3: 校验完整 JSON
+    raw = "".join(chunks)
+    try:
+        from app.modules.llm.deepseek_evidence_provider import (
+            DeepSeekEvidenceResponse,
+        )
+        parsed = DeepSeekEvidenceResponse.model_validate_json(raw)
+        drafts_data = [
+            {
+                "summary": c.summary,
+                "evidence_type": c.evidence_type,
+                "locator": c.locator,
+                "source_quote": c.source_quote,
+            }
+            for c in parsed.cards
+        ]
+    except Exception as e:
+        yield StreamEvidenceErrorEvent(
+            error_code="EVIDENCE_JSON_PARSE_ERROR",
+            message=f"证据卡片 JSON 校验失败: {e}",
+            partial_text=raw,
+        )
+        return
+
+    # Phase 4: 保存（重新打开 db）
+    from app.infrastructure.database.engine import SessionLocal
+    from app.modules.llm.evidence_card_provider import EvidenceCardDraft
+    db2 = SessionLocal()
+    try:
+        drafts = [
+            EvidenceCardDraft(
+                summary=d["summary"],
+                evidence_type=d["evidence_type"],
+                locator=d["locator"],
+                source_quote=d["source_quote"],
+            )
+            for d in drafts_data
+        ]
+        cards = save_evidence_card_drafts(
+            db2,
+            project_id=project_id,
+            source_id=source_id,
+            parsed_document_id=pd_id,
+            drafts=drafts,
+            candidate_source=provider.source_label(),
+        )
+        _add_change(db2, project_id,
+                    SourceChangeType.EVIDENCE_CARD_GENERATED.value,
+                    f"流式生成证据卡片候选 {len(cards)} 张")
+        db2.commit()
+
+        yield StreamEvidenceDoneEvent(
+            card_count=len(cards),
+            candidate_source=provider.source_label(),
+            fallback_used=fallback_used,
+        )
+    except Exception as e:
+        yield StreamEvidenceErrorEvent(
+            error_code="EVIDENCE_SAVE_FAILED",
+            message=f"证据卡片保存失败: {e}",
+            partial_text=raw,
+        )
+    finally:
+        db2.close()

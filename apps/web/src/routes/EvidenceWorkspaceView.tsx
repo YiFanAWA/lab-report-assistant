@@ -6,6 +6,7 @@ import { useSources } from "../features/sources/hooks";
 import {
   useEvidenceCards,
   useGenerateEvidence,
+  useStreamGenerateEvidence,
   useUpdateEvidence,
   useConfirmEvidence,
   useRejectEvidence,
@@ -511,7 +512,12 @@ function GenerateEvidenceRow({
   onJobStarted: (jobId: string) => void;
 }) {
   const generate = useGenerateEvidence(projectId);
+  // SPEC 0020：流式生成证据卡片（按来源独立触发）
+  const stream = useStreamGenerateEvidence(projectId, source.id);
   const [err, setErr] = useState<string | null>(null);
+
+  // 任一生成路径进行中时禁用另一路径，避免并发冲突
+  const busy = disabled || generate.isPending || stream.streaming;
 
   return (
     <div
@@ -529,31 +535,143 @@ function GenerateEvidenceRow({
             [{sourceStatusLabel(source.status)}]
           </span>
         </span>
-        <button
-          onClick={() => {
-            setErr(null);
-            generate.mutate(source.id, {
-              onSuccess: (data) => onJobStarted(data.job_id),
-              onError: (e) => setErr(errorMessage(e, "生成失败")),
-            });
-          }}
-          disabled={disabled || generate.isPending}
-          style={{
-            padding: "0.25rem 0.6rem",
-            fontSize: "0.8rem",
-            background: "#0ea5e9",
-            color: "#fff",
-            border: "none",
-            borderRadius: "0.25rem",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {generate.isPending ? "提交中…" : "生成候选"}
-        </button>
+        <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
+          <button
+            onClick={() => {
+              setErr(null);
+              generate.mutate(source.id, {
+                onSuccess: (data) => onJobStarted(data.job_id),
+                onError: (e) => setErr(errorMessage(e, "生成失败")),
+              });
+            }}
+            disabled={busy}
+            style={{
+              padding: "0.25rem 0.6rem",
+              fontSize: "0.8rem",
+              background: "#0ea5e9",
+              color: "#fff",
+              border: "none",
+              borderRadius: "0.25rem",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {generate.isPending ? "提交中…" : "生成候选"}
+          </button>
+          {/* SPEC 0020：流式生成按钮 */}
+          <button
+            onClick={() => {
+              setErr(null);
+              stream.start();
+            }}
+            disabled={busy}
+            style={{
+              padding: "0.25rem 0.6rem",
+              fontSize: "0.8rem",
+              background: "#6366f1",
+              color: "#fff",
+              border: "none",
+              borderRadius: "0.25rem",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {stream.streaming ? "流式生成中…" : "流式生成"}
+          </button>
+        </div>
       </div>
       {err && (
         <div style={{ marginTop: "0.25rem", color: "#c00", fontSize: "0.8rem" }}>{err}</div>
+      )}
+
+      {/* SPEC 0020：流式生成展示区 */}
+      {stream.streaming && (
+        <div
+          style={{
+            marginTop: "0.5rem",
+            padding: "0.75rem",
+            border: "1px solid #e5e7eb",
+            borderRadius: "0.375rem",
+            background: "#fff",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <span style={{ fontSize: "0.8rem", color: "#666" }}>
+              正在逐 chunk 生成…
+            </span>
+            <button
+              onClick={stream.cancel}
+              style={{
+                padding: "0.25rem 0.6rem",
+                fontSize: "0.8rem",
+                color: "#c00",
+                background: "transparent",
+                border: "1px solid #c00",
+                borderRadius: "0.25rem",
+                cursor: "pointer",
+              }}
+            >
+              取消
+            </button>
+          </div>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontSize: "0.8rem",
+              lineHeight: 1.5,
+              margin: 0,
+              maxHeight: "240px",
+              overflow: "auto",
+              fontFamily: "monospace",
+            }}
+          >
+            {stream.chunks}
+          </pre>
+        </div>
+      )}
+      {stream.result && (
+        <p style={{ color: "#16a34a", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+          流式生成完成 ✓ [{stream.result.candidate_source}
+          {stream.result.fallback_used ? "（降级）" : ""}] · 共 {stream.result.card_count} 张卡片
+        </p>
+      )}
+      {stream.error && (
+        <div style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+          <p style={{ margin: 0 }}>
+            流式生成失败：{stream.error.message}
+            {stream.error.partial_text && (
+              <span style={{ color: "#92400e" }}>（已保留部分生成内容）</span>
+            )}
+          </p>
+          {stream.error.partial_text && (
+            <details style={{ marginTop: "0.3rem" }}>
+              <summary style={{ cursor: "pointer", fontSize: "0.75rem" }}>
+                查看已生成内容
+              </summary>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  fontSize: "0.75rem",
+                  marginTop: "0.3rem",
+                  padding: "0.4rem",
+                  background: "#fef2f2",
+                  borderRadius: "0.25rem",
+                }}
+              >
+                {stream.error.partial_text}
+              </pre>
+            </details>
+          )}
+        </div>
       )}
     </div>
   );

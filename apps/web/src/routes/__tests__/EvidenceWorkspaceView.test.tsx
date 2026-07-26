@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -34,6 +34,7 @@ vi.mock("../../features/sources/hooks", () => ({
 vi.mock("../../features/evidence/hooks", () => ({
   useEvidenceCards: vi.fn(),
   useGenerateEvidence: vi.fn(),
+  useStreamGenerateEvidence: vi.fn(),
   useUpdateEvidence: vi.fn(),
   useConfirmEvidence: vi.fn(),
   useRejectEvidence: vi.fn(),
@@ -49,6 +50,7 @@ import { useSources } from "../../features/sources/hooks";
 import {
   useEvidenceCards,
   useGenerateEvidence,
+  useStreamGenerateEvidence,
   useUpdateEvidence,
   useConfirmEvidence,
   useRejectEvidence,
@@ -64,6 +66,7 @@ const mockedUseProject = vi.mocked(useProject);
 const mockedUseSources = vi.mocked(useSources);
 const mockedUseEvidenceCards = vi.mocked(useEvidenceCards);
 const mockedUseGenerateEvidence = vi.mocked(useGenerateEvidence);
+const mockedUseStreamGenerateEvidence = vi.mocked(useStreamGenerateEvidence);
 const mockedUseUpdateEvidence = vi.mocked(useUpdateEvidence);
 const mockedUseConfirmEvidence = vi.mocked(useConfirmEvidence);
 const mockedUseRejectEvidence = vi.mocked(useRejectEvidence);
@@ -178,6 +181,17 @@ function setupMocks(options: {
   mockedUseConfirmEvidence.mockReturnValue(makeMutationMock() as any);
   mockedUseRejectEvidence.mockReturnValue(makeMutationMock() as any);
   mockedUseCompleteEvidence.mockReturnValue(makeMutationMock() as any);
+
+  // SPEC 0020：流式生成证据卡片 hook 默认返回空闲状态
+  mockedUseStreamGenerateEvidence.mockReturnValue({
+    streaming: false,
+    chunks: "",
+    result: null,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  } as any);
 }
 
 /** 用路由上下文渲染组件。 */
@@ -471,5 +485,176 @@ describe("EvidenceWorkspaceView - 项目状态标签", () => {
     renderWithRoute();
 
     expect(screen.getByText("[证据已确认]")).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// SPEC 0020 流式生成证据卡片
+// ============================================================
+
+describe("EvidenceWorkspaceView - 流式生成证据卡片（SPEC 0020）", () => {
+  it("流式按钮与原生成候选按钮共存", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+
+    renderWithRoute();
+
+    expect(screen.getByText("生成候选")).toBeInTheDocument();
+    expect(screen.getByText("流式生成")).toBeInTheDocument();
+  });
+
+  it("点击流式按钮触发 start", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    const startSpy = vi.fn();
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: null,
+      start: startSpy,
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    fireEvent.click(screen.getByText("流式生成"));
+
+    expect(startSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("流式期间显示 chunk 累积展示区和取消按钮", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: true,
+      chunks: '{"cards":[{"summary":"部分内容"}',
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    // 流式期间应显示"正在逐 chunk 生成"提示
+    expect(screen.getByText(/正在逐 chunk 生成/)).toBeInTheDocument();
+    // 应显示已累积的 chunk 内容
+    expect(screen.getByText(/部分内容/)).toBeInTheDocument();
+    // 应显示取消按钮
+    expect(screen.getByText("取消")).toBeInTheDocument();
+  });
+
+  it("点击取消按钮触发 cancel", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    const cancelSpy = vi.fn();
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: true,
+      chunks: '{"cards":[',
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: cancelSpy,
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    fireEvent.click(screen.getByText("取消"));
+
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("完成提示显示 candidate_source 和 card_count", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: {
+        card_count: 3,
+        candidate_source: "DEEPSEEK",
+        fallback_used: false,
+      },
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    // 应显示完成提示，含 candidate_source
+    expect(screen.getByText(/流式生成完成/)).toBeInTheDocument();
+    expect(screen.getByText(/DEEPSEEK/)).toBeInTheDocument();
+  });
+
+  it("降级完成提示显示（降级）标记", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: {
+        card_count: 2,
+        candidate_source: "LOCAL_RULE",
+        fallback_used: true,
+      },
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/LOCAL_RULE/)).toBeInTheDocument();
+    expect(screen.getByText(/降级/)).toBeInTheDocument();
+  });
+
+  it("错误展示含 partial_text 详情折叠", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "EVIDENCE_JSON_PARSE_ERROR",
+        message: "JSON 校验失败",
+        partial_text: '{"cards":[不完整',
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    // 应显示错误信息
+    expect(screen.getByText(/流式生成失败/)).toBeInTheDocument();
+    expect(screen.getByText(/JSON 校验失败/)).toBeInTheDocument();
+    // 应有"查看已生成内容"折叠详情
+    expect(screen.getByText("查看已生成内容")).toBeInTheDocument();
+  });
+
+  it("无 partial_text 时不显示详情折叠", () => {
+    setupMocks({ sources: [makeParsedSource()] });
+    mockedUseStreamGenerateEvidence.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "EVIDENCE_SOURCE_NOT_PARSED",
+        message: "来源未解析",
+        partial_text: "",
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    // 应显示错误信息
+    expect(screen.getByText(/流式生成失败/)).toBeInTheDocument();
+    // 不应显示"查看已生成内容"折叠详情
+    expect(screen.queryByText("查看已生成内容")).not.toBeInTheDocument();
   });
 });

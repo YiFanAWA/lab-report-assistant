@@ -6,6 +6,7 @@ LLM 调用失败时降级到 LocalRuleEvidenceCardProvider。
 
 import json
 import logging
+from typing import Generator
 
 from pydantic import BaseModel, ValidationError
 
@@ -105,6 +106,70 @@ class DeepSeekEvidenceCardProvider:
         except (DeepSeekError, ValidationError, ValueError, TypeError) as e:
             logger.warning(f"DeepSeek 证据卡片提取失败，降级到 LocalRule: {e}")
             return self._fallback.draft(text)
+
+    def stream_draft(self, text: str) -> Generator[str, None, None]:
+        """流式调用 DeepSeek 提取证据卡片，逐 chunk yield content。
+
+        SPEC 0020 证据卡片生成流式化。
+
+        降级策略（复用 SPEC 0018/0019 模式）：
+        - 首 chunk 前失败：降级到 LocalRule，一次性 yield fallback JSON（拆分多 chunk 模拟流式）
+        - 中途失败：已 yield 的 chunks 保留，抛异常由上层 service 转 StreamErrorEvent
+        - JSON 校验失败：流式完成后校验失败，抛 DeepSeekError（由 service 层转 error 事件，不保存 EvidenceCard）
+
+        yield 内容：LLM 流式 chunk（首 chunk 后保证至少有一个 chunk）
+        """
+        chunks: list[str] = []
+        started = False
+        try:
+            for chunk in self._client.stream_chat_completion(
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_user_prompt(text)},
+                ],
+                response_format={"type": "json_object"},
+                temperature=self._temperature,
+            ):
+                started = True
+                chunks.append(chunk)
+                yield chunk
+        except Exception as e:
+            if not started:
+                # 首 chunk 前失败，降级到 LocalRule
+                logger.warning(
+                    f"DeepSeek 流式证据卡片失败，降级到 LocalRule: {e}"
+                )
+                fallback_drafts = self._fallback.draft(text)
+                # 手动序列化为 JSON（EvidenceCardDraft 是 dataclass，不是 Pydantic 模型）
+                fallback_json = json.dumps({
+                    "cards": [
+                        {
+                            "summary": d.summary,
+                            "evidence_type": d.evidence_type,
+                            "locator": d.locator,
+                            "source_quote": d.source_quote,
+                        }
+                        for d in fallback_drafts
+                    ]
+                }, ensure_ascii=False)
+                # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+                for i in range(0, len(fallback_json), 50):
+                    yield fallback_json[i:i + 50]
+                return
+            # 中途失败，已 yield 的 chunks 保留，抛异常由上层 service 转 StreamErrorEvent
+            raise
+
+        # 流式完成，校验完整 JSON
+        raw = "".join(chunks)
+        try:
+            self._parse_and_validate(raw)
+        except DeepSeekError:
+            raise
+        except Exception as e:
+            raise DeepSeekError(
+                code="DEEPSEEK_JSON_PARSE_ERROR",
+                message=f"流式生成的 JSON 校验失败: {e}",
+            ) from e
 
     def _parse_and_validate(self, raw: str) -> DeepSeekEvidenceResponse:
         try:

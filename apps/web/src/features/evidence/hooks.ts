@@ -1,8 +1,10 @@
 /** 证据卡片 TanStack Query hooks。 */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback } from "react";
 import {
   generateEvidence,
+  streamGenerateEvidence,
   listEvidence,
   updateEvidence,
   confirmEvidence,
@@ -37,6 +39,124 @@ export function useGenerateEvidence(projectId: string) {
       qc.invalidateQueries({ queryKey: [...evidenceKey(projectId), "list"] });
     },
   });
+}
+
+// --- SPEC 0020 流式生成证据卡片 ---
+
+export interface StreamEvidenceState {
+  /** 是否正在流式生成 */
+  streaming: boolean;
+  /** 已生成的完整文本（chunk 累积） */
+  chunks: string;
+  /** 完成事件返回的结果 */
+  result: {
+    card_count: number;
+    candidate_source: string;
+    fallback_used: boolean;
+  } | null;
+  /** 错误事件返回的信息 */
+  error: {
+    error_code: string;
+    message: string;
+    partial_text: string;
+  } | null;
+}
+
+const INITIAL_STREAM_EVIDENCE_STATE: StreamEvidenceState = {
+  streaming: false,
+  chunks: "",
+  result: null,
+  error: null,
+};
+
+/**
+ * 流式生成证据卡片 hook。
+ *
+ * SPEC 0020 证据卡片生成流式化。
+ *
+ * 管理 SSE 连接的生命周期：
+ * - start(): 建立连接，逐 chunk 累积文本
+ * - cancel(): 中断连接（AbortController.abort()）
+ * - reset(): 重置状态
+ *
+ * 完成后自动 invalidate 证据卡片列表 query，触发 GET 刷新最终结果。
+ */
+export function useStreamGenerateEvidence(
+  projectId: string,
+  sourceId: string
+) {
+  const qc = useQueryClient();
+  const [state, setState] = useState<StreamEvidenceState>(
+    INITIAL_STREAM_EVIDENCE_STATE
+  );
+  const abortRef = useRef<AbortController | null>(null);
+
+  const start = useCallback(async () => {
+    // 重置状态并开始流式
+    setState({ ...INITIAL_STREAM_EVIDENCE_STATE, streaming: true });
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      for await (const evt of streamGenerateEvidence(
+        projectId,
+        sourceId,
+        controller.signal
+      )) {
+        if (evt.event === "chunk") {
+          const { text } = JSON.parse(evt.data);
+          setState((s) => ({ ...s, chunks: s.chunks + text }));
+        } else if (evt.event === "done") {
+          const data = JSON.parse(evt.data);
+          setState({
+            streaming: false,
+            chunks: "",
+            result: data,
+            error: null,
+          });
+          // 刷新证据卡片列表 query，获取后端保存的最终结果
+          qc.invalidateQueries({
+            queryKey: [...evidenceKey(projectId), "list"],
+          });
+        } else if (evt.event === "error") {
+          const data = JSON.parse(evt.data);
+          setState((s) => ({
+            ...s,
+            error: data,
+            streaming: false,
+          }));
+        }
+      }
+    } catch (e: unknown) {
+      // AbortError 是用户主动取消，不算错误
+      const err = e as { name?: string; message?: string };
+      if (err?.name === "AbortError") {
+        setState((s) => ({ ...s, streaming: false }));
+      } else {
+        setState((s) => ({
+          ...s,
+          error: {
+            error_code: "STREAM_NETWORK_ERROR",
+            message: err?.message ?? "流式连接失败",
+            partial_text: s.chunks,
+          },
+          streaming: false,
+        }));
+      }
+    } finally {
+      abortRef.current = null;
+    }
+  }, [projectId, sourceId, qc]);
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const reset = useCallback(() => {
+    setState(INITIAL_STREAM_EVIDENCE_STATE);
+  }, []);
+
+  return { ...state, start, cancel, reset };
 }
 
 /** 更新证据卡片。 */
