@@ -25,8 +25,10 @@ STALE 传播链：
 """
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Generator
 
 from sqlalchemy.orm import Session
 
@@ -258,6 +260,340 @@ def generate_outline(db: Session, project_id: str) -> str:
                 f"触发大纲生成")
     db.commit()
     return job.id
+
+
+def gather_outline_context(db: Session, project_id: str) -> dict:
+    """聚合大纲生成所需的上下文。
+
+    SPEC 0019：从 worker/handlers.py 提取到 service 层，
+    让流式 service 和 Worker handler 共享。
+
+    从各 owner 服务查询已确认内容：
+    - requirements: 已确认任务单
+    - sources: 已确认证据卡片
+    - datasets: 数据集字段概览
+    - analysis: 已确认分析方案
+    - execution: 成功的执行记录和产物
+    """
+    from app.modules.requirements.models import RequirementPlan
+    from app.modules.requirements.status import PlanStatus
+    from app.modules.sources.models import EvidenceCard
+    from app.modules.sources.status import EvidenceCardStatus
+    from app.modules.datasets.models import Dataset, DatasetVersion
+    from app.modules.analysis.models import AnalysisPlan
+    from app.modules.analysis.status import AnalysisPlanStatus
+    from app.modules.execution.models import ExecutionRun, ExecutionArtifact
+    from app.modules.execution.status import ExecutionRunStatus
+    from app.modules.projects.models import Project
+
+    context: dict = {}
+
+    # 项目信息
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project:
+        context["project"] = {
+            "id": project.id,
+            "name": project.name,
+            "topic": project.topic,
+        }
+
+    # 已确认任务单
+    plan = (
+        db.query(RequirementPlan)
+        .filter(
+            RequirementPlan.project_id == project_id,
+            RequirementPlan.status == PlanStatus.CONFIRMED.value,
+        )
+        .order_by(RequirementPlan.confirmed_at.desc())
+        .first()
+    )
+    if plan:
+        try:
+            payload = json.loads(plan.payload_json)
+        except Exception:
+            payload = {}
+        context["requirements"] = {
+            "plan_id": plan.id,
+            "payload": payload,
+        }
+
+    # 已确认证据卡片
+    cards = (
+        db.query(EvidenceCard)
+        .filter(
+            EvidenceCard.project_id == project_id,
+            EvidenceCard.status == EvidenceCardStatus.CONFIRMED.value,
+        )
+        .all()
+    )
+    context["evidence_cards"] = [
+        {
+            "id": c.id,
+            "claim": c.claim if hasattr(c, "claim") else "",
+            "summary": getattr(c, "summary", "") or getattr(c, "claim", ""),
+        }
+        for c in cards
+    ]
+
+    # 数据集字段概览（取最新已解析版本）
+    dataset = (
+        db.query(Dataset)
+        .filter(Dataset.project_id == project_id)
+        .order_by(Dataset.created_at.desc())
+        .first()
+    )
+    if dataset:
+        version = (
+            db.query(DatasetVersion)
+            .filter(DatasetVersion.dataset_id == dataset.id)
+            .order_by(DatasetVersion.version.desc())
+            .first()
+        )
+        if version and version.profile_json:
+            try:
+                profile = json.loads(version.profile_json)
+            except Exception:
+                profile = {}
+            context["dataset"] = {
+                "dataset_id": dataset.id,
+                "version_id": version.id,
+                "row_count": version.row_count,
+                "column_count": version.column_count,
+                "profile": profile,
+            }
+
+    # 已确认分析方案
+    analysis_plan = (
+        db.query(AnalysisPlan)
+        .filter(
+            AnalysisPlan.project_id == project_id,
+            AnalysisPlan.status == AnalysisPlanStatus.CONFIRMED.value,
+        )
+        .order_by(AnalysisPlan.confirmed_at.desc())
+        .first()
+    )
+    if analysis_plan:
+        try:
+            cleaning_plan = json.loads(analysis_plan.cleaning_plan) if analysis_plan.cleaning_plan else []
+            analysis_plan_items = json.loads(analysis_plan.analysis_plan) if analysis_plan.analysis_plan else []
+            chart_plan = json.loads(analysis_plan.chart_plan) if analysis_plan.chart_plan else []
+        except Exception:
+            cleaning_plan, analysis_plan_items, chart_plan = [], [], []
+        context["analysis_plan"] = {
+            "plan_id": analysis_plan.id,
+            "cleaning_plan": cleaning_plan,
+            "analysis_plan": analysis_plan_items,
+            "chart_plan": chart_plan,
+        }
+
+    # 成功的执行记录和产物
+    runs = (
+        db.query(ExecutionRun)
+        .filter(
+            ExecutionRun.project_id == project_id,
+            ExecutionRun.status == ExecutionRunStatus.SUCCEEDED.value,
+        )
+        .order_by(ExecutionRun.created_at.desc())
+        .all()
+    )
+    executions = []
+    for run in runs:
+        artifacts = (
+            db.query(ExecutionArtifact)
+            .filter(ExecutionArtifact.execution_run_id == run.id)
+            .all()
+        )
+        executions.append({
+            "run_id": run.id,
+            "stdout": run.stdout or "",
+            "stderr": run.stderr or "",
+            "artifacts": [
+                {
+                    "name": a.name,
+                    "artifact_type": a.artifact_type,
+                    "file_path": a.file_path,
+                    "execution_run_id": run.id,
+                }
+                for a in artifacts
+            ],
+        })
+    context["executions"] = executions
+
+    return context
+
+
+# --- SPEC 0019 流式事件类型 ---
+
+
+@dataclass
+class StreamOutlineChunkEvent:
+    """流式 chunk 事件，承载一个 LLM 生成的大纲内容片段。"""
+
+    text: str
+
+
+@dataclass
+class StreamOutlineDoneEvent:
+    """流式完成事件，承载大纲保存后的元信息。"""
+
+    outline_id: str
+    candidate_source: str
+    fallback_used: bool
+
+
+@dataclass
+class StreamOutlineErrorEvent:
+    """流式错误事件，承载失败时的错误信息和已生成的部分文本。"""
+
+    error_code: str
+    message: str
+    partial_text: str
+
+
+StreamOutlineEvent = (
+    StreamOutlineChunkEvent | StreamOutlineDoneEvent | StreamOutlineErrorEvent
+)
+
+
+def stream_generate_outline(
+    db: Session, project_id: str, provider
+) -> Generator[StreamOutlineEvent, None, None]:
+    """流式生成大纲。
+
+    SPEC 0019 大纲生成流式化。
+
+    流程（分段持有 db session，避免 SQLite 写锁阻塞）：
+    1. Phase 1 校验（持有 db）：校验 project 状态 + 至少一个成功执行记录 + 聚合上下文
+    2. Phase 2 流式生成（关闭 db，不持有连接）：调用 provider.stream_generate()
+    3. Phase 3 JSON 校验：用 DeepSeekOutlineResponse 校验完整 JSON
+    4. Phase 4 保存（重新打开 db）：save_outline_draft + 写变更记录
+
+    中途失败：yield StreamOutlineErrorEvent（保留 partial_text），不保存 Outline。
+
+    兼容不支持 stream_generate 的 provider（LocalRule / Fake）：调用 generate() 一次性 yield。
+
+    yield StreamOutlineEvent：StreamOutlineChunkEvent / StreamOutlineDoneEvent / StreamOutlineErrorEvent。
+    """
+    from app.infrastructure.database.engine import SessionLocal
+    from app.modules.execution.models import ExecutionRun
+    from app.modules.execution.status import ExecutionRunStatus
+
+    # Phase 1: 校验（持有 db）
+    project = _ensure_project(db, project_id)
+    _ensure_project_ready_for_outline(project)
+
+    succeeded_count = (
+        db.query(ExecutionRun)
+        .filter(
+            ExecutionRun.project_id == project_id,
+            ExecutionRun.status == ExecutionRunStatus.SUCCEEDED.value,
+        )
+        .count()
+    )
+    if succeeded_count == 0:
+        raise AppError(
+            code="OUTLINE_NOT_GENERATABLE",
+            message="没有成功的执行记录，无法生成大纲",
+        )
+
+    context = gather_outline_context(db, project_id)
+    db.close()  # 显式关闭，避免流式期间持有连接
+
+    # Phase 2: 流式生成（不持有 db）
+    chunks: list[str] = []
+    fallback_used = False
+    try:
+        if hasattr(provider, "stream_generate"):
+            for chunk in provider.stream_generate(context):
+                chunks.append(chunk)
+                yield StreamOutlineChunkEvent(text=chunk)
+        else:
+            # 兼容只支持同步的 provider（LocalRule / Fake）
+            draft = provider.generate(context)
+            # 手动序列化为 JSON（OutlineDraft 是 dataclass，不是 Pydantic 模型）
+            full_json = json.dumps({
+                "sections": [
+                    {
+                        "id": s.id,
+                        "title": s.title,
+                        "content": s.content,
+                        "source_type": s.source_type,
+                        "source_ids": s.source_ids,
+                    }
+                    for s in draft.sections
+                ]
+            }, ensure_ascii=False)
+            # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+            for i in range(0, len(full_json), 50):
+                piece = full_json[i:i + 50]
+                chunks.append(piece)
+                yield StreamOutlineChunkEvent(text=piece)
+    except Exception as e:
+        # 流式中途失败
+        partial_text = "".join(chunks)
+        yield StreamOutlineErrorEvent(
+            error_code=getattr(e, "code", "OUTLINE_STREAM_FAILED"),
+            message=str(e) or e.__class__.__name__,
+            partial_text=partial_text,
+        )
+        return
+
+    # Phase 3: 校验完整 JSON
+    raw = "".join(chunks)
+    try:
+        from app.modules.llm.deepseek_outline_provider import (
+            DeepSeekOutlineResponse,
+        )
+        parsed = DeepSeekOutlineResponse.model_validate_json(raw)
+        sections_data = [
+            {
+                "id": s.id,
+                "title": s.title,
+                "content": s.content,
+                "source_type": s.source_type,
+                "source_ids": s.source_ids,
+            }
+            for s in parsed.sections
+        ]
+    except Exception as e:
+        yield StreamOutlineErrorEvent(
+            error_code="OUTLINE_JSON_PARSE_ERROR",
+            message=f"大纲 JSON 校验失败: {e}",
+            partial_text=raw,
+        )
+        return
+
+    # Phase 4: 保存（重新打开 db）
+    db2 = SessionLocal()
+    try:
+        candidate_source_val = provider.source_label()
+        outline = save_outline_draft(
+            db2,
+            project_id=project_id,
+            sections=sections_data,
+            candidate_source=candidate_source_val,
+        )
+        _add_change(
+            db2, project_id,
+            OutlineChangeType.OUTLINE_GENERATED.value,
+            f"流式生成大纲候选：{len(sections_data)} 个章节",
+        )
+        db2.commit()
+        db2.refresh(outline)
+
+        yield StreamOutlineDoneEvent(
+            outline_id=outline.id,
+            candidate_source=candidate_source_val,
+            fallback_used=fallback_used,
+        )
+    except Exception as e:
+        yield StreamOutlineErrorEvent(
+            error_code="OUTLINE_SAVE_FAILED",
+            message=f"大纲保存失败: {e}",
+            partial_text=raw,
+        )
+    finally:
+        db2.close()
 
 
 # --- 查询：Outline ---

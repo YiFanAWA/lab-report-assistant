@@ -1,8 +1,10 @@
 /** 大纲与交付物 TanStack Query hooks。 */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback } from "react";
 import {
   generateOutline,
+  streamGenerateOutline,
   listOutlines,
   getOutline,
   updateOutline,
@@ -56,6 +58,120 @@ export function useGenerateOutline(projectId: string) {
       qc.invalidateQueries({ queryKey: [...outlinesKey(projectId), "list"] });
     },
   });
+}
+
+// --- SPEC 0019 流式生成大纲 ---
+
+export interface StreamOutlineState {
+  /** 是否正在流式生成 */
+  streaming: boolean;
+  /** 已生成的完整文本（chunk 累积） */
+  chunks: string;
+  /** 完成事件返回的结果 */
+  result: {
+    outline_id: string;
+    candidate_source: string;
+    fallback_used: boolean;
+  } | null;
+  /** 错误事件返回的信息 */
+  error: {
+    error_code: string;
+    message: string;
+    partial_text: string;
+  } | null;
+}
+
+const INITIAL_STREAM_OUTLINE_STATE: StreamOutlineState = {
+  streaming: false,
+  chunks: "",
+  result: null,
+  error: null,
+};
+
+/**
+ * 流式生成大纲 hook。
+ *
+ * SPEC 0019 大纲生成流式化。
+ *
+ * 管理 SSE 连接的生命周期：
+ * - start(): 建立连接，逐 chunk 累积文本
+ * - cancel(): 中断连接（AbortController.abort()）
+ * - reset(): 重置状态
+ *
+ * 完成后自动 invalidate 大纲列表 query，触发 GET 刷新最终结果。
+ */
+export function useStreamGenerateOutline(projectId: string) {
+  const qc = useQueryClient();
+  const [state, setState] = useState<StreamOutlineState>(
+    INITIAL_STREAM_OUTLINE_STATE
+  );
+  const abortRef = useRef<AbortController | null>(null);
+
+  const start = useCallback(async () => {
+    // 重置状态并开始流式
+    setState({ ...INITIAL_STREAM_OUTLINE_STATE, streaming: true });
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      for await (const evt of streamGenerateOutline(
+        projectId,
+        controller.signal
+      )) {
+        if (evt.event === "chunk") {
+          const { text } = JSON.parse(evt.data);
+          setState((s) => ({ ...s, chunks: s.chunks + text }));
+        } else if (evt.event === "done") {
+          const data = JSON.parse(evt.data);
+          setState({
+            streaming: false,
+            chunks: "",
+            result: data,
+            error: null,
+          });
+          // 刷新大纲列表 query，获取后端保存的最终结果
+          qc.invalidateQueries({
+            queryKey: [...outlinesKey(projectId), "list"],
+          });
+        } else if (evt.event === "error") {
+          const data = JSON.parse(evt.data);
+          setState((s) => ({
+            ...s,
+            error: data,
+            streaming: false,
+          }));
+        }
+      }
+    } catch (e: unknown) {
+      // AbortError 是用户主动取消，不算错误
+      const err = e as { name?: string; message?: string };
+      if (err?.name === "AbortError") {
+        setState((s) => ({ ...s, streaming: false }));
+      } else {
+        setState((s) => ({
+          ...s,
+          error: {
+            error_code: "STREAM_NETWORK_ERROR",
+            message: err?.message ?? "流式连接失败",
+            partial_text: s.chunks,
+          },
+          streaming: false,
+        }));
+      }
+    } finally {
+      abortRef.current = null;
+    }
+  }, [projectId, qc]);
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const reset = useCallback(() => {
+    setState(INITIAL_STREAM_OUTLINE_STATE);
+  }, []);
+
+  return { ...state, start, cancel, reset };
 }
 
 /** 编辑大纲。 */

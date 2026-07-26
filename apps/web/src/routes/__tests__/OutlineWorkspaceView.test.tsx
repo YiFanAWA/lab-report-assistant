@@ -31,6 +31,7 @@ vi.mock("../../features/outlines/hooks", () => ({
   useOutlines: vi.fn(),
   useOutline: vi.fn(),
   useGenerateOutline: vi.fn(),
+  useStreamGenerateOutline: vi.fn(),
   useUpdateOutline: vi.fn(),
   useConfirmOutline: vi.fn(),
   useRejectOutline: vi.fn(),
@@ -52,6 +53,7 @@ import { useProject } from "../../features/projects/hooks";
 import {
   useOutlines,
   useGenerateOutline,
+  useStreamGenerateOutline,
   useUpdateOutline,
   useConfirmOutline,
   useRejectOutline,
@@ -69,6 +71,7 @@ import type { Outline } from "../../features/outlines/types";
 const mockedUseProject = vi.mocked(useProject);
 const mockedUseOutlines = vi.mocked(useOutlines);
 const mockedUseGenerateOutline = vi.mocked(useGenerateOutline);
+const mockedUseStreamGenerateOutline = vi.mocked(useStreamGenerateOutline);
 const mockedUseUpdateOutline = vi.mocked(useUpdateOutline);
 const mockedUseConfirmOutline = vi.mocked(useConfirmOutline);
 const mockedUseRejectOutline = vi.mocked(useRejectOutline);
@@ -165,6 +168,17 @@ function setupMocks(options: {
   mockedUseGeneratePpt.mockReturnValue(makeMutationMock() as any);
   mockedUseUploadWordTemplate.mockReturnValue(makeMutationMock() as any);
   mockedUseDeleteWordTemplate.mockReturnValue(makeMutationMock() as any);
+
+  // SPEC 0019：流式生成 hook 默认返回非流式状态
+  mockedUseStreamGenerateOutline.mockReturnValue({
+    streaming: false,
+    chunks: "",
+    result: null,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  } as any);
 
   // Word 模板查询默认返回 null（无模板）
   mockedUseWordTemplate.mockReturnValue({
@@ -508,5 +522,173 @@ describe("OutlineWorkspaceView - 项目状态标签", () => {
     renderWithRoute();
 
     expect(screen.getByText("[UNKNOWN_STATUS]")).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// SPEC 0019 流式生成大纲
+// ============================================================
+
+describe("OutlineWorkspaceView - SPEC 0019 流式生成大纲", () => {
+  it("流式生成按钮与原生成按钮共存", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+
+    renderWithRoute();
+
+    // 原同步按钮存在
+    expect(screen.getByRole("button", { name: "生成大纲候选" })).toBeInTheDocument();
+    // 新流式按钮存在
+    expect(screen.getByRole("button", { name: "流式生成大纲" })).toBeInTheDocument();
+  });
+
+  it("点击流式按钮触发 start()", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    const startSpy = vi.fn();
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: null,
+      start: startSpy,
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    const btn = screen.getByRole("button", { name: "流式生成大纲" });
+    btn.click();
+
+    expect(startSpy).toHaveBeenCalledOnce();
+  });
+
+  it("流式期间显示 chunk 累积展示区", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: true,
+      chunks: '{"sections":[{"id":"s1"}',
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    // 显示流式提示
+    expect(screen.getByText("正在逐 chunk 生成…")).toBeInTheDocument();
+    // chunk 内容显示
+    expect(screen.getByText('{"sections":[{"id":"s1"}')).toBeInTheDocument();
+  });
+
+  it("流式期间显示取消按钮", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    const cancelSpy = vi.fn();
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: true,
+      chunks: "...",
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: cancelSpy,
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    const cancelBtn = screen.getByRole("button", { name: "取消" });
+    cancelBtn.click();
+
+    expect(cancelSpy).toHaveBeenCalledOnce();
+  });
+
+  it("流式完成后显示完成提示", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: {
+        outline_id: "ol_001",
+        candidate_source: "DEEPSEEK",
+        fallback_used: false,
+      },
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/流式生成完成 ✓/)).toBeInTheDocument();
+    expect(screen.getByText(/\[DEEPSEEK\]/)).toBeInTheDocument();
+  });
+
+  it("流式失败时显示错误信息", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "OUTLINE_JSON_PARSE_ERROR",
+        message: "大纲 JSON 校验失败",
+        partial_text: '{"sections":[',
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/流式生成失败：大纲 JSON 校验失败/)).toBeInTheDocument();
+    // 有 partial_text 时显示"查看已生成内容"详情
+    expect(screen.getByText("查看已生成内容")).toBeInTheDocument();
+  });
+
+  it("流式失败无 partial_text 时不显示详情", () => {
+    setupMocks({
+      project: makeProject({ status: "RESULT_CONFIRMED" }),
+      outlines: [],
+    });
+    mockedUseStreamGenerateOutline.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "OUTLINE_NOT_GENERATABLE",
+        message: "没有成功的执行记录",
+        partial_text: "",
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/流式生成失败：没有成功的执行记录/)).toBeInTheDocument();
+    // 无 partial_text 时不显示详情
+    expect(screen.queryByText("查看已生成内容")).not.toBeInTheDocument();
   });
 });

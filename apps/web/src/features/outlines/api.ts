@@ -14,6 +14,7 @@ import type {
   CompleteProjectResponse,
   WordTemplate,
 } from "./types";
+import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 
 const BASE = "/api";
 
@@ -39,6 +40,24 @@ export async function generateOutline(
     { method: "POST" }
   );
   return handle<GenerateOutlineResponse>(r);
+}
+
+/**
+ * 流式生成大纲（SPEC 0019）。
+ *
+ * 返回异步迭代器，逐个 yield SSE 事件。
+ * 调用方负责处理 chunk / done / error 事件。
+ * 复用 SPEC 0018 的 streamSse 工具。
+ *
+ * @param projectId 项目 ID
+ * @param signal 可选的 AbortSignal，用于取消流式
+ */
+export async function* streamGenerateOutline(
+  projectId: string,
+  signal?: AbortSignal
+): AsyncGenerator<SSEEvent, void, unknown> {
+  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/outline/stream-generate`;
+  yield* streamSSE(url, {}, signal);
 }
 
 /** 获取大纲列表（支持 status 过滤）。 */

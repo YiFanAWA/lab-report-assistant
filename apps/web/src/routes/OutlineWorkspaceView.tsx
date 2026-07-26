@@ -5,6 +5,7 @@ import { useProject } from "../features/projects/hooks";
 import {
   useOutlines,
   useGenerateOutline,
+  useStreamGenerateOutline,
   useUpdateOutline,
   useConfirmOutline,
   useRejectOutline,
@@ -732,6 +733,8 @@ export function OutlineWorkspaceView() {
   const { data: outlines, isLoading: outlinesLoading } = useOutlines(pid);
 
   const generate = useGenerateOutline(pid);
+  // SPEC 0019：流式生成大纲
+  const streamOutline = useStreamGenerateOutline(pid);
 
   // 跟踪生成任务
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -815,31 +818,53 @@ export function OutlineWorkspaceView() {
         ) : (
           <>
             <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.5rem" }}>
-              点击下方按钮生成大纲候选（本地规则提供者拼装 6 个章节）：
+              点击下方按钮生成大纲候选（本地规则提供者拼装 6 个章节）。
+              流式按钮可实时看到 LLM 输出过程。
             </p>
-            <button
-              onClick={() => {
-                setGenErr(null);
-                generate.mutate(undefined, {
-                  onSuccess: (data) => setActiveJobId(data.job_id),
-                  onError: (e) => setGenErr(errorMessage(e, "触发生成失败")),
-                });
-              }}
-              disabled={generate.isPending || !!activeJobId}
-              style={{
-                padding: "0.5rem 1rem",
-                fontSize: "0.9rem",
-                background: "#0ea5e9",
-                color: "#fff",
-                border: "none",
-                borderRadius: "0.375rem",
-                cursor: "pointer",
-              }}
-            >
-              {generate.isPending || activeJobId
-                ? "生成中…"
-                : "生成大纲候选"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  setGenErr(null);
+                  generate.mutate(undefined, {
+                    onSuccess: (data) => setActiveJobId(data.job_id),
+                    onError: (e) => setGenErr(errorMessage(e, "触发生成失败")),
+                  });
+                }}
+                disabled={generate.isPending || !!activeJobId || streamOutline.streaming}
+                style={{
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                  background: "#0ea5e9",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "0.375rem",
+                  cursor: "pointer",
+                }}
+              >
+                {generate.isPending || activeJobId
+                  ? "生成中…"
+                  : "生成大纲候选"}
+              </button>
+              {/* SPEC 0019：流式生成按钮 */}
+              <button
+                onClick={() => {
+                  setGenErr(null);
+                  streamOutline.start();
+                }}
+                disabled={generate.isPending || !!activeJobId || streamOutline.streaming}
+                style={{
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                  background: "#6366f1",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "0.375rem",
+                  cursor: "pointer",
+                }}
+              >
+                {streamOutline.streaming ? "流式生成中…" : "流式生成大纲"}
+              </button>
+            </div>
             {activeJobId && genJob && (
               <p style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: "0.5rem" }}>
                 {jobTypeLabel(genJob.job_type)}：{jobStatusLabel(genJob.status)}
@@ -850,6 +875,96 @@ export function OutlineWorkspaceView() {
               <p style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>
                 {genErr}
               </p>
+            )}
+
+            {/* SPEC 0019：流式生成展示区 */}
+            {streamOutline.streaming && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "1rem",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "0.375rem",
+                  background: "#f9fafb",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                    正在逐 chunk 生成…
+                  </span>
+                  <button
+                    onClick={streamOutline.cancel}
+                    style={{
+                      padding: "0.3rem 0.8rem",
+                      fontSize: "0.85rem",
+                      color: "#c00",
+                      background: "transparent",
+                      border: "1px solid #c00",
+                      borderRadius: "0.25rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    fontSize: "0.85rem",
+                    lineHeight: 1.5,
+                    margin: 0,
+                    maxHeight: "300px",
+                    overflow: "auto",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {streamOutline.chunks}
+                </pre>
+              </div>
+            )}
+            {streamOutline.result && (
+              <p style={{ color: "#16a34a", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                流式生成完成 ✓ [{streamOutline.result.candidate_source}
+                {streamOutline.result.fallback_used ? "（降级）" : ""}]
+              </p>
+            )}
+            {streamOutline.error && (
+              <div style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                <p style={{ margin: 0 }}>
+                  流式生成失败：{streamOutline.error.message}
+                  {streamOutline.error.partial_text && (
+                    <span style={{ color: "#92400e" }}>（已保留部分生成内容）</span>
+                  )}
+                </p>
+                {streamOutline.error.partial_text && (
+                  <details style={{ marginTop: "0.3rem" }}>
+                    <summary style={{ cursor: "pointer", fontSize: "0.8rem" }}>
+                      查看已生成内容
+                    </summary>
+                    <pre
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontSize: "0.8rem",
+                        marginTop: "0.3rem",
+                        padding: "0.5rem",
+                        background: "#fef2f2",
+                        borderRadius: "0.25rem",
+                      }}
+                    >
+                      {streamOutline.error.partial_text}
+                    </pre>
+                  </details>
+                )}
+              </div>
             )}
           </>
         )}
