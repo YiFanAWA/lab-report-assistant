@@ -325,6 +325,130 @@ describe("AnalysisWorkspaceView - 分析方案列表展示", () => {
 });
 
 // ============================================================
+// PlanCard target_fields 容错处理（V2.3.0 收口修复）
+//
+// 后端 LocalRule provider 在 V2.3.0 之前曾输出 target_fields 为字符串，
+// 已保存的旧错误格式记录或用户手动编辑的 JSON 可能包含非数组值。
+// PlanCard 不应该因为单个字段类型异常而崩溃整个页面。
+// ============================================================
+
+describe("AnalysisWorkspaceView - PlanCard target_fields 容错", () => {
+  it("target_fields 为数组时正常显示", () => {
+    const plan = makePlan({
+      analysis_plan: JSON.stringify([
+        {
+          analysis_type: "DESCRIPTIVE_STATISTICS",
+          target_fields: ["age", "gender"],
+          method: "计算均值",
+          expected_output: "统计表",
+        },
+      ]),
+    });
+    setupMocks({ datasets: [makeReadyDataset()], plans: [plan] });
+
+    renderWithRoute();
+
+    expect(screen.getByText(/DESCRIPTIVE_STATISTICS/)).toBeInTheDocument();
+    expect(screen.getByText(/目标字段：age, gender/)).toBeInTheDocument();
+  });
+
+  it("target_fields 为字符串时不崩溃，容错展示", () => {
+    const plan = makePlan({
+      analysis_plan: JSON.stringify([
+        {
+          analysis_type: "FREQUENCY",
+          target_fields: "gender",
+          method: "统计频次",
+          expected_output: "频次表",
+        },
+      ]),
+    });
+    setupMocks({ datasets: [makeReadyDataset()], plans: [plan] });
+
+    // 不应该抛出 TypeError
+    expect(() => renderWithRoute()).not.toThrow();
+
+    expect(screen.getByText(/FREQUENCY/)).toBeInTheDocument();
+    expect(screen.getByText(/目标字段：gender/)).toBeInTheDocument();
+  });
+
+  it("target_fields 为 null 时不崩溃，不显示目标字段", () => {
+    const plan = makePlan({
+      analysis_plan: JSON.stringify([
+        {
+          analysis_type: "CORRELATION",
+          target_fields: null,
+          method: "计算相关系数",
+          expected_output: "相关矩阵",
+        },
+      ]),
+    });
+    setupMocks({ datasets: [makeReadyDataset()], plans: [plan] });
+
+    expect(() => renderWithRoute()).not.toThrow();
+
+    expect(screen.getByText(/CORRELATION/)).toBeInTheDocument();
+    expect(screen.queryByText(/目标字段/)).not.toBeInTheDocument();
+  });
+
+  it("target_fields 为 undefined 时不崩溃", () => {
+    const plan = makePlan({
+      analysis_plan: JSON.stringify([
+        {
+          analysis_type: "MISSING_PATTERN",
+          // 故意不设置 target_fields
+          method: "分析缺失模式",
+          expected_output: "缺失报告",
+        },
+      ]),
+    });
+    setupMocks({ datasets: [makeReadyDataset()], plans: [plan] });
+
+    expect(() => renderWithRoute()).not.toThrow();
+
+    expect(screen.getByText(/MISSING_PATTERN/)).toBeInTheDocument();
+    expect(screen.queryByText(/目标字段/)).not.toBeInTheDocument();
+  });
+
+  it("多个条目混合数组/字符串 target_fields 时全部容错展示", () => {
+    const plan = makePlan({
+      analysis_plan: JSON.stringify([
+        {
+          analysis_type: "DESCRIPTIVE_STATISTICS",
+          target_fields: ["age"],
+          method: "计算均值",
+          expected_output: "统计表",
+        },
+        {
+          analysis_type: "FREQUENCY",
+          target_fields: "gender",
+          method: "统计频次",
+          expected_output: "频次表",
+        },
+        {
+          analysis_type: "GROUP_STATISTICS",
+          target_fields: ["gender", "age"],
+          method: "分组聚合",
+          expected_output: "分组表",
+        },
+      ]),
+    });
+    setupMocks({ datasets: [makeReadyDataset()], plans: [plan] });
+
+    expect(() => renderWithRoute()).not.toThrow();
+
+    expect(screen.getByText(/DESCRIPTIVE_STATISTICS/)).toBeInTheDocument();
+    expect(screen.getByText(/FREQUENCY/)).toBeInTheDocument();
+    expect(screen.getByText(/GROUP_STATISTICS/)).toBeInTheDocument();
+    // 数组形式：age；字符串形式：gender；数组形式：gender, age
+    // 不崩溃 + 至少出现一次目标字段渲染即通过容错验证
+    expect(screen.getAllByText(/目标字段：age/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/目标字段：gender/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/目标字段：gender, age/)).toBeInTheDocument();
+  });
+});
+
+// ============================================================
 // 方案操作按钮门控
 // ============================================================
 

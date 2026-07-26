@@ -109,6 +109,23 @@ function prettyJson(raw: string): string {
   }
 }
 
+/**
+ * 安全拼接 target_fields，容错处理字符串/数组/null/undefined 等情况。
+ *
+ * 后端 LocalRule provider 在 V2.3.0 之前曾输出 target_fields 为字符串，
+ * 已保存的旧错误格式记录可能仍存在于数据库中；同时用户手动编辑 JSON
+ * 也可能输入非数组值。PlanCard 不应该因为单个字段类型异常而崩溃整个页面，
+ * 这里做防御性容错展示。
+ */
+function safeJoinTargetFields(fields: unknown): string {
+  if (Array.isArray(fields)) {
+    return fields.map((f) => String(f)).filter(Boolean).join(", ");
+  }
+  if (fields == null) return "";
+  if (typeof fields === "string") return fields;
+  return String(fields);
+}
+
 /** 单个分析方案卡片，含编辑、确认、拒绝、STALE 提示。 */
 function PlanCard({
   projectId,
@@ -231,9 +248,9 @@ function PlanCard({
                 {analysisItems.map((a, i) => (
                   <li key={i} style={{ marginBottom: "0.4rem" }}>
                     <strong>{a.analysis_type}</strong>
-                    {a.target_fields.length > 0 && (
+                    {safeJoinTargetFields(a.target_fields) && (
                       <span style={{ color: "#6b7280" }}>
-                        {" "}（目标字段：{a.target_fields.join(", ")}）
+                        {" "}（目标字段：{safeJoinTargetFields(a.target_fields)}）
                       </span>
                     )}
                     <div style={{ color: "#374151" }}>方法：{a.method}</div>

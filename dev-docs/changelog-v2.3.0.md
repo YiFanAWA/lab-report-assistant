@@ -4,7 +4,7 @@
 > **发布日期：** 2026-07-26
 > **上一版本：** v2.2.0
 > **提交范围：** `v2.2.0..v2.3.0`（1 个提交：SPEC 0021 分析方案生成流式化）
-> **变更统计：** 后端 895 测试 + 前端 546 测试 = 1441 个测试（新增 64 个）
+> **变更统计：** 后端 895 测试 + 前端 551 测试 = 1446 个测试（新增 79 个，含 SPEC 0021 流式 64 个 + 收口复核新增 PlanCard 容错测试 5 个）
 > **文档状态：** 已完成实现与验收，待项目负责人确认发布
 
 ---
@@ -91,7 +91,7 @@ data: {"error_code":"...", "message":"...", "partial_text":"..."}
 
 ---
 
-## 二、收口复核修复：LocalRuleAnalysisPlanProvider 输出 target_fields 类型不一致阻断问题
+## 二、收口复核修复：LocalRule target_fields 类型 + 前端 PlanCard 容错（2 项阻断问题）
 
 ### 2.1 问题发现
 
@@ -112,9 +112,38 @@ V2.3.0 浏览器验收期间发现阻断问题：LocalRuleAnalysisPlanProvider �
 ### 2.3 修复验证
 
 - 后端 895 测试全部通过（包括 Provider 单元测试验证 `target_fields` 类型）
-- 前端 546 测试全部通过（包括 PlanCard 渲染测试）
+- 前端 551 测试全部通过（包括 PlanCard 渲染测试与 5 个新增容错测试）
 - 浏览器验收 PlanCard 渲染正常，无 TypeError
 - 清理 1 条已保存的旧错误格式数据
+
+### 2.4 前端 PlanCard 容错修复（防御性加固）
+
+**问题：** 即使后端 LocalRule 输出已修正为数组，已保存的旧错误格式记录可能仍存在于数据库中；同时用户手动编辑 JSON 也可能输入非数组 `target_fields`。前端 PlanCard 直接调用 `target_fields.join(", ")` 是脆弱设计，单个字段类型异常会导致整个分析工作区页面崩溃。
+
+**修复方案：** 在 [AnalysisWorkspaceView.tsx](file:///d:/java_project/lab-report-assistant/apps/web/src/routes/AnalysisWorkspaceView.tsx) 中新增 `safeJoinTargetFields()` 辅助函数，容错处理字符串/数组/null/undefined 等情况：
+
+```typescript
+function safeJoinTargetFields(fields: unknown): string {
+  if (Array.isArray(fields)) {
+    return fields.map((f) => String(f)).filter(Boolean).join(", ");
+  }
+  if (fields == null) return "";
+  if (typeof fields === "string") return fields;
+  return String(fields);
+}
+```
+
+**新增 5 个边界测试覆盖：**
+
+| 测试场景 | 验证点 |
+| --- | --- |
+| `target_fields` 为数组 | 正常显示 `目标字段：age, gender` |
+| `target_fields` 为字符串 | 不崩溃，容错展示 `目标字段：gender` |
+| `target_fields` 为 null | 不崩溃，不显示目标字段行 |
+| `target_fields` 为 undefined | 不崩溃，不显示目标字段行 |
+| 多条目混合数组/字符串 | 全部容错展示，不崩溃 |
+
+**修复验证：** 前端测试套件从 546 扩展到 551（新增 5 个 PlanCard 容错测试），全套零回归。
 
 ---
 
@@ -138,9 +167,10 @@ V2.3.0 浏览器验收期间发现阻断问题：LocalRuleAnalysisPlanProvider �
 | `api-stream.test.ts` | 6 | 正确 URL / POST 方法 / 空 body / URL 编码 / 委托 streamSSE / AbortSignal / HTTP 错误透传 |
 | `hooks-stream.test.tsx` | 12 | chunk 累积 / done + invalidate / start 重置 / fallback_used 标记 / streaming 状态 / error + partial_text / STREAM_NETWORK_ERROR / AbortError / cancel / reset / 初始状态 |
 | `AnalysisWorkspaceView.test.tsx`（新增流式块） | 9 | 流式按钮与原按钮共存 / 点击触发 start / 流式展示区显示 / 取消按钮触发 cancel / 完成提示显示 candidate_source / 降级完成提示 / 错误展示含 partial_text 详情 / 无 partial_text 时不显示详情 / 流式按钮禁用状态 |
-| **小计** | **27** | — |
+| `AnalysisWorkspaceView.test.tsx`（PlanCard 容错块） | 5 | target_fields 为数组 / 字符串 / null / undefined / 多条目混合类型容错 |
+| **小计** | **32** | — |
 
-前端总数：**546 passed**（519 原有 + 27 新增），31 个测试文件。
+前端总数：**551 passed**（519 原有 + 32 新增），31 个测试文件。
 
 ### 3.3 回归测试
 
@@ -249,7 +279,7 @@ V2.3.0 浏览器验收期间发现阻断问题：LocalRuleAnalysisPlanProvider �
 1. **TD-009 延续**：本次 SPEC 0021 浏览器验收截图已通过 browser_use agent 主动持久化到磁盘（9 张截图保存成功），TD-009 作为历史债务仍延续（之前 SPEC 0017/0018 的截图未持久化）。本次截图持久化部分缓解了 TD-009 限制。
 2. **DEEPSEEK_API_KEY 未设置**：本次浏览器验收在 LocalRule 降级路径下完成，未覆盖 DeepSeek 真实流式调用路径。真实 LLM 流式调用路径已在后端单元测试（mock DeepSeekClient）中覆盖，待后续配置真实 API_KEY 后补充真实 LLM 流式验收。
 3. **LocalRule 降级路径过快**：在无 DeepSeek API key 时，provider 降级为 LocalRule 同步生成，chunk 拆分为 50 字符片段快速 yield。本次浏览器验收因 LocalRule 拆分了较长的 AnalysisPlanDraft JSON（含 cleaning_plan + analysis_plan + chart_plan 三个列表）成功捕获了流式 UI 中间状态。
-4. **本次 SPEC 0021 引入阻断问题已修复**：LocalRuleAnalysisPlanProvider 输出 `target_fields` 为字符串导致前端 PlanCard TypeError，已修复 6 处输出为数组，并清理 1 条已保存的旧错误数据。该问题在收口复核阶段被捕获并修复，未流入正式发布版本。
+4. **本次 SPEC 0021 引入 2 项阻断问题已修复**：(1) LocalRuleAnalysisPlanProvider 输出 `target_fields` 为字符串导致前端 PlanCard TypeError，已修复 6 处输出为数组，并清理 1 条已保存的旧错误数据；(2) 前端 PlanCard 假设 `target_fields` 一定是数组是脆弱设计，已添加 `safeJoinTargetFields()` 容错函数并新增 5 个边界测试覆盖。2 项问题均在收口复核阶段被捕获并修复，未流入正式发布版本。
 
 ---
 
