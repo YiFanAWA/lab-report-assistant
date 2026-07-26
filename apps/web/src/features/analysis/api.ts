@@ -7,6 +7,7 @@ import type {
   CompleteAnalysisResponse,
 } from "./types";
 import type { GenerateAnalysisResponse } from "../jobs/types";
+import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 
 const BASE = "/api";
 
@@ -33,6 +34,26 @@ export async function generateAnalysisPlan(
     { method: "POST" }
   );
   return handle<GenerateAnalysisResponse>(r);
+}
+
+/**
+ * 流式生成分析方案（SPEC 0021）。
+ *
+ * 返回异步迭代器，逐个 yield SSE 事件。
+ * 调用方负责处理 chunk / done / error 事件。
+ * 复用 SPEC 0018 的 streamSSE 工具。
+ *
+ * @param projectId 项目 ID
+ * @param datasetId 数据集 ID
+ * @param signal 可选的 AbortSignal，用于取消流式
+ */
+export async function* streamGenerateAnalysisPlan(
+  projectId: string,
+  datasetId: string,
+  signal?: AbortSignal
+): AsyncGenerator<SSEEvent, void, unknown> {
+  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/datasets/${encodeURIComponent(datasetId)}/analysis/stream-generate`;
+  yield* streamSSE(url, {}, signal);
 }
 
 /** 获取分析方案列表。可选 dataset_id 和 status 筛选。 */

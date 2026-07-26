@@ -5,7 +5,9 @@ API、Worker、提示词只能调用本服务，不能直接修改方案状态�
 """
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Generator
 
 from sqlalchemy.orm import Session
 
@@ -25,6 +27,7 @@ from app.modules.jobs.status import JobType
 from app.modules.projects import service as project_service
 from app.modules.projects.status import ProjectStatus
 from app.modules.requirements.models import ChangeRecord
+from app.infrastructure.parsers.dataset_parser import profile_from_dict
 
 
 # --- 内部辅助 ---
@@ -393,3 +396,184 @@ def advance_project_to_planned(db: Session, project_id: str):
         project.status = ProjectStatus.ANALYSIS_PLANNED.value
     db.flush()
     return project
+
+
+# --- 分析方案流式生成（SPEC 0021） ---
+
+
+@dataclass
+class StreamAnalysisChunkEvent:
+    """流式 chunk 事件，携带 LLM 返回的文本片段。"""
+
+    text: str
+
+
+@dataclass
+class StreamAnalysisDoneEvent:
+    """流式完成事件，携带保存结果摘要。"""
+
+    plan_id: str
+    candidate_source: str
+    fallback_used: bool
+
+
+@dataclass
+class StreamAnalysisErrorEvent:
+    """流式错误事件，携带已生成的 partial_text 供前端展示。"""
+
+    error_code: str
+    message: str
+    partial_text: str
+
+
+StreamAnalysisEvent = (
+    StreamAnalysisChunkEvent
+    | StreamAnalysisDoneEvent
+    | StreamAnalysisErrorEvent
+)
+
+
+def stream_generate_analysis_plan(
+    db: Session, project_id: str, dataset_id: str, provider
+) -> Generator[StreamAnalysisEvent, None, None]:
+    """流式生成分析方案。
+
+    SPEC 0021 分析方案生成流式化。
+
+    流程（分段持有 db session，避免 SQLite 写锁阻塞，复用 SPEC 0019/0020 模式）：
+    1. Phase 1 校验（持有 db）：校验 project 状态 + 数据集 READY + 版本 PARSED + 取 DatasetProfile
+    2. Phase 2 流式生成（关闭 db，不持有连接）：调用 provider.stream_generate()
+    3. Phase 3 JSON 校验：用 DeepSeekAnalysisPlanResponse 校验完整 JSON
+    4. Phase 4 保存（重新打开 db）：save_analysis_plan_draft + advance_project_to_planned + 写变更记录
+
+    中途失败：yield StreamAnalysisErrorEvent（保留 partial_text），不保存 AnalysisPlan。
+
+    兼容不支持 stream_generate 的 provider（LocalRule/Fake）：调用 generate() 一次性 yield。
+
+    yield StreamAnalysisEvent：StreamAnalysisChunkEvent / StreamAnalysisDoneEvent / StreamAnalysisErrorEvent。
+    """
+    # Phase 1: 校验（持有 db）
+    project = _ensure_project(db, project_id)
+    _ensure_project_ready_for_analysis(project)
+
+    dataset = dataset_service.get_dataset_by_id_and_project(
+        db, project_id, dataset_id)
+    if dataset.status != DatasetStatus.READY.value:
+        raise AppError(
+            code="DATASET_NOT_PARSED",
+            message="数据集未解析，无法生成分析方案",
+            field="dataset_id",
+        )
+
+    latest_version = dataset_service.get_latest_version(db, dataset_id)
+    if latest_version.status != "PARSED":
+        raise AppError(
+            code="DATASET_NOT_PARSED",
+            message="数据集版本未解析完成",
+            field="dataset_id",
+        )
+
+    if not latest_version.profile_json:
+        raise AppError(
+            code="DATASET_NOT_PARSED",
+            message="数据集版本未解析，无 profile 数据",
+            field="dataset_id",
+        )
+
+    try:
+        profile_data = json.loads(latest_version.profile_json)
+    except json.JSONDecodeError as e:
+        raise AppError(
+            code="DATASET_PARSE_FAILED",
+            message=f"profile_json 解析失败：{e}",
+            field="dataset_id",
+        ) from e
+
+    profile = profile_from_dict(profile_data)
+    dataset_version_id = latest_version.id
+    db.close()  # 显式关闭，避免流式期间持有连接
+
+    # Phase 2: 流式生成（不持有 db）
+    chunks: list[str] = []
+    fallback_used = False
+    try:
+        if hasattr(provider, "stream_generate"):
+            for chunk in provider.stream_generate(profile):
+                chunks.append(chunk)
+                yield StreamAnalysisChunkEvent(text=chunk)
+        else:
+            # 兼容只支持同步的 provider（LocalRule/Fake）
+            draft = provider.generate(profile)
+            # 手动序列化为 JSON（AnalysisPlanDraft 是 dataclass，不是 Pydantic 模型）
+            full_json = json.dumps({
+                "cleaning_plan": draft.cleaning_plan,
+                "analysis_plan": draft.analysis_plan,
+                "chart_plan": draft.chart_plan,
+            }, ensure_ascii=False)
+            # 拆分为多个 chunk 模拟流式（按 50 字符拆分）
+            for i in range(0, len(full_json), 50):
+                piece = full_json[i:i + 50]
+                chunks.append(piece)
+                yield StreamAnalysisChunkEvent(text=piece)
+    except Exception as e:
+        # 流式中途失败
+        partial_text = "".join(chunks)
+        yield StreamAnalysisErrorEvent(
+            error_code=getattr(e, "code", "ANALYSIS_PLAN_STREAM_FAILED"),
+            message=str(e) or e.__class__.__name__,
+            partial_text=partial_text,
+        )
+        return
+
+    # Phase 3: 校验完整 JSON
+    raw = "".join(chunks)
+    try:
+        from app.modules.llm.deepseek_analysis_plan_provider import (
+            DeepSeekAnalysisPlanResponse,
+        )
+        parsed = DeepSeekAnalysisPlanResponse.model_validate_json(raw)
+    except Exception as e:
+        yield StreamAnalysisErrorEvent(
+            error_code="ANALYSIS_PLAN_JSON_PARSE_ERROR",
+            message=f"分析方案 JSON 校验失败: {e}",
+            partial_text=raw,
+        )
+        return
+
+    # Phase 4: 保存（重新打开 db）
+    from app.infrastructure.database.engine import SessionLocal
+    from app.modules.llm.analysis_plan_provider import AnalysisPlanDraft
+    db2 = SessionLocal()
+    try:
+        draft = AnalysisPlanDraft(
+            cleaning_plan=parsed.cleaning_plan,
+            analysis_plan=parsed.analysis_plan,
+            chart_plan=parsed.chart_plan,
+        )
+        plan = save_analysis_plan_draft(
+            db2,
+            project_id=project_id,
+            dataset_id=dataset_id,
+            dataset_version_id=dataset_version_id,
+            draft=draft,
+            candidate_source=provider.source_label(),
+        )
+        advance_project_to_planned(db2, project_id)
+        _add_change(db2, project_id,
+                    AnalysisChangeType.ANALYSIS_PLAN_GENERATED.value,
+                    f"流式生成分析方案候选：{dataset_id}")
+        db2.commit()
+
+        yield StreamAnalysisDoneEvent(
+            plan_id=plan.id,
+            candidate_source=provider.source_label(),
+            fallback_used=fallback_used,
+        )
+    except Exception as e:
+        yield StreamAnalysisErrorEvent(
+            error_code="ANALYSIS_PLAN_SAVE_FAILED",
+            message=f"分析方案保存失败: {e}",
+            partial_text=raw,
+        )
+    finally:
+        db2.close()

@@ -127,7 +127,7 @@ def _build_analysis_plan_items(profile: DatasetProfile) -> list[dict]:
 
     # 描述性统计
     if numeric_fields:
-        target = ", ".join(f.name for f in numeric_fields[:5])
+        target = [f.name for f in numeric_fields[:5]]
         items.append({
             "analysis_type": "DESCRIPTIVE_STATISTICS",
             "target_fields": target,
@@ -140,7 +140,7 @@ def _build_analysis_plan_items(profile: DatasetProfile) -> list[dict]:
     if categorical_fields and numeric_fields:
         items.append({
             "analysis_type": "GROUP_STATISTICS",
-            "target_fields": f"{categorical_fields[0].name} 分组 vs {numeric_fields[0].name}",
+            "target_fields": [categorical_fields[0].name, numeric_fields[0].name],
             "method": "按类别字段分组聚合，计算均值/计数",
             "expected_output": "分组统计表",
             "dependencies": [categorical_fields[0].name, numeric_fields[0].name],
@@ -150,7 +150,7 @@ def _build_analysis_plan_items(profile: DatasetProfile) -> list[dict]:
     if len(numeric_fields) >= 2:
         items.append({
             "analysis_type": "CORRELATION",
-            "target_fields": ", ".join(f.name for f in numeric_fields[:5]),
+            "target_fields": [f.name for f in numeric_fields[:5]],
             "method": "计算 Pearson 相关系数矩阵",
             "expected_output": "相关系数矩阵热图数据",
             "dependencies": [f.name for f in numeric_fields[:5]],
@@ -161,7 +161,7 @@ def _build_analysis_plan_items(profile: DatasetProfile) -> list[dict]:
         target = categorical_fields[0].name
         items.append({
             "analysis_type": "FREQUENCY",
-            "target_fields": target,
+            "target_fields": [target],
             "method": "统计各类别频次和占比",
             "expected_output": "频次分布表",
             "dependencies": [target],
@@ -172,7 +172,7 @@ def _build_analysis_plan_items(profile: DatasetProfile) -> list[dict]:
     if fields_with_missing:
         items.append({
             "analysis_type": "MISSING_PATTERN",
-            "target_fields": ", ".join(f.name for f in fields_with_missing[:5]),
+            "target_fields": [f.name for f in fields_with_missing[:5]],
             "method": "分析缺失值的分布模式",
             "expected_output": "缺失值模式报告",
             "dependencies": [f.name for f in fields_with_missing[:5]],
@@ -265,7 +265,7 @@ class FakeAnalysisPlanProvider(AnalysisPlanDraftProvider):
             analysis_plan=[
                 {
                     "analysis_type": "DESCRIPTIVE_STATISTICS",
-                    "target_fields": "*",
+                    "target_fields": ["*"],
                     "method": "计算描述性统计",
                     "expected_output": "统计表",
                     "dependencies": [],

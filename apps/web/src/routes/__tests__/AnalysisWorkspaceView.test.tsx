@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -39,6 +39,7 @@ vi.mock("../../features/analysis/hooks", () => ({
   useConfirmAnalysisPlan: vi.fn(),
   useRejectAnalysisPlan: vi.fn(),
   useCompleteAnalysis: vi.fn(),
+  useStreamGenerateAnalysisPlan: vi.fn(),
 }));
 
 vi.mock("../../features/jobs/hooks", () => ({
@@ -54,6 +55,7 @@ import {
   useConfirmAnalysisPlan,
   useRejectAnalysisPlan,
   useCompleteAnalysis,
+  useStreamGenerateAnalysisPlan,
 } from "../../features/analysis/hooks";
 import { useJob } from "../../features/jobs/hooks";
 import { AnalysisWorkspaceView } from "../AnalysisWorkspaceView";
@@ -69,6 +71,7 @@ const mockedUseUpdateAnalysisPlan = vi.mocked(useUpdateAnalysisPlan);
 const mockedUseConfirmAnalysisPlan = vi.mocked(useConfirmAnalysisPlan);
 const mockedUseRejectAnalysisPlan = vi.mocked(useRejectAnalysisPlan);
 const mockedUseCompleteAnalysis = vi.mocked(useCompleteAnalysis);
+const mockedUseStreamGenerateAnalysisPlan = vi.mocked(useStreamGenerateAnalysisPlan);
 const mockedUseJob = vi.mocked(useJob);
 
 // --- 测试辅助 ---
@@ -174,6 +177,18 @@ function setupMocks(options: {
   mockedUseConfirmAnalysisPlan.mockReturnValue(makeMutationMock() as any);
   mockedUseRejectAnalysisPlan.mockReturnValue(makeMutationMock() as any);
   mockedUseCompleteAnalysis.mockReturnValue(makeMutationMock() as any);
+
+  // SPEC 0021：流式生成 hook 默认值
+  const makeStreamMock = () => ({
+    streaming: false,
+    chunks: "",
+    result: null,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  });
+  mockedUseStreamGenerateAnalysisPlan.mockReturnValue(makeStreamMock() as any);
 }
 
 /** 用路由上下文渲染组件。 */
@@ -454,5 +469,183 @@ describe("AnalysisWorkspaceView - 项目状态标签", () => {
     renderWithRoute();
 
     expect(screen.getByText("[UNKNOWN_STATUS]")).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// SPEC 0021 流式生成 UI
+// ============================================================
+
+describe("AnalysisWorkspaceView - SPEC 0021 流式生成 UI", () => {
+  it("有就绪数据集时显示流式生成按钮", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+
+    renderWithRoute();
+
+    expect(screen.getByText("流式生成")).toBeInTheDocument();
+  });
+
+  it("流式生成中按钮显示流式生成中", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: true,
+      chunks: "",
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText("流式生成中…")).toBeInTheDocument();
+  });
+
+  it("流式生成中显示 chunk 展示区", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: true,
+      chunks: '{"cleaning_plan":[',
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/正在逐 chunk 生成/)).toBeInTheDocument();
+    expect(screen.getByText('{"cleaning_plan":[')).toBeInTheDocument();
+  });
+
+  it("流式生成中显示取消按钮", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    const cancelSpy = vi.fn();
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: true,
+      chunks: "部分",
+      result: null,
+      error: null,
+      start: vi.fn(),
+      cancel: cancelSpy,
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    const cancelBtn = screen.getByText("取消");
+    expect(cancelBtn).toBeInTheDocument();
+    fireEvent.click(cancelBtn);
+    expect(cancelSpy).toHaveBeenCalled();
+  });
+
+  it("流式生成完成后显示完成提示", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: {
+        plan_id: "plan_001",
+        candidate_source: "DEEPSEEK",
+        fallback_used: false,
+      },
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/流式生成完成 ✓/)).toBeInTheDocument();
+    expect(screen.getByText(/DEEPSEEK/)).toBeInTheDocument();
+    expect(screen.getByText(/plan_001/)).toBeInTheDocument();
+  });
+
+  it("流式生成降级时完成提示显示降级标记", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: {
+        plan_id: "plan_002",
+        candidate_source: "LOCAL_RULE",
+        fallback_used: true,
+      },
+      error: null,
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/降级/)).toBeInTheDocument();
+    expect(screen.getByText(/LOCAL_RULE/)).toBeInTheDocument();
+  });
+
+  it("流式生成失败显示错误详情", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "ANALYSIS_PLAN_JSON_PARSE_ERROR",
+        message: "JSON 校验失败",
+        partial_text: '{"cleaning_plan":[',
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText(/流式生成失败/)).toBeInTheDocument();
+    expect(screen.getByText(/JSON 校验失败/)).toBeInTheDocument();
+  });
+
+  it("流式生成失败时展示 partial_text 详情", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: {
+        error_code: "ANALYSIS_PLAN_JSON_PARSE_ERROR",
+        message: "JSON 校验失败",
+        partial_text: '{"cleaning_plan":[',
+      },
+      start: vi.fn(),
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText("查看已生成内容")).toBeInTheDocument();
+  });
+
+  it("点击流式生成按钮调用 start()", () => {
+    setupMocks({ datasets: [makeReadyDataset()] });
+    const startSpy = vi.fn();
+    mockedUseStreamGenerateAnalysisPlan.mockReturnValue({
+      streaming: false,
+      chunks: "",
+      result: null,
+      error: null,
+      start: startSpy,
+      cancel: vi.fn(),
+      reset: vi.fn(),
+    } as any);
+
+    renderWithRoute();
+
+    const streamBtn = screen.getByText("流式生成");
+    fireEvent.click(streamBtn);
+    expect(startSpy).toHaveBeenCalled();
   });
 });

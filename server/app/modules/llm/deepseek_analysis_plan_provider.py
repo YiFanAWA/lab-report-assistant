@@ -10,7 +10,9 @@ LLM 调用失败时降级到 LocalRuleAnalysisPlanProvider。
 
 import json
 import logging
+from typing import Generator
 
+import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.infrastructure.llm.deepseek_client import DeepSeekClient, DeepSeekError
@@ -120,6 +122,59 @@ class DeepSeekAnalysisPlanProvider:
         except (DeepSeekError, ValidationError, ValueError, TypeError) as e:
             logger.warning(f"DeepSeek 分析方案生成失败，降级到 LocalRule: {e}")
             return self._fallback.generate(profile)
+
+    def stream_generate(
+        self, profile: DatasetProfile
+    ) -> Generator[str, None, None]:
+        """流式调用 DeepSeek 生成分析方案，逐 chunk yield content。
+
+        首 chunk 前失败降级到 LocalRule，拆分多 chunk 模拟流式。
+        中途失败抛异常，由调用方处理。
+        流式完成后做 JSON 校验，失败时抛 DeepSeekError。
+        """
+        chunks: list[str] = []
+        started = False
+        try:
+            for chunk in self._client.stream_chat_completion(
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_user_prompt(profile)},
+                ],
+                response_format={"type": "json_object"},
+                temperature=self._temperature,
+            ):
+                started = True
+                chunks.append(chunk)
+                yield chunk
+        except (DeepSeekError, httpx.HTTPError) as e:
+            if not started:
+                # 首 chunk 前失败，降级到 LocalRule
+                logger.warning(f"DeepSeek 流式分析方案失败，降级到 LocalRule: {e}")
+                fallback_draft = self._fallback.generate(profile)
+                # 序列化为 JSON（AnalysisPlanDraft 是 dataclass，不是 Pydantic 模型）
+                full_json = json.dumps({
+                    "cleaning_plan": fallback_draft.cleaning_plan,
+                    "analysis_plan": fallback_draft.analysis_plan,
+                    "chart_plan": fallback_draft.chart_plan,
+                }, ensure_ascii=False)
+                # 拆分为多个 chunk 模拟流式
+                for i in range(0, len(full_json), 50):
+                    piece = full_json[i:i + 50]
+                    chunks.append(piece)
+                    yield piece
+                return
+            # 中途失败不降级，抛异常让调用方处理
+            raise
+
+        # JSON 校验
+        raw = "".join(chunks)
+        try:
+            DeepSeekAnalysisPlanResponse.model_validate_json(raw)
+        except ValidationError as e:
+            raise DeepSeekError(
+                code="DEEPSEEK_JSON_PARSE_ERROR",
+                message=f"LLM 返回 JSON 校验失败: {e}",
+            ) from e
 
     def _parse_and_validate(self, raw: str) -> DeepSeekAnalysisPlanResponse:
         try:
