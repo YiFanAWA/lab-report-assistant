@@ -1,13 +1,15 @@
 /** 执行核心侧 TanStack Query hooks。
 
-11 个 hooks：
-- 代码任务（7 个）：useCodeTasks/useCodeTask/useGenerateCodeTask/useUpdateCodeTask/useConfirmCodeTask/useRejectCodeTask/useExecuteCodeTask
+12 个 hooks：
+- 代码任务（8 个）：useCodeTasks/useCodeTask/useGenerateCodeTask/useStreamGenerateCodeTask/useUpdateCodeTask/useConfirmCodeTask/useRejectCodeTask/useExecuteCodeTask
 - 执行记录（4 个）：useExecutionRuns/useExecutionRun/useCompleteExecution + buildArtifactDownloadUrl（纯函数，无 hook）
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback } from "react";
 import {
   generateCodeTask,
+  streamGenerateCodeTask,
   listCodeTasks,
   getCodeTask,
   updateCodeTask,
@@ -57,6 +59,124 @@ export function useGenerateCodeTask(projectId: string) {
       qc.invalidateQueries({ queryKey: [...codeTasksKey(projectId), "list"] });
     },
   });
+}
+
+// --- SPEC 0022 流式生成代码任务 ---
+
+export interface StreamCodeTaskState {
+  /** 是否正在流式生成 */
+  streaming: boolean;
+  /** 已生成的完整文本（chunk 累积，模型原始输出） */
+  chunks: string;
+  /** 完成事件返回的结果 */
+  result: {
+    code_task_id: string;
+    candidate_source: string;
+    fallback_used: boolean;
+  } | null;
+  /** 错误事件返回的信息 */
+  error: {
+    error_code: string;
+    message: string;
+    partial_text: string;
+  } | null;
+}
+
+const INITIAL_STREAM_CODE_TASK_STATE: StreamCodeTaskState = {
+  streaming: false,
+  chunks: "",
+  result: null,
+  error: null,
+};
+
+/**
+ * 流式生成代码任务 hook。
+ *
+ * SPEC 0022 代码任务生成流式化。
+ *
+ * 管理 SSE 连接的生命周期：
+ * - start(planId): 建立连接，逐 chunk 累积文本
+ * - cancel(): 中断连接（AbortController.abort()）
+ * - reset(): 重置状态
+ *
+ * 完成后自动 invalidate 代码任务列表 query，触发 GET 刷新最终结果。
+ */
+export function useStreamGenerateCodeTask(projectId: string) {
+  const qc = useQueryClient();
+  const [state, setState] = useState<StreamCodeTaskState>(
+    INITIAL_STREAM_CODE_TASK_STATE
+  );
+  const abortRef = useRef<AbortController | null>(null);
+
+  const start = useCallback(
+    async (planId: string) => {
+      // 重置状态并开始流式
+      setState({ ...INITIAL_STREAM_CODE_TASK_STATE, streaming: true });
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        for await (const evt of streamGenerateCodeTask(
+          projectId,
+          planId,
+          controller.signal
+        )) {
+          if (evt.event === "chunk") {
+            const { text } = JSON.parse(evt.data);
+            setState((s) => ({ ...s, chunks: s.chunks + text }));
+          } else if (evt.event === "done") {
+            const data = JSON.parse(evt.data);
+            setState({
+              streaming: false,
+              chunks: "",
+              result: data,
+              error: null,
+            });
+            // 刷新代码任务列表 query，获取后端保存的最终结果
+            qc.invalidateQueries({
+              queryKey: [...codeTasksKey(projectId), "list"],
+            });
+          } else if (evt.event === "error") {
+            const data = JSON.parse(evt.data);
+            setState((s) => ({
+              ...s,
+              error: data,
+              streaming: false,
+            }));
+          }
+        }
+      } catch (e: unknown) {
+        // AbortError 是用户主动取消，不算错误
+        const err = e as { name?: string; message?: string };
+        if (err?.name === "AbortError") {
+          setState((s) => ({ ...s, streaming: false }));
+        } else {
+          setState((s) => ({
+            ...s,
+            error: {
+              error_code: "STREAM_NETWORK_ERROR",
+              message: err?.message ?? "流式连接失败",
+              partial_text: s.chunks,
+            },
+            streaming: false,
+          }));
+        }
+      } finally {
+        abortRef.current = null;
+      }
+    },
+    [projectId, qc]
+  );
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const reset = useCallback(() => {
+    setState(INITIAL_STREAM_CODE_TASK_STATE);
+  }, []);
+
+  return { ...state, start, cancel, reset };
 }
 
 /** 编辑代码任务。 */

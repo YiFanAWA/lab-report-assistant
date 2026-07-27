@@ -669,6 +669,245 @@ def create_execution_run(
     return run
 
 
+# --- 代码任务流式生成（SPEC 0022） ---
+
+
+from dataclasses import dataclass
+from typing import Generator
+
+
+@dataclass
+class StreamCodeTaskChunkEvent:
+    """流式 chunk 事件，携带 LLM 返回的文本片段。"""
+
+    text: str
+
+
+@dataclass
+class StreamCodeTaskDoneEvent:
+    """流式完成事件，携带保存结果摘要。"""
+
+    code_task_id: str
+    candidate_source: str
+    fallback_used: bool
+
+
+@dataclass
+class StreamCodeTaskErrorEvent:
+    """流式错误事件，携带已生成的 partial_text 供前端展示。"""
+
+    error_code: str
+    message: str
+    partial_text: str
+
+
+StreamCodeTaskEvent = (
+    StreamCodeTaskChunkEvent
+    | StreamCodeTaskDoneEvent
+    | StreamCodeTaskErrorEvent
+)
+
+
+# 并发保护：同一 AnalysisPlan 同一时刻只允许一个活动流式请求（SPEC 0022 §3.7）
+active_streams: dict[str, str] = {}
+
+
+def stream_generate_code_task(
+    db: Session,
+    request,
+    project_id: str,
+    plan_id: str,
+    provider,
+) -> Generator[StreamCodeTaskEvent, None, None]:
+    """流式生成代码任务。
+
+    SPEC 0022 代码任务生成流式化。
+
+    流程（分段持有 db session，避免 SQLite 写锁阻塞，复用 SPEC 0019/0020/0021 模式）：
+    1. Phase 1 校验（持有 db）：校验 project 状态 + AnalysisPlan CONFIRMED + 取分析方案内容 + 记录版本号
+    2. Phase 2 流式生成（关闭 db，不持有连接）：调用 provider.stream_generate()
+       检测 request.is_disconnected() 实现服务端取消语义
+    3. Phase 3 JSON 校验：用 DeepSeekCodeTaskResponse 校验完整 JSON
+    4. Phase 4 保存（重新打开 db2）：Phase 3 状态复核 + save_code_task_draft + 写变更记录
+
+    中途失败：yield StreamCodeTaskErrorEvent（保留 partial_text），不保存 CodeTask。
+    客户端断开：不保存 CodeTask，不推送 done/error。
+    兼容不支持 stream_generate 的 provider：调用 generate() 一次性 yield。
+
+    yield StreamCodeTaskEvent：StreamCodeTaskChunkEvent / StreamCodeTaskDoneEvent / StreamCodeTaskErrorEvent。
+    """
+    # Phase 1: 校验（持有 db）
+    project = _ensure_project(db, project_id)
+    _ensure_project_ready_for_execution(project)
+
+    plan = analysis_service.get_analysis_plan_by_project(db, project_id, plan_id)
+    if plan.status != AnalysisPlanStatus.CONFIRMED.value:
+        raise AppError(
+            code="ANALYSIS_PLAN_NOT_CONFIRMED",
+            message="分析方案未确认，无法生成代码任务",
+            field="analysis_plan_id",
+        )
+
+    # 记录 AnalysisPlan 内容和版本号（用于 Phase 3 状态复核）
+    dataset_id = plan.dataset_id
+    dataset_version_id = plan.dataset_version_id
+    plan_updated_at = plan.updated_at
+    analysis_plan_dict = {
+        "cleaning_plan": _parse_json_field(plan.cleaning_plan),
+        "analysis_plan": _parse_json_field(plan.analysis_plan),
+        "chart_plan": _parse_json_field(plan.chart_plan),
+    }
+    db.close()  # 显式关闭，避免流式期间持有连接
+
+    # Phase 2: 流式生成（不持有 db）
+    chunks: list[str] = []
+    fallback_used = False
+    try:
+        if hasattr(provider, "stream_generate"):
+            for chunk in provider.stream_generate(analysis_plan_dict):
+                # 检测客户端断开（SPEC 0022 §3.3.1 服务端取消语义）
+                if _is_disconnected(request):
+                    # 客户端断开：终止流式，不保存，不推送 done/error
+                    return
+                chunks.append(chunk)
+                yield StreamCodeTaskChunkEvent(text=chunk)
+        else:
+            # 兼容只支持同步的 provider
+            draft = provider.generate(analysis_plan_dict)
+            full_json = json.dumps({"code": draft.code}, ensure_ascii=False)
+            # 拆分为多个 chunk 模拟流式
+            for i in range(0, len(full_json), 50):
+                if _is_disconnected(request):
+                    return
+                piece = full_json[i:i + 50]
+                chunks.append(piece)
+                yield StreamCodeTaskChunkEvent(text=piece)
+    except Exception as e:
+        # 流式中途失败：yield error 事件，不保存
+        partial_text = "".join(chunks)
+        yield StreamCodeTaskErrorEvent(
+            error_code=getattr(e, "code", "CODE_TASK_STREAM_FAILED"),
+            message=str(e) or e.__class__.__name__,
+            partial_text=partial_text,
+        )
+        return
+
+    # Phase 3: JSON 校验
+    raw = "".join(chunks)
+    try:
+        from app.modules.llm.deepseek_code_task_provider import (
+            DeepSeekCodeTaskResponse,
+        )
+        parsed = DeepSeekCodeTaskResponse.model_validate_json(raw)
+    except Exception as e:
+        yield StreamCodeTaskErrorEvent(
+            error_code="CODE_TASK_JSON_PARSE_ERROR",
+            message=f"代码任务 JSON 校验失败: {e}",
+            partial_text=raw,
+        )
+        return
+
+    # Phase 4: 保存（重新打开 db2）+ 状态复核
+    from app.infrastructure.database.engine import SessionLocal
+    db2 = SessionLocal()
+    try:
+        # Phase 3 状态复核（SPEC 0022 §3.4.1）
+        # 重新校验 AnalysisPlan 状态和版本
+        verify_plan = (
+            db2.query(analysis_service.AnalysisPlan)
+            .filter(
+                analysis_service.AnalysisPlan.id == plan_id,
+                analysis_service.AnalysisPlan.project_id == project_id,
+            )
+            .first()
+        )
+        if verify_plan is None:
+            yield StreamCodeTaskErrorEvent(
+                error_code="ANALYSIS_PLAN_NOT_FOUND",
+                message="流式生成期间分析方案被删除",
+                partial_text=raw,
+            )
+            return
+        if verify_plan.status != AnalysisPlanStatus.CONFIRMED.value:
+            yield StreamCodeTaskErrorEvent(
+                error_code="ANALYSIS_PLAN_STATUS_CHANGED",
+                message=f"流式生成期间分析方案状态变为 {verify_plan.status}",
+                partial_text=raw,
+            )
+            return
+        if verify_plan.updated_at != plan_updated_at:
+            yield StreamCodeTaskErrorEvent(
+                error_code="ANALYSIS_PLAN_MODIFIED",
+                message="流式生成期间分析方案被修改",
+                partial_text=raw,
+            )
+            return
+
+        # 保存 CodeTask
+        task = save_code_task_draft(
+            db2,
+            project_id=project_id,
+            analysis_plan_id=plan_id,
+            dataset_id=dataset_id,
+            dataset_version_id=dataset_version_id,
+            code=parsed.code,
+            candidate_source=provider.source_label(),
+        )
+        db2.commit()
+
+        yield StreamCodeTaskDoneEvent(
+            code_task_id=task.id,
+            candidate_source=provider.source_label(),
+            fallback_used=fallback_used,
+        )
+    except Exception as e:
+        yield StreamCodeTaskErrorEvent(
+            error_code="CODE_TASK_SAVE_FAILED",
+            message=f"代码任务保存失败: {e}",
+            partial_text=raw,
+        )
+    finally:
+        db2.close()
+
+
+def _parse_json_field(field) -> list:
+    """将 AnalysisPlan 的 JSON 字符串字段解析为 list。
+
+    兼容 JSON 字符串、已解析 list、None。
+    """
+    if field is None:
+        return []
+    if isinstance(field, list):
+        return field
+    if isinstance(field, str):
+        try:
+            parsed = json.loads(field)
+            return parsed if isinstance(parsed, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    return []
+
+
+def _is_disconnected(request) -> bool:
+    """同步检查 request.is_disconnected()，兼容协程返回值。
+
+    FastAPI 的 Request.is_disconnected() 是异步方法，返回协程对象。
+    service 层是同步生成器，需要同步获取结果。
+    测试中 request 通常是 MagicMock，is_disconnected() 直接返回 bool。
+    """
+    import inspect
+    result = request.is_disconnected()
+    if inspect.iscoroutine(result):
+        # 协程对象，用 asyncio.run 获取结果
+        import asyncio
+        try:
+            return asyncio.run(result)
+        except Exception:
+            # 在已有事件循环中或运行失败，视为未断开
+            return False
+    return bool(result)
+
+
 def mark_execution_running(db: Session, run_id: str) -> ExecutionRun:
     """标记执行记录为 RUNNING，记录 started_at。不提交事务。
 

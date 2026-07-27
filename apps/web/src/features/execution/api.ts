@@ -1,7 +1,7 @@
 /** 执行核心侧 API 调用 — 复用 handle 错误处理模式。
 
-覆盖 11 个端点：
-- code_tasks（7 个）：generate/list/get/update/confirm/reject/execute
+覆盖 12 个端点：
+- code_tasks（8 个）：generate/stream-generate/list/get/update/confirm/reject/execute
 - execution_runs（4 个）：list/get/download/complete
  */
 
@@ -15,6 +15,7 @@ import type {
   ExecuteCodeTaskResponse,
   CompleteExecutionResponse,
 } from "./types";
+import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 
 const BASE = "/api";
 
@@ -43,6 +44,26 @@ export async function generateCodeTask(
     { method: "POST" }
   );
   return handle<GenerateCodeTaskResponse>(r);
+}
+
+/**
+ * 流式生成代码任务（SPEC 0022）。
+ *
+ * 返回异步迭代器，逐个 yield SSE 事件。
+ * 调用方负责处理 chunk / done / error 事件。
+ * 复用 SPEC 0018 的 streamSSE 工具。
+ *
+ * @param projectId 项目 ID
+ * @param planId 已确认分析方案 ID
+ * @param signal 可选的 AbortSignal，用于取消流式
+ */
+export async function* streamGenerateCodeTask(
+  projectId: string,
+  planId: string,
+  signal?: AbortSignal
+): AsyncGenerator<SSEEvent, void, unknown> {
+  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/analysis/${encodeURIComponent(planId)}/code/stream-generate`;
+  yield* streamSSE(url, {}, signal);
 }
 
 /** 获取代码任务列表（支持 status 过滤）。 */

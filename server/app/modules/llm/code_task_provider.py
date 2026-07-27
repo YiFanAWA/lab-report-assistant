@@ -9,12 +9,23 @@
 - 字段过多时由 AnalysisPlanProvider 处理，CodeTask 只消费已截断后的方案。
 
 提供者只接收 AnalysisPlan 的 dict 形式（不含原始数据），不泄露用户数据。
+
+SPEC 0022：流式化改造。
+- 抽象基类新增 stream_generate() 抽象方法，所有 Provider 必须实现。
+- LocalRuleCodeTaskProvider.stream_generate()：同步生成后拆分多 chunk yield 模拟流式。
+- DeepSeekCodeTaskProvider.stream_generate()：流式调用 LLM，首 chunk 前失败降级到
+  fallback.stream_generate()（与 LocalRule 接口一致）。
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Generator
 
 import json
+
+
+# LocalRule 降级路径拆分 chunk 的字符数（与 SPEC 0021 保持一致）
+_CHUNK_SIZE = 50
 
 
 @dataclass
@@ -26,6 +37,14 @@ class CodeTaskDraft:
     """
 
     code: str
+
+
+def _draft_to_json(draft: CodeTaskDraft) -> str:
+    """将 CodeTaskDraft 序列化为 LLM 返回格式的 JSON 字符串。
+
+    与 DeepSeek LLM 返回格式一致：{"code": "..."}。
+    """
+    return json.dumps({"code": draft.code}, ensure_ascii=False)
 
 
 class CodeTaskDraftProvider(ABC):
@@ -40,6 +59,25 @@ class CodeTaskDraftProvider(ABC):
         - dataset_profile: dict，可选，包含字段信息用于代码生成
 
         返回：CodeTaskDraft(code=完整可执行 Python 脚本)
+        """
+
+    @abstractmethod
+    def stream_generate(
+        self,
+        analysis_plan: dict,
+        dataset_profile: dict | None = None,
+    ) -> Generator[str, None, None]:
+        """流式生成代码任务，逐 chunk yield 原始文本（不解析 JSON）。
+
+        SPEC 0022 流式化要求：所有 Provider 必须实现此方法，与 DeepSeek provider 接口一致。
+
+        行为约定：
+        - 同步 Provider（LocalRule/Fake）：调用 generate() 生成完整 CodeTaskDraft，
+          序列化为 {"code": "..."} JSON 后拆分多 chunk yield 模拟流式。
+        - DeepSeek Provider：流式调用 LLM，逐 chunk yield；首 chunk 前失败降级到
+          fallback.stream_generate()。
+
+        参数与 generate() 一致。
         """
 
     @abstractmethod
@@ -88,6 +126,25 @@ def _parse_plan_items(plan_json: str | list) -> list[dict]:
     if isinstance(plan_json, list):
         return plan_json
     return []
+
+
+def _first_field_name(target_fields) -> str:
+    """从 target_fields 提取第一个字段名。
+
+    兼容 SPEC 0021 修复后 target_fields 可能为 list 的情况：
+    - list：取第一个元素（如 ["age", "gender"] → "age"）
+    - str：用 split() 取第一个字段（如 "age 分组 vs age" → "age"）
+    - 其他类型或空：返回空字符串
+    """
+    if isinstance(target_fields, list):
+        if target_fields:
+            return str(target_fields[0])
+        return ""
+    if isinstance(target_fields, str):
+        if target_fields:
+            return target_fields.split()[0] if target_fields.split() else ""
+        return ""
+    return ""
 
 
 def _build_cleaning_code(cleaning_plan: list[dict]) -> str:
@@ -167,7 +224,9 @@ def _build_analysis_code(analysis_plan: list[dict]) -> str:
             lines.append("    print('相关性分析完成')")
         elif analysis_type == "FREQUENCY":
             if target_fields and target_fields != "*":
-                lines.append(f"freq = df['{target_fields.split()[0]}'].value_counts()")
+                first_field = _first_field_name(target_fields)
+                if first_field:
+                    lines.append(f"freq = df['{first_field}'].value_counts()")
                 lines.append("freq.to_csv(OUTPUT_DIR + '/frequency.csv')")
                 lines.append("print('频次分析完成')")
         elif analysis_type == "MISSING_PATTERN":
@@ -277,6 +336,22 @@ class LocalRuleCodeTaskProvider(CodeTaskDraftProvider):
 
         return CodeTaskDraft(code="\n".join(parts))
 
+    def stream_generate(
+        self,
+        analysis_plan: dict,
+        dataset_profile: dict | None = None,
+    ) -> Generator[str, None, None]:
+        """LocalRule 降级流式：同步生成完整 JSON 后，拆分为多 chunk yield 模拟流式。
+
+        SPEC 0022：作为 DeepSeek provider 的降级路径，必须实现相同接口。
+        复用现有 generate() 逻辑，仅包装为同步迭代器。
+        """
+        draft = self.generate(analysis_plan, dataset_profile)
+        full_json = _draft_to_json(draft)
+        # 拆分为多 chunk 模拟流式（与 SPEC 0021 保持一致的 chunk 大小）
+        for i in range(0, len(full_json), _CHUNK_SIZE):
+            yield full_json[i:i + _CHUNK_SIZE]
+
 
 class FakeCodeTaskProvider(CodeTaskDraftProvider):
     """测试用确定性提供者 —— 返回固定最小代码。"""
@@ -293,3 +368,14 @@ class FakeCodeTaskProvider(CodeTaskDraftProvider):
             "df.describe().to_csv(OUTPUT_DIR + '/stats.csv')\n"
         )
         return CodeTaskDraft(code=code)
+
+    def stream_generate(
+        self,
+        analysis_plan: dict,
+        dataset_profile: dict | None = None,
+    ) -> Generator[str, None, None]:
+        """Fake 流式：同步生成后拆分多 chunk yield 模拟流式。"""
+        draft = self.generate(analysis_plan, dataset_profile)
+        full_json = _draft_to_json(draft)
+        for i in range(0, len(full_json), _CHUNK_SIZE):
+            yield full_json[i:i + _CHUNK_SIZE]

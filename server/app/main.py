@@ -75,12 +75,21 @@ async def handle_app_error(request: Request, exc: AppError):
         "DATASET_FILE_TOO_LARGE",
         "WORD_TEMPLATE_TOO_LARGE",
     }
+    conflict_codes = {
+        # SPEC 0022：流式生成并发冲突返回 409
+        # 注意：ANALYSIS_PLAN_NOT_CONFIRMED / PROJECT_ANALYSIS_NOT_CONFIRMED
+        # 不能加到这里，因为原有 generate_code_task 端点期望返回 400。
+        # 流式端点的预校验在 API 层直接返回 JSONResponse(409)。
+        "STREAM_ALREADY_ACTIVE",
+    }
     if exc.code in not_found_codes:
         status = 404
     elif exc.code in forbidden_codes:
         status = 403
     elif exc.code in too_large_codes:
         status = 413
+    elif exc.code in conflict_codes:
+        status = 409
     else:
         status = 400
     return JSONResponse(

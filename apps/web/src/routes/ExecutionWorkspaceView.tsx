@@ -6,6 +6,7 @@ import { useAnalysisPlans } from "../features/analysis/hooks";
 import {
   useCodeTasks,
   useGenerateCodeTask,
+  useStreamGenerateCodeTask,
   useUpdateCodeTask,
   useConfirmCodeTask,
   useRejectCodeTask,
@@ -733,6 +734,7 @@ export function ExecutionWorkspaceView() {
   const { data: executionRuns, isLoading: runsLoading } = useExecutionRuns(pid);
 
   const generate = useGenerateCodeTask(pid);
+  const stream = useStreamGenerateCodeTask(pid);
   const complete = useCompleteExecution(pid);
 
   // 跟踪生成代码任务
@@ -906,7 +908,8 @@ export function ExecutionWorkspaceView() {
                   disabled={
                     !selectedPlanId ||
                     generate.isPending ||
-                    !!genJobId
+                    !!genJobId ||
+                    stream.streaming
                   }
                   style={{
                     padding: "0.4rem 0.8rem",
@@ -921,6 +924,34 @@ export function ExecutionWorkspaceView() {
                   {generate.isPending || genJobId
                     ? "生成中…"
                     : "生成代码候选"}
+                </button>
+                {/* SPEC 0022：流式生成按钮（方案 A：流式展示原始 JSON，完成后解析展示代码） */}
+                <button
+                  onClick={() => {
+                    setGenErr(null);
+                    if (!selectedPlanId) {
+                      setGenErr("请先选择一个分析方案");
+                      return;
+                    }
+                    stream.start(selectedPlanId);
+                  }}
+                  disabled={
+                    !selectedPlanId ||
+                    stream.streaming ||
+                    generate.isPending ||
+                    !!genJobId
+                  }
+                  style={{
+                    padding: "0.4rem 0.8rem",
+                    fontSize: "0.85rem",
+                    background: "#6366f1",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "0.375rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {stream.streaming ? "流式生成中…" : "流式生成"}
                 </button>
               </div>
               {genJobId && genJob && (
@@ -948,6 +979,116 @@ export function ExecutionWorkspaceView() {
                 >
                   {genErr}
                 </p>
+              )}
+
+              {/* SPEC 0022：流式生成展示区（方案 A） */}
+              {stream.streaming && (
+                <div
+                  style={{
+                    marginTop: "0.5rem",
+                    padding: "0.75rem",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "0.375rem",
+                    background: "#fff",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.8rem", color: "#666" }}>
+                      正在逐 chunk 生成（原始 JSON 输出）…
+                    </span>
+                    <button
+                      onClick={stream.cancel}
+                      style={{
+                        padding: "0.25rem 0.6rem",
+                        fontSize: "0.8rem",
+                        color: "#c00",
+                        background: "transparent",
+                        border: "1px solid #c00",
+                        borderRadius: "0.25rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      取消
+                    </button>
+                  </div>
+                  <pre
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      fontSize: "0.8rem",
+                      lineHeight: 1.5,
+                      margin: 0,
+                      maxHeight: "240px",
+                      overflow: "auto",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {stream.chunks}
+                  </pre>
+                </div>
+              )}
+              {stream.result && (
+                <p
+                  style={{
+                    color: "#16a34a",
+                    fontSize: "0.8rem",
+                    marginTop: "0.4rem",
+                  }}
+                >
+                  流式生成完成 ✓ [{stream.result.candidate_source}
+                  {stream.result.fallback_used ? "（降级）" : ""}] · code_task_id:{" "}
+                  {stream.result.code_task_id}
+                </p>
+              )}
+              {stream.error && (
+                <div
+                  style={{
+                    color: "#c00",
+                    fontSize: "0.8rem",
+                    marginTop: "0.4rem",
+                  }}
+                >
+                  <p style={{ margin: 0 }}>
+                    流式生成失败：{stream.error.message}
+                    {stream.error.partial_text && (
+                      <span style={{ color: "#92400e" }}>
+                        （已保留部分生成内容）
+                      </span>
+                    )}
+                  </p>
+                  {stream.error.partial_text && (
+                    <details style={{ marginTop: "0.3rem" }}>
+                      <summary
+                        style={{ cursor: "pointer", fontSize: "0.75rem" }}
+                      >
+                        查看已生成内容
+                      </summary>
+                      <pre
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          fontSize: "0.75rem",
+                          marginTop: "0.3rem",
+                          padding: "0.4rem",
+                          background: "#fef2f2",
+                          borderRadius: "0.25rem",
+                          maxHeight: "200px",
+                          overflow: "auto",
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {stream.error.partial_text}
+                      </pre>
+                    </details>
+                  )}
+                </div>
               )}
             </>
           )}

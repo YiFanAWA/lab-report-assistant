@@ -31,6 +31,15 @@ vi.mock("../../features/execution/hooks", () => ({
     mutate: vi.fn(),
     isPending: false,
   })),
+  useStreamGenerateCodeTask: vi.fn(() => ({
+    streaming: false,
+    chunks: "",
+    result: null,
+    error: null,
+    start: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  })),
   useUpdateCodeTask: vi.fn(() => ({
     mutate: vi.fn(),
     isPending: false,
