@@ -206,3 +206,89 @@ class TestStreamDraftJSONValidation:
         # 流结束后应抛 DeepSeekError（JSON 校验失败）
         with pytest.raises(DeepSeekError):
             next(gen, None)  # StopIteration 或抛异常
+
+
+def _make_valid_response_dict() -> dict:
+    """构造有效的任务单 LLM 响应 dict（便于修改单个字段测试容错）。"""
+    return json.loads(_make_valid_response_json())
+
+
+class TestDeepSeekResponseTolerance:
+    """LLM 输出不稳定时的容错场景。
+
+    真实 DeepSeek（temperature=0.3）5 次调用有 3 次失败，两类根因：
+    - *_requirements 字段返回 [{"description": "..."}] 而非 ["..."]
+    - replication_level.suggested_scope 返回 null 而非 str
+
+    模型容错层（field_validator mode=before）应吸收这些不稳定输出。
+    """
+
+    def test_data_requirements返回对象数组时容错为字符串数组(self):
+        data = _make_valid_response_dict()
+        data["data_requirements"] = [{"description": "CSV 数据集"}]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.data_requirements == ["CSV 数据集"]
+
+    def test_method_requirements返回对象数组时容错(self):
+        data = _make_valid_response_dict()
+        data["method_requirements"] = [
+            {"description": "描述性统计"},
+            {"description": "可视化"},
+        ]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.method_requirements == ["描述性统计", "可视化"]
+
+    def test_chart_requirements返回对象数组时容错(self):
+        data = _make_valid_response_dict()
+        data["chart_requirements"] = [{"description": "年龄分布直方图"}]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.chart_requirements == ["年龄分布直方图"]
+
+    def test_report_requirements返回对象数组时容错(self):
+        data = _make_valid_response_dict()
+        data["report_requirements"] = [{"description": "实验报告"}]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.report_requirements == ["实验报告"]
+
+    def test_suggested_scope为null时容错为空串(self):
+        data = _make_valid_response_dict()
+        data["replication_level"]["suggested_scope"] = None
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.replication_level.suggested_scope == ""
+
+    def test_混合元素数组容错_字符串与对象共存(self):
+        data = _make_valid_response_dict()
+        data["chart_requirements"] = [
+            "年龄分布直方图",
+            {"description": "病情分布图"},
+        ]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.chart_requirements == ["年龄分布直方图", "病情分布图"]
+
+    def test_对象无description字段取首个字符串值(self):
+        data = _make_valid_response_dict()
+        data["data_requirements"] = [{"reason": "无 desc 字段"}]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.data_requirements == ["无 desc 字段"]
+
+    def test_正常字符串数组不受容错影响(self):
+        data = _make_valid_response_dict()
+        data["acceptance_criteria"] = ["可追溯", "图表正确"]
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.acceptance_criteria == ["可追溯", "图表正确"]
+
+    def test_整份LLM不稳定输出容错后通过校验(self):
+        """复现真实失败场景：多个 *_requirements 同时返回对象数组 + suggested_scope 为 null。"""
+        data = _make_valid_response_dict()
+        data["data_requirements"] = [{"description": "胃病诊疗数据集"}]
+        data["method_requirements"] = [{"description": "Python"}, {"description": "统计"}]
+        data["chart_requirements"] = [{"description": "直方图"}]
+        data["report_requirements"] = [{"description": "实验报告"}]
+        data["replication_level"]["suggested_scope"] = None
+        # 容错后应通过校验
+        resp = DeepSeekRequirementResponse.model_validate(data)
+        assert resp.data_requirements == ["胃病诊疗数据集"]
+        assert resp.method_requirements == ["Python", "统计"]
+        assert resp.chart_requirements == ["直方图"]
+        assert resp.report_requirements == ["实验报告"]
+        assert resp.replication_level.suggested_scope == ""

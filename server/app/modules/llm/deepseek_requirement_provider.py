@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Generator
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
 from app.infrastructure.llm.deepseek_client import DeepSeekClient, DeepSeekError
 from app.modules.llm.local_rule_provider import LocalRuleRequirementDraftProvider
@@ -23,6 +23,46 @@ logger = logging.getLogger(__name__)
 
 
 # --- Pydantic 结构化输出校验模型 ---
+
+
+def _coerce_str_list(v: object) -> object:
+    """容错：将字符串数组中的非 str 元素统一为 str。
+
+    真实 DeepSeek（temperature=0.3）5 次实测有 3 次把 *_requirements
+    字段返回成 [{"description": "..."}] 而非 ["..."]，导致 list[str] 校验失败。
+
+    转换规则：
+    - str 元素：保留
+    - dict 元素：优先取 description；否则取首个 str 值；都没有则跳过
+    - 其他类型：str() 转换
+    """
+    if not isinstance(v, list):
+        return v
+    result: list[str] = []
+    for item in v:
+        if isinstance(item, str):
+            result.append(item)
+        elif isinstance(item, dict):
+            desc = item.get("description")
+            if isinstance(desc, str):
+                result.append(desc)
+            else:
+                str_vals = [val for val in item.values() if isinstance(val, str)]
+                if str_vals:
+                    result.append(str_vals[0])
+                # 无字符串值则跳过，避免引入噪声
+        else:
+            result.append(str(item))
+    return result
+
+
+def _coerce_none_to_empty(v: object) -> object:
+    """容错：将 None 转为空串。
+
+    真实 DeepSeek 实测：LLM 对 replication_level.suggested_scope
+    有时返回 null 而非字符串，导致 str 校验失败。
+    """
+    return "" if v is None else v
 
 
 class DeepSeekTask(BaseModel):
@@ -43,6 +83,12 @@ class DeepSeekReplicationLevel(BaseModel):
     supported_in_v1: bool
     reason: str
     suggested_scope: str
+
+    # 容错：LLM 有时返回 null（SPEC 0018 流式实测）
+    @field_validator("suggested_scope", mode="before")
+    @classmethod
+    def _coerce_suggested_scope(cls, v: object) -> object:
+        return _coerce_none_to_empty(v)
 
 
 class DeepSeekRequirementResponse(BaseModel):
@@ -66,6 +112,20 @@ class DeepSeekRequirementResponse(BaseModel):
     presentation_requirements: list[str]
     acceptance_criteria: list[str]
     replication_level: DeepSeekReplicationLevel
+
+    # 容错：LLM 有时把字符串数组返回成对象数组 [{"description": "..."}]（SPEC 0018 流式实测）
+    @field_validator(
+        "data_requirements",
+        "method_requirements",
+        "chart_requirements",
+        "report_requirements",
+        "presentation_requirements",
+        "acceptance_criteria",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_str_list_fields(cls, v: object) -> object:
+        return _coerce_str_list(v)
 
 
 # --- Prompt 构造 ---
@@ -91,6 +151,18 @@ _SYSTEM_PROMPT = """你是一个实验要求分析助手。你的任务是将自
    - presentation_requirements: PPT 要求列表
    - acceptance_criteria: 验收条件列表
    - replication_level: 复刻层级对象
+
+【字段类型约束——严格遵守，否则校验失败】
+- required_tasks / recommended_tasks / optional_tasks / out_of_scope_tasks / unknown_items：
+  每个元素必须是「对象」，含 title, description, task_type, reason, source_quote（可选）。
+- data_requirements / method_requirements / chart_requirements / report_requirements /
+  presentation_requirements / acceptance_criteria：
+  每个元素必须是「字符串」，不得是对象。
+  ✅ 正确示例：["年龄分布直方图", "相关性矩阵热力图"]
+  ❌ 错误示例：[{"description": "年龄分布直方图"}, {"description": "相关性矩阵热力图"}]
+- replication_level.suggested_scope：必须是「非空字符串」，不得为 null。
+  ✅ 正确示例："suggested_scope": "按实验指导完成分析"
+  ❌ 错误示例："suggested_scope": null
 
 每个任务对象包含：title, description, task_type（REQUIRED/RECOMMENDED/OPTIONAL/OUT_OF_SCOPE/UNKNOWN）, reason, source_quote（可选）
 

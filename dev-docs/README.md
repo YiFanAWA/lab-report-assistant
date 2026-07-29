@@ -59,6 +59,7 @@
 - [decisions/0026-start-spec-0020-evidence-streaming.md](decisions/0026-start-spec-0020-evidence-streaming.md)：启动 SPEC 0020 证据卡片生成流式化切片的决策记录（SSE 端点绕过 Worker，Provider 输入为单文档 parsed_text 无需上下文聚合提取，复用 SPEC 0018/0019 流式架构，保留 Worker 异步端点兼容）。
 - [decisions/0027-start-spec-0021-analysis-plan-streaming.md](decisions/0027-start-spec-0021-analysis-plan-streaming.md)：启动 SPEC 0021 分析方案生成流式化切片的决策记录（SSE 端点绕过 Worker，Provider 输入为 DatasetProfile 无需上下文聚合提取，复用 SPEC 0018/0019/0020 流式架构，保留 Worker 异步端点兼容）。
 - [decisions/0028-start-spec-0022-code-task-streaming.md](decisions/0028-start-spec-0022-code-task-streaming.md)：启动 SPEC 0022 代码任务生成流式化切片的决策记录（SSE 端点绕过 Worker，Provider 输入为 AnalysisPlan 无需上下文聚合提取，复用 SPEC 0018/0019/0020/0021 流式架构，保留 Worker 异步端点兼容，新增并发保护 active_streams + 服务端取消 request.is_disconnected + 错误分层 + Phase 3 状态复核）。
+- [decisions/0029-deepseek-json-tolerance-fix.md](decisions/0029-deepseek-json-tolerance-fix.md)：DeepSeek 任务单 JSON 解析失败容错修复决策记录（Prompt 强化 + Pydantic field_validator 容错，修复 `*_requirements` 返回对象数组与 `suggested_scope` 返回 null 的高频间歇性失败，真实 DeepSeek 5 次复测失败率 60%→0%）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 - [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。

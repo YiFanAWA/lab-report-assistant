@@ -8,6 +8,8 @@
 >
 > **CI 配置修复（2026-07-25，P0 补丁）：** V1.4.0 发布后评估发现 CI 流水线（SPEC 0015）存在两项 P0 缺陷并已修复：(1) 后端依赖安装从硬编码 `pip install pandas==3.0.3...`（6 行）改为 `pip install -e ".[dev,analysis]"`（1 行），验证 TD-004 清理后的 pyproject.toml 依赖声明正确性；(2) 前端 job 新增 `npm test -- --run` 步骤，让 434 个前端单元测试参与 CI 把关（此前 CI 只运行 tsc --noEmit 和 build，不拦截前端测试回归）。本地预演：`pip install --dry-run -e ".[dev,analysis]"` 依赖解析成功；前端 vitest 434 passed。
 
+> **DeepSeek 任务单 JSON 容错修复（2026-07-30，P0 阻断修复）：** SPEC 0018 流式生成任务单时高频抛 `DEEPSEEK_JSON_PARSE_ERROR`（真实 DeepSeek 5 次复现 60% 失败率）。根因有二：(1) LLM 把 `*_requirements` 等 `list[str]` 字段返回成对象数组 `[{"description": "..."}]`；(2) `replication_level.suggested_scope` 返回 `null` 而 schema 要求 `str`。采用 **Prompt 强化 + Pydantic 容错** 双层方案：`_SYSTEM_PROMPT` 新增【字段类型约束】章节含正/反例；`DeepSeekRequirementResponse` / `DeepSeekReplicationLevel` 加 `field_validator(mode="before")` 容错（dict→取 description、null→空串）。新增 9 个容错测试（`TestDeepSeekResponseTolerance`）。修复后真实 DeepSeek 5 次复测 **0 失败**（失败率 60%→0%）。本次仅修任务单 provider，其他 provider 同类问题留作后续观察。详见 [决策 0029](decisions/0029-deepseek-json-tolerance-fix.md)。
+
 ## 启动门禁
 
 本节保留立项、架构和代码阶段启动的历史门禁。
