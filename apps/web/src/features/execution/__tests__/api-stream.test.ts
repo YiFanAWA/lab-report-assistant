@@ -14,8 +14,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { streamGenerateCodeTask } from "../api";
 import type { SSEEvent } from "../../../shared/stream-sse";
+import { STREAMING_BASE } from "../../../shared/api-base";
 
-const BASE = "/api";
 const PROJECT_ID = "proj_abc123";
 const PLAN_ID = "plan_def456";
 
@@ -74,7 +74,7 @@ describe("streamGenerateCodeTask - SPEC 0022", () => {
 
     const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe(
-      `${BASE}/projects/${PROJECT_ID}/analysis/${PLAN_ID}/code/stream-generate`
+      `${STREAMING_BASE}/projects/${PROJECT_ID}/analysis/${PLAN_ID}/code/stream-generate`
     );
     expect(opts.method).toBe("POST");
     expect(opts.headers["Content-Type"]).toBe("application/json");

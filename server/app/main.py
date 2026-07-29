@@ -23,7 +23,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    # 5173 为默认前端端口；5174 为 5173 被占用时的备选 dev 端口
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],  # dev 备选端口
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

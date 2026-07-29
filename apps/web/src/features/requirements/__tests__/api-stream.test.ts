@@ -13,8 +13,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { streamGeneratePlan } from "../api";
 import type { SSEEvent } from "../../../shared/stream-sse";
+import { STREAMING_BASE } from "../../../shared/api-base";
 
-const BASE = "/api";
 const PROJECT_ID = "proj_abc123";
 
 /** 构造一个 mock ReadableStream，按顺序推送 chunks。 */
@@ -69,7 +69,7 @@ describe("streamGeneratePlan - SPEC 0018", () => {
     await collectAll(streamGeneratePlan(PROJECT_ID, "src_001"));
 
     const [url, opts] = ((globalThis as any).fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe(`${BASE}/projects/${PROJECT_ID}/requirements/plans/stream-generate`);
+    expect(url).toBe(`${STREAMING_BASE}/projects/${PROJECT_ID}/requirements/plans/stream-generate`);
     expect(opts.method).toBe("POST");
     expect(opts.headers["Content-Type"]).toBe("application/json");
   });

@@ -5,6 +5,7 @@ import type {
   RequirementPlanPayload,
 } from "./types";
 import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
+import { STREAMING_BASE } from "../../shared/api-base";
 
 const BASE = "/api";
 
@@ -86,7 +87,8 @@ export async function* streamGeneratePlan(
   sourceId: string,
   signal?: AbortSignal
 ): AsyncGenerator<SSEEvent, void, unknown> {
-  const url = `${BASE}/projects/${encodeURIComponent(projectId)}/requirements/plans/stream-generate`;
+  // 流式端点使用 STREAMING_BASE：dev 直连后端绕过 Vite 代理对 chunked SSE 的缓冲
+  const url = `${STREAMING_BASE}/projects/${encodeURIComponent(projectId)}/requirements/plans/stream-generate`;
   yield* streamSSE(url, { source_id: sourceId }, signal);
 }
 

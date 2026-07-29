@@ -8,6 +8,19 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # server/
 
+# 加载 .env 文件（如果存在，不覆盖已设置的环境变量）
+# Docker 部署时 docker-compose.yml 的 env_file 已注入环境变量，此逻辑仅在本地开发生效
+_env_path = PROJECT_ROOT / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text(encoding="utf-8").splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _key, _, _value = _line.partition("=")
+            _key = _key.strip()
+            _value = _value.strip()
+            if _key and _key not in os.environ:
+                os.environ[_key] = _value
+
 
 class Settings:
     @property
