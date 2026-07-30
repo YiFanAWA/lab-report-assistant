@@ -1,4 +1,4 @@
-"""PPT 文档渲染器（SPEC 0024 布局与视觉层次改进）。
+"""PPT 文档渲染器（SPEC 0025 三角色彩系统与深浅对比三明治结构）。
 
 从同一份已确认大纲提炼生成 .pptx 文件。
 使用 python-pptx 库，空白版式 + 精确定位驱动。
@@ -9,10 +9,16 @@
 - 双栏内容页：左栏 40% 文本要点 + 右栏 60% 图表
 - 图表自适应：单图居中放大、双图并排、3-4 图 2×2 网格
 - 五级字号体系：36/28/20/16/12 pt
-- 主题色扩展应用：色块背景、分隔线、要点圆点标记
+
+设计要点（SPEC 0025）：
+- 三角色彩系统：从单一 theme_color 用 colorsys 派生主色/辅助色/强调色
+- 深浅对比三明治结构：深色标题栏 → 浅色内容区 → 深色页脚栏
+- 辅助色浅色背景衬托左栏，强调色用于圆点标记和章节标题
+- 主色亮度 > 0.60 时自动切换深色标题文字（对比度保障，阈值覆盖紫色 #7c3aed）
 - SPEC 0011 配置兼容：target_slide_count/theme_color/include_charts 三字段不变
 """
 
+import colorsys
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,8 +50,6 @@ MARGIN_BOTTOM = 0.5
 CONTENT_LEFT_WIDTH = 5.3      # 左栏文本宽度（40%）
 CONTENT_RIGHT_LEFT = 6.1      # 右栏起始位置
 CONTENT_RIGHT_WIDTH = 6.7     # 右栏图表宽度（60%）
-CONTENT_TOP = 1.6             # 双栏内容起始纵向位置
-CONTENT_HEIGHT = 5.2          # 双栏内容高度
 
 # 字号体系（Pt）
 FONT_SIZE_MAIN_TITLE = 36
@@ -64,14 +68,37 @@ DEFAULT_THEME_COLOR = "333333"
 # 色块与分隔线
 TITLE_BANNER_HEIGHT = 2.5     # 封面顶部色块高度
 DIVIDER_HEIGHT = 0.04         # 分隔线粗细
-FOOTER_TOP = 7.0              # 页脚纵向位置
+
+
+# === SPEC 0025 三明治结构常量 ===
+
+# 标题栏（深色背景栏）
+TITLE_BAR_HEIGHT = 1.0           # 内容页/图表页/总结页标题栏高度
+
+# 页脚栏（深色背景栏）
+FOOTER_BAR_HEIGHT = 0.5          # 页脚栏高度
+FOOTER_BAR_TOP = SLIDE_HEIGHT - FOOTER_BAR_HEIGHT  # 7.0
+
+# 内容区（三明治夹心：标题栏和页脚栏之间）
+CONTENT_TOP = TITLE_BAR_HEIGHT + 0.2    # 1.2（内容起始纵向位置）
+CONTENT_BOTTOM = FOOTER_BAR_TOP - 0.2   # 6.8
+CONTENT_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP  # 5.6
+
+# 图表可用区域上边界（图表页标题栏下方）
+CHART_AREA_TOP = TITLE_BAR_HEIGHT + 0.3  # 1.3
+
+# 文字颜色
+TEXT_COLOR_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+TEXT_COLOR_DARK = RGBColor(0x33, 0x33, 0x33)
+TEXT_COLOR_MUTED = RGBColor(0x55, 0x55, 0x55)
 
 
 class PptRenderer:
-    """PPT 文档渲染器（SPEC 0024 布局与视觉层次改进）。
+    """PPT 文档渲染器（SPEC 0025 三角色彩系统与深浅对比三明治结构）。
 
     从同一份已确认大纲提炼生成 .pptx 文件。
-    采用 16:9 画布 + 空白版式精确定位 + 双栏内容页 + 图表自适应布局。
+    采用 16:9 画布 + 空白版式精确定位 + 双栏内容页 + 图表自适应布局
+    + 三角色彩系统（主色/辅助色/强调色）+ 深浅对比三明治结构。
     """
 
     def render(
@@ -112,8 +139,11 @@ class PptRenderer:
             prs.slide_width = Inches(SLIDE_WIDTH)
             prs.slide_height = Inches(SLIDE_HEIGHT)
 
-            # 解析主题色（None 时降级到默认深灰色）
+            # SPEC 0025: 从主题色派生三角色彩（主色/辅助色/强调色/标题文字色）
             theme_rgb = self._resolve_theme_color(theme_color)
+            primary, auxiliary, accent, title_text_color = (
+                self._derive_color_palette(theme_rgb)
+            )
 
             # 收集图表产物
             chart_artifacts = (
@@ -154,7 +184,8 @@ class PptRenderer:
 
             # 1. 封面页
             self._render_title_slide(
-                prs, project_name, project_topic, theme_rgb,
+                prs, project_name, project_topic,
+                primary, title_text_color,
             )
 
             # 2-N. 内容页（双栏布局）
@@ -163,7 +194,10 @@ class PptRenderer:
                     prs,
                     title=group["title"],
                     sections=group["sections"],
-                    theme_rgb=theme_rgb,
+                    primary=primary,
+                    auxiliary=auxiliary,
+                    accent=accent,
+                    title_text_color=title_text_color,
                     chart_artifact=group["chart"],
                     page_num=i + 2,
                     total_pages=total_pages,
@@ -174,7 +208,8 @@ class PptRenderer:
             page_offset = 2 + len(content_groups)
             if remaining_charts:
                 self._add_chart_slide(
-                    prs, remaining_charts, theme_rgb,
+                    prs, remaining_charts,
+                    primary, title_text_color,
                     page_num=page_offset,
                     total_pages=total_pages,
                     project_name=project_name,
@@ -183,7 +218,8 @@ class PptRenderer:
 
             # 总结页
             self._render_summary_slide(
-                prs, outline_sections, theme_rgb,
+                prs, outline_sections,
+                primary, title_text_color,
                 page_num=page_offset,
                 total_pages=total_pages,
                 project_name=project_name,
@@ -222,6 +258,64 @@ class PptRenderer:
                 exc, theme_color,
             )
             return RGBColor.from_string(DEFAULT_THEME_COLOR)
+
+    # === SPEC 0025 三角色彩派生 ===
+
+    def _derive_color_palette(
+        self, theme_rgb: RGBColor,
+    ) -> tuple[RGBColor, RGBColor, RGBColor, RGBColor]:
+        """从主题色派生三角色彩（SPEC 0025）。
+
+        使用 Python 标准库 colorsys 进行 RGB ↔ HLS 色彩空间转换。
+
+        返回 (primary, auxiliary, accent, title_text_color)：
+        - primary: 主色（= theme_rgb），用于标题栏/页脚栏背景、封面色块
+        - auxiliary: 辅助色（高亮度低饱和度浅色），用于左栏背景衬托
+        - accent: 强调色（互补色相），用于圆点标记/章节标题
+        - title_text_color: 标题栏文字色（白或深灰，取决于主色亮度）
+        """
+        # 提取 RGB 分量（0-1 范围）
+        hex_str = str(theme_rgb)
+        r = int(hex_str[0:2], 16) / 255
+        g = int(hex_str[2:4], 16) / 255
+        b = int(hex_str[4:6], 16) / 255
+
+        # 转 HLS
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        # 主色 = 原色
+        primary = theme_rgb
+
+        # 辅助色 = 高亮度（0.92）低饱和度（≤0.30），浅色背景衬托
+        aux_l = 0.92
+        aux_s = min(s, 0.30)
+        aux_r, aux_g, aux_b = colorsys.hls_to_rgb(h, aux_l, aux_s)
+        auxiliary = RGBColor(
+            int(aux_r * 255), int(aux_g * 255), int(aux_b * 255),
+        )
+
+        # 强调色 = 互补色相（H+0.5），中亮度（0.45）高饱和度（0.50-0.70）
+        if s < 0.20:
+            # 低饱和度特殊处理：互补色区分度不足，固定使用蓝色作为强调色
+            # 阈值 0.20 覆盖 #475569（饱和度约 0.193）等灰蓝色
+            accent = RGBColor(0x25, 0x63, 0xEB)
+        else:
+            acc_h = (h + 0.5) % 1.0
+            acc_l = 0.45
+            acc_s = min(max(s, 0.50), 0.70)
+            acc_r, acc_g, acc_b = colorsys.hls_to_rgb(acc_h, acc_l, acc_s)
+            accent = RGBColor(
+                int(acc_r * 255), int(acc_g * 255), int(acc_b * 255),
+            )
+
+        # 标题栏文字色：主色亮度 > 0.60 时用深灰，否则用白色（对比度保障）
+        # 阈值 0.60 覆盖紫色 #7c3aed（L≈0.578），使 5 种预设深色统一用白字
+        if l > 0.60:
+            title_text_color = TEXT_COLOR_DARK
+        else:
+            title_text_color = TEXT_COLOR_WHITE
+
+        return primary, auxiliary, accent, title_text_color
 
     # === 内容页候选构建 ===
 
@@ -332,16 +426,17 @@ class PptRenderer:
         prs: Presentation,
         project_name: str,
         project_topic: str,
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        title_text_color: RGBColor,
     ) -> None:
-        """渲染封面页：顶部主题色块 + 白色大标题 + 副标题 + 底部装饰线。"""
+        """渲染封面页：顶部主色块 + 白色大标题 + 副标题 + 底部主色窄条（三明治）。"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])  # 空白版式
 
-        # 1. 顶部主题色全幅色块
+        # 1. 顶部主色全幅色块（SPEC 0024 保持）
         self._add_color_block(
             slide, Inches(0), Inches(0),
             Inches(SLIDE_WIDTH), Inches(TITLE_BANNER_HEIGHT),
-            theme_rgb,
+            primary,
         )
 
         # 2. 主标题（色块内白色文字，36pt Bold，居中）
@@ -355,11 +450,10 @@ class PptRenderer:
         run = tf.paragraphs[0].add_run()
         run.text = project_topic or "实验报告"
         self._set_run_font(
-            run, FONT_SIZE_MAIN_TITLE,
-            RGBColor(0xFF, 0xFF, 0xFF), bold=True,
+            run, FONT_SIZE_MAIN_TITLE, title_text_color, bold=True,
         )
 
-        # 3. 副标题（色块下方，20pt 深灰）
+        # 3. 副标题（色块下方，20pt 主色）
         subtitle_tb = slide.shapes.add_textbox(
             Inches(MARGIN_LEFT), Inches(3.2),
             Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT), Inches(1.5),
@@ -371,20 +465,20 @@ class PptRenderer:
         p1.alignment = PP_ALIGN.CENTER
         r1 = p1.add_run()
         r1.text = f"项目：{project_name}"
-        self._set_run_font(r1, FONT_SIZE_SUBTITLE, theme_rgb)
+        self._set_run_font(r1, FONT_SIZE_SUBTITLE, primary)
 
         p2 = stf.add_paragraph()
         p2.alignment = PP_ALIGN.CENTER
         r2 = p2.add_run()
         r2.text = f"生成日期：{now.strftime('%Y-%m-%d')}"
-        self._set_run_font(r2, FONT_SIZE_SUBTITLE, theme_rgb)
+        self._set_run_font(r2, FONT_SIZE_SUBTITLE, primary)
 
-        # 4. 底部装饰线
-        self._add_divider(
+        # 4. 底部主色窄条（SPEC 0025 新增：三明治下层面包）
+        self._add_color_block(
             slide,
-            Inches(MARGIN_LEFT), Inches(SLIDE_HEIGHT - 0.8),
-            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT),
-            theme_rgb,
+            Inches(0), Inches(FOOTER_BAR_TOP),
+            Inches(SLIDE_WIDTH), Inches(FOOTER_BAR_HEIGHT),
+            primary,
         )
 
     # === 双栏内容页 ===
@@ -394,69 +488,87 @@ class PptRenderer:
         prs: Presentation,
         title: str,
         sections: list[dict],
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        auxiliary: RGBColor,
+        accent: RGBColor,
+        title_text_color: RGBColor,
         chart_artifact: dict | None = None,
         page_num: int = 0,
         total_pages: int = 0,
         project_name: str = "",
     ) -> None:
-        """添加双栏内容页：左栏文本要点 + 右栏图表/补充文本。"""
+        """添加双栏内容页：深色标题栏 + 左栏文本（辅助色背景）+ 右栏图表 + 深色页脚栏。"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])  # 空白版式
 
-        # 1. 页面标题 + 分隔线
-        self._add_page_title(slide, title, theme_rgb)
+        # 1. 深色标题栏（SPEC 0025 三明治上层面包）
+        self._add_page_title(slide, title, primary, title_text_color)
 
-        # 2. 左栏文本（40%）
-        self._add_content_left_column(slide, sections, theme_rgb)
+        # 2. 左栏文本（40%，辅助色背景 + 强调色圆点）
+        self._add_content_left_column(slide, sections, accent, auxiliary)
 
         # 3. 右栏图表或补充文本（60%）
         if chart_artifact:
             self._add_content_right_chart(slide, chart_artifact)
         else:
-            self._add_content_right_text(slide, sections, theme_rgb)
+            self._add_content_right_text(slide, sections)
 
-        # 4. 页脚
+        # 4. 深色页脚栏（SPEC 0025 三明治下层面包）
         self._add_footer(
-            slide, project_name, page_num, total_pages, theme_rgb,
+            slide, project_name, page_num, total_pages,
+            primary, title_text_color,
         )
 
     def _add_page_title(
         self,
         slide,
         title: str,
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        title_text_color: RGBColor,
     ) -> None:
-        """添加页面标题（28pt 主题色 Bold）+ 主题色分隔线。"""
-        # 标题文本框
+        """添加深色标题栏（主色背景 + 白色/深灰标题文字，SPEC 0025 三明治结构）。"""
+        # 1. 主色背景栏（全幅，高 TITLE_BAR_HEIGHT）
+        self._add_color_block(
+            slide,
+            Inches(0), Inches(0),
+            Inches(SLIDE_WIDTH), Inches(TITLE_BAR_HEIGHT),
+            primary,
+        )
+
+        # 2. 标题文字（title_text_color，28pt Bold，垂直居中）
         title_tb = slide.shapes.add_textbox(
-            Inches(MARGIN_LEFT), Inches(MARGIN_TOP),
-            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT), Inches(0.8),
+            Inches(MARGIN_LEFT), Inches(0.1),
+            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT), Inches(TITLE_BAR_HEIGHT - 0.2),
         )
         tf = title_tb.text_frame
         tf.word_wrap = True
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         p = tf.paragraphs[0]
         run = p.add_run()
         run.text = title
-        self._set_run_font(run, FONT_SIZE_PAGE_TITLE, theme_rgb, bold=True)
-
-        # 标题下分隔线
-        self._add_divider(
-            slide,
-            Inches(MARGIN_LEFT), Inches(1.3),
-            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT),
-            theme_rgb,
+        self._set_run_font(
+            run, FONT_SIZE_PAGE_TITLE, title_text_color, bold=True,
         )
 
     def _add_content_left_column(
         self,
         slide,
         sections: list[dict],
-        theme_rgb: RGBColor,
+        accent: RGBColor,
+        auxiliary: RGBColor,
     ) -> None:
-        """添加左栏文本要点（主题色圆点 + 标题 + 说明，16pt）。"""
-        tb = slide.shapes.add_textbox(
+        """添加左栏文本要点（辅助色背景 + 强调色圆点/标题 + 深灰说明，16pt）。"""
+        # 1. 辅助色浅色背景矩形（SPEC 0025）
+        self._add_color_block(
+            slide,
             Inches(MARGIN_LEFT), Inches(CONTENT_TOP),
             Inches(CONTENT_LEFT_WIDTH), Inches(CONTENT_HEIGHT),
+            auxiliary,
+        )
+
+        # 2. 文本要点（叠在背景上，留 0.1" 内边距）
+        tb = slide.shapes.add_textbox(
+            Inches(MARGIN_LEFT + 0.15), Inches(CONTENT_TOP + 0.1),
+            Inches(CONTENT_LEFT_WIDTH - 0.3), Inches(CONTENT_HEIGHT - 0.2),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -471,28 +583,27 @@ class PptRenderer:
             else:
                 p = tf.add_paragraph()
 
-            # 圆点标记（主题色）
+            # 圆点标记（强调色，SPEC 0025）
             bullet_run = p.add_run()
             bullet_run.text = "● "
             self._set_run_font(
-                bullet_run, FONT_SIZE_BODY, theme_rgb, bold=True,
+                bullet_run, FONT_SIZE_BODY, accent, bold=True,
             )
 
-            # 标题（Bold）
+            # 章节标题（强调色 Bold，SPEC 0025）
             title_run = p.add_run()
             title_run.text = section_title
             self._set_run_font(
-                title_run, FONT_SIZE_BODY, theme_rgb, bold=True,
+                title_run, FONT_SIZE_BODY, accent, bold=True,
             )
 
-            # 说明文本（换行）
+            # 说明文本（深灰，换行）
             if short_content:
                 desc_p = tf.add_paragraph()
                 desc_run = desc_p.add_run()
                 desc_run.text = f"  {short_content}"
                 self._set_run_font(
-                    desc_run, FONT_SIZE_BODY,
-                    RGBColor(0x33, 0x33, 0x33),
+                    desc_run, FONT_SIZE_BODY, TEXT_COLOR_DARK,
                 )
 
         # 超过 5 个要点加省略号
@@ -501,7 +612,7 @@ class PptRenderer:
             more_run = more_p.add_run()
             more_run.text = "…"
             self._set_run_font(
-                more_run, FONT_SIZE_BODY, theme_rgb,
+                more_run, FONT_SIZE_BODY, accent,
             )
 
     def _add_content_right_chart(self, slide, artifact: dict) -> None:
@@ -509,9 +620,9 @@ class PptRenderer:
         file_path = artifact.get("file_path", "")
         name = artifact.get("name", "")
 
-        # 可用区域：top=CONTENT_TOP 到 FOOTER_TOP
+        # 可用区域：top=CONTENT_TOP 到 FOOTER_BAR_TOP
         max_width = CONTENT_RIGHT_WIDTH  # 6.7"
-        max_height = FOOTER_TOP - CONTENT_TOP  # 5.4"
+        max_height = FOOTER_BAR_TOP - CONTENT_TOP  # 5.4"
 
         if file_path and Path(file_path).exists():
             w, h = self._fit_image_size(file_path, max_width, max_height)
@@ -538,7 +649,6 @@ class PptRenderer:
         self,
         slide,
         sections: list[dict],
-        theme_rgb: RGBColor,
     ) -> None:
         """无图表时右栏展示补充文本。"""
         tb = slide.shapes.add_textbox(
@@ -567,14 +677,15 @@ class PptRenderer:
         self,
         prs: Presentation,
         chart_artifacts: list[dict],
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        title_text_color: RGBColor,
         page_num: int = 0,
         total_pages: int = 0,
         project_name: str = "",
     ) -> None:
-        """添加关键图表页（图表自适应布局）。"""
+        """添加关键图表页（图表自适应布局 + SPEC 0025 三明治结构）。"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])  # 空白版式
-        self._add_page_title(slide, "关键图表", theme_rgb)
+        self._add_page_title(slide, "关键图表", primary, title_text_color)
 
         count = min(len(chart_artifacts), 4)  # 最多 4 张
         if count == 1:
@@ -590,7 +701,8 @@ class PptRenderer:
             self._add_truncation_note(slide, len(chart_artifacts))
 
         self._add_footer(
-            slide, project_name, page_num, total_pages, theme_rgb,
+            slide, project_name, page_num, total_pages,
+            primary, title_text_color,
         )
 
     def _fit_image_size(
@@ -625,9 +737,9 @@ class PptRenderer:
         file_path = artifact.get("file_path", "")
         name = artifact.get("name", "")
 
-        # 可用区域：top=1.8 到 FOOTER_TOP=7.0
+        # 可用区域：top=1.8 到 FOOTER_BAR_TOP=7.0
         max_width = 8.0
-        max_height = FOOTER_TOP - 1.8  # 5.2"
+        max_height = FOOTER_BAR_TOP - 1.8  # 5.2"
 
         if file_path and Path(file_path).exists():
             w, h = self._fit_image_size(file_path, max_width, max_height)
@@ -655,7 +767,7 @@ class PptRenderer:
     ) -> None:
         """双图左右并排布局（各自适应缩放到可用区域）。"""
         max_width = 5.8
-        max_height = FOOTER_TOP - 1.8  # 5.2"
+        max_height = FOOTER_BAR_TOP - 1.8  # 5.2"
         positions = [(0.5, 1.8), (7.0, 1.8)]
         for i, art in enumerate(artifacts[:2]):
             file_path = art.get("file_path", "")
@@ -803,24 +915,25 @@ class PptRenderer:
         self,
         prs: Presentation,
         outline_sections: list[dict],
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        title_text_color: RGBColor,
         page_num: int = 0,
         total_pages: int = 0,
         project_name: str = "",
     ) -> None:
-        """渲染总结页：居中排版 + 主题色分隔线 + 要点提炼。"""
+        """渲染总结页：深色标题栏 + 居中正文 + 深色页脚栏（SPEC 0025 三明治结构）。"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])  # 空白版式
 
-        # 页面标题 + 分隔线
-        self._add_page_title(slide, "总结", theme_rgb)
+        # 1. 深色标题栏（SPEC 0025 三明治上层面包）
+        self._add_page_title(slide, "总结", primary, title_text_color)
 
-        # 提取 SUMMARY 类型章节作为总结
+        # 2. 提取 SUMMARY 类型章节作为总结
         summary_sections = [
             s for s in outline_sections
             if s.get("source_type") == "SUMMARY"
         ]
 
-        # 总结正文（居中，20pt 深灰）
+        # 3. 总结正文（居中，20pt 深灰）
         tb = slide.shapes.add_textbox(
             Inches(MARGIN_LEFT), Inches(2.5),
             Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT), Inches(3.5),
@@ -840,7 +953,7 @@ class PptRenderer:
                 run = p.add_run()
                 run.text = content
                 self._set_run_font(
-                    run, FONT_SIZE_SUBTITLE, RGBColor(0x33, 0x33, 0x33),
+                    run, FONT_SIZE_SUBTITLE, TEXT_COLOR_DARK,
                 )
         else:
             p = tf.paragraphs[0]
@@ -848,20 +961,13 @@ class PptRenderer:
             run = p.add_run()
             run.text = "本实验已按既定方案完成数据分析与可视化。"
             self._set_run_font(
-                run, FONT_SIZE_SUBTITLE, RGBColor(0x33, 0x33, 0x33),
+                run, FONT_SIZE_SUBTITLE, TEXT_COLOR_DARK,
             )
 
-        # 底部装饰线
-        self._add_divider(
-            slide,
-            Inches(MARGIN_LEFT), Inches(SLIDE_HEIGHT - 1.0),
-            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT),
-            theme_rgb,
-        )
-
-        # 页脚
+        # 4. 深色页脚栏（SPEC 0025 三明治下层面包，取代旧装饰线）
         self._add_footer(
-            slide, project_name, page_num, total_pages, theme_rgb,
+            slide, project_name, page_num, total_pages,
+            primary, title_text_color,
         )
 
     # === 辅助方法：样式 ===
@@ -929,32 +1035,33 @@ class PptRenderer:
         project_name: str,
         page_num: int,
         total_pages: int,
-        theme_rgb: RGBColor,
+        primary: RGBColor,
+        title_text_color: RGBColor,
     ) -> None:
-        """添加页脚（项目名 + 页码 + 分隔线）。"""
-        # 页脚分隔线
-        self._add_divider(
+        """添加深色页脚栏（主色背景 + 白色项目名和页码，SPEC 0025 三明治结构）。"""
+        # 1. 主色背景栏（全幅，高 FOOTER_BAR_HEIGHT）
+        self._add_color_block(
             slide,
-            Inches(MARGIN_LEFT), Inches(FOOTER_TOP),
-            Inches(SLIDE_WIDTH - 2 * MARGIN_LEFT),
-            RGBColor(0xCC, 0xCC, 0xCC),  # 浅灰色
+            Inches(0), Inches(FOOTER_BAR_TOP),
+            Inches(SLIDE_WIDTH), Inches(FOOTER_BAR_HEIGHT),
+            primary,
         )
 
-        # 项目名（左）
+        # 2. 项目名（左，title_text_color）
         left_tb = slide.shapes.add_textbox(
-            Inches(MARGIN_LEFT), Inches(FOOTER_TOP + 0.1),
+            Inches(MARGIN_LEFT), Inches(FOOTER_BAR_TOP + 0.1),
             Inches(6), Inches(0.3),
         )
         lt = left_tb.text_frame
         lr = lt.paragraphs[0].add_run()
         lr.text = project_name
         self._set_run_font(
-            lr, FONT_SIZE_CAPTION, RGBColor(0x88, 0x88, 0x88),
+            lr, FONT_SIZE_CAPTION, title_text_color,
         )
 
-        # 页码（右）
+        # 3. 页码（右，title_text_color）
         right_tb = slide.shapes.add_textbox(
-            Inches(SLIDE_WIDTH - 3), Inches(FOOTER_TOP + 0.1),
+            Inches(SLIDE_WIDTH - 3), Inches(FOOTER_BAR_TOP + 0.1),
             Inches(2.5), Inches(0.3),
         )
         rt = right_tb.text_frame
@@ -962,7 +1069,7 @@ class PptRenderer:
         rr = rt.paragraphs[0].add_run()
         rr.text = f"第 {page_num} / {total_pages} 页"
         self._set_run_font(
-            rr, FONT_SIZE_CAPTION, RGBColor(0x88, 0x88, 0x88),
+            rr, FONT_SIZE_CAPTION, title_text_color,
         )
 
     def _add_placeholder_textbox(

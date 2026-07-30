@@ -320,6 +320,229 @@ def test_render_invalid_theme_color_falls_back(tmp_path):
     assert len(prs.slides) >= 3
 
 
+# --- SPEC 0025 三角色彩系统与三明治结构测试 ---
+
+
+def _shape_has_fill_color(slide, target_color: RGBColor) -> bool:
+    """检查幻灯片是否有指定填充色的形状（不含文本字体色）。"""
+    for shape in slide.shapes:
+        try:
+            if shape.fill.type is not None and shape.fill.fore_color.rgb == target_color:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+class TestSpec0025ColorSystem:
+    """SPEC 0025 三角色彩派生测试。"""
+
+    def test_derive_palette_blue_primary_unchanged(self):
+        """D1：蓝色主题派生主色 = 原值。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        primary, _, _, _ = renderer._derive_color_palette(theme_rgb)
+        assert primary == RGBColor(0x25, 0x63, 0xEB)
+
+    def test_derive_palette_blue_auxiliary_light(self):
+        """D2：蓝色主题派生辅助色为高亮度浅色。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        # 辅助色不应等于主色
+        assert auxiliary != RGBColor(0x25, 0x63, 0xEB)
+        # 辅助色应为浅色（各分量平均值 > 180）
+        hex_str = str(auxiliary)
+        r = int(hex_str[0:2], 16)
+        g = int(hex_str[2:4], 16)
+        b = int(hex_str[4:6], 16)
+        avg = (r + g + b) / 3
+        assert avg > 180, f"辅助色不够亮：{hex_str}（平均亮度 {avg}）"
+
+    def test_derive_palette_blue_accent_complementary(self):
+        """D3：蓝色主题派生强调色为互补色（金黄系，R 分量高）。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, _, accent, _ = renderer._derive_color_palette(theme_rgb)
+        # 强调色不应等于主色
+        assert accent != RGBColor(0x25, 0x63, 0xEB)
+        # 蓝色色相约 0.6，互补色约 0.1（金黄系），R 分量应较高
+        hex_str = str(accent)
+        r = int(hex_str[0:2], 16)
+        assert r > 150, f"强调色不是金黄系：{hex_str}（R={r}）"
+
+    def test_derive_palette_gray_accent_is_blue(self):
+        """D4：灰色主题强调色固定为蓝色 #2563EB（特殊处理）。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#475569")
+        _, _, accent, _ = renderer._derive_color_palette(theme_rgb)
+        assert accent == RGBColor(0x25, 0x63, 0xEB)
+
+    def test_derive_palette_none_uses_default(self):
+        """D5：theme_color=None 使用默认 #333333 派生三色。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color(None)
+        primary, _, _, _ = renderer._derive_color_palette(theme_rgb)
+        assert primary == RGBColor(0x33, 0x33, 0x33)
+
+    def test_derive_palette_invalid_falls_back(self):
+        """D6：无效色值降级到默认 #333333 派生三色。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#invalid")
+        primary, _, _, _ = renderer._derive_color_palette(theme_rgb)
+        assert primary == RGBColor(0x33, 0x33, 0x33)
+
+    def test_derive_palette_blue_title_text_white(self):
+        """主色亮度 < 0.60 时标题文字为白色（对比度保障）。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, _, _, title_text_color = renderer._derive_color_palette(theme_rgb)
+        assert title_text_color == RGBColor(0xFF, 0xFF, 0xFF)
+
+    def test_derive_palette_purple_title_text_white(self):
+        """紫色主题（亮度约 0.578）标题文字为白色（阈值 0.60 覆盖紫色）。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#7c3aed")
+        _, _, _, title_text_color = renderer._derive_color_palette(theme_rgb)
+        assert title_text_color == RGBColor(0xFF, 0xFF, 0xFF)
+
+    def test_derive_palette_returns_four_colors(self):
+        """三角色彩派生返回四元组（主色/辅助色/强调色/标题文字色）。"""
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        result = renderer._derive_color_palette(theme_rgb)
+        assert len(result) == 4
+        primary, auxiliary, accent, title_text_color = result
+        # 四色都应为 RGBColor 实例
+        assert isinstance(primary, RGBColor)
+        assert isinstance(auxiliary, RGBColor)
+        assert isinstance(accent, RGBColor)
+        assert isinstance(title_text_color, RGBColor)
+
+
+class TestSpec0025SandwichStructure:
+    """SPEC 0025 深浅对比三明治结构测试。"""
+
+    def test_sandwich_content_title_bar_exists(self, tmp_path):
+        """S1：内容页存在主色标题栏背景（shape fill）。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        # 内容页（第2页）应有主色填充的标题栏
+        content_slide = prs.slides[1]
+        assert _shape_has_fill_color(content_slide, primary), (
+            "内容页标题栏未使用主色背景"
+        )
+
+    def test_sandwich_content_footer_bar_exists(self, tmp_path):
+        """S3：内容页存在主色页脚栏背景（shape fill）。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        content_slide = prs.slides[1]
+        assert _shape_has_fill_color(content_slide, primary), (
+            "内容页页脚栏未使用主色背景"
+        )
+
+    def test_sandwich_cover_bottom_bar_exists(self, tmp_path):
+        """S5：封面页底部存在主色窄条（三明治下层面包）。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        cover_slide = prs.slides[0]
+        assert _shape_has_fill_color(cover_slide, primary), (
+            "封面页未使用主色色块（顶部色块或底部窄条）"
+        )
+
+    def test_sandwich_summary_title_bar_exists(self, tmp_path):
+        """S7：总结页存在主色标题栏背景。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        # 总结页是最后一页
+        summary_slide = prs.slides[len(prs.slides) - 1]
+        assert _shape_has_fill_color(summary_slide, primary), (
+            "总结页标题栏未使用主色背景"
+        )
+
+    def test_auxiliary_background_left_column(self, tmp_path):
+        """A1：左栏存在辅助色浅色背景。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        content_slide = prs.slides[1]
+        assert _shape_has_fill_color(content_slide, auxiliary), (
+            "左栏未使用辅助色浅色背景"
+        )
+
+    def test_accent_color_used_in_bullets(self, tmp_path):
+        """A2：左栏圆点标记使用强调色（非主色）。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, _, accent, _ = renderer._derive_color_palette(theme_rgb)
+        content_slide = prs.slides[1]
+        # 强调色应出现在文本字体色中（圆点标记和章节标题）
+        assert _slide_has_color(content_slide, accent), (
+            "左栏圆点/标题未使用强调色"
+        )
+
+    def test_sandwich_chart_page_title_bar(self, tmp_path):
+        """S6：图表页存在主色标题栏背景。"""
+        chart_path = tmp_path / "chart.png"
+        chart_path.write_bytes(
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+            b"\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x00\x03\x00\x01"
+            b"\x82\x8b\x99\xde\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        artifacts = [
+            {"name": "chart1.png", "artifact_type": "CHART_PNG",
+             "file_path": str(chart_path)},
+        ]
+        # 用 5 张图表触发独立图表页
+        multi_artifacts = [
+            {"name": f"chart{i}.png", "artifact_type": "CHART_PNG",
+             "file_path": str(chart_path)}
+            for i in range(5)
+        ]
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+            artifacts=multi_artifacts,
+        )
+        prs = Presentation(str(output_path))
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        # 查找图表页（包含"关键图表"文本的页面）
+        chart_slide = None
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    if "关键图表" in shape.text_frame.text:
+                        chart_slide = slide
+                        break
+            if chart_slide:
+                break
+        assert chart_slide is not None, "未找到图表页"
+        assert _shape_has_fill_color(chart_slide, primary), (
+            "图表页标题栏未使用主色背景"
+        )
+
+
 # --- API 测试 ---
 
 
