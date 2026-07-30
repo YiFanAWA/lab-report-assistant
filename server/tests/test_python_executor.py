@@ -193,16 +193,20 @@ class TestExecuteCodeSuccess:
         assert result.sandbox_error_code is None
 
     def test_data_path_variable_injected(self, tmp_path):
-        """DATA_PATH 变量被正确注入为字符串字面量。"""
+        """DATA_PATH 变量被正确注入为字符串字面量（resolve 为绝对路径）。"""
         work_dir = tmp_path / "run2"
+        data_file = tmp_path / "data.csv"
         result = execute_code(
             code="print('DATA_PATH=' + DATA_PATH)\n",
             work_dir=str(work_dir),
-            data_path="/test/path/data.csv",
+            data_path=str(data_file),
             timeout_seconds=10,
         )
         assert result.exit_code == 0
-        assert "DATA_PATH=/test/path/data.csv" in result.stdout
+        assert "DATA_PATH=" in result.stdout
+        # data_path 会被 resolve 为绝对路径，确保子进程能正确找到数据文件
+        resolved = str(data_file.resolve())
+        assert resolved in result.stdout
 
     def test_output_dir_variable_injected(self, tmp_path):
         """OUTPUT_DIR 变量被正确注入为受控工作目录绝对路径。"""

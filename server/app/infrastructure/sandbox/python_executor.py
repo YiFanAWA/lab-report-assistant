@@ -351,12 +351,20 @@ def execute_code(
     # 1. AST 校验（只校验用户代码，不校验脚本头部注入的 import matplotlib）
     validate_code(code, allowed_imports)
 
-    # 2. 准备工作目录
-    work_path = Path(work_dir)
+    # 2. 准备工作目录（resolve 为绝对路径，避免 subprocess cwd + 相对 script_path 路径重复）
+    work_path = Path(work_dir).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
 
+    # data_path 也 resolve 为绝对路径，确保子进程能正确找到数据文件
+    # （settings.project_data_root 可能是相对路径，导致 version.file_path 也是相对路径）
+    data_path_resolved = (
+        str(Path(data_path).resolve())
+        if not Path(data_path).is_absolute()
+        else str(data_path)
+    )
+
     # 3. 写入临时脚本
-    script_content = _build_script(code, data_path, str(work_path))
+    script_content = _build_script(code, data_path_resolved, str(work_path))
     script_path = work_path / "_run.py"
     script_path.write_text(script_content, encoding="utf-8")
 
@@ -370,7 +378,7 @@ def execute_code(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env={
-            "SANDBOX_DATA_PATH": str(data_path),
+            "SANDBOX_DATA_PATH": data_path_resolved,
             "SANDBOX_OUTPUT_DIR": str(work_path),
             "PYTHONPATH": "",
             "PATH": os.environ.get("PATH", ""),

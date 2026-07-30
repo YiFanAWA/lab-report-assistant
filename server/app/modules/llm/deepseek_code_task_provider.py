@@ -48,7 +48,7 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
 
 代码要求：
 1. 代码必须是完整可执行的 Python 脚本
-2. 执行环境会注入以下变量：
+2. 执行环境会注入以下变量（直接使用，无需 import 任何模块获取）：
    - DATA_PATH: 数据集文件路径（CSV 或 Excel）
    - OUTPUT_DIR: 输出目录路径
 3. 代码应包含：
@@ -57,13 +57,28 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
    - 统计分析（按 analysis_plan）
    - 图表生成（按 chart_plan，使用 matplotlib，保存到 OUTPUT_DIR）
    - 表格导出（CSV 格式，保存到 OUTPUT_DIR）
-4. 图表保存格式：{OUTPUT_DIR}/{图表名}.png
-5. 表格保存格式：{OUTPUT_DIR}/{表格名}.csv
-6. 不使用 shell=True，不访问网络，不读写 OUTPUT_DIR 之外的路径
+4. 图表保存格式：用 f"{OUTPUT_DIR}/{图表名}.png" 拼接路径
+5. 表格保存格式：用 f"{OUTPUT_DIR}/{表格名}.csv" 拼接路径
+
+import 白名单（只允许以下模块，其他一律禁止）：
+- pandas
+- numpy
+- matplotlib
+- scipy
+- sklearn
+- openpyxl
+
+严禁 import 以下模块（会被 AST 校验拦截导致执行失败）：
+- os, sys, subprocess, shutil, pathlib, io, ctypes, signal
+- socket, ssl, http, urllib, requests
+- multiprocessing, threading, asyncio, pickle
+
+路径操作禁止使用 os.path 或 pathlib，必须用字符串拼接或 f-string。
+例如：保存图表用 plt.savefig(f"{OUTPUT_DIR}/age_hist.png")
 
 输出要求：
 - 必须返回 JSON 格式：{"code": "完整 Python 代码字符串"}
-- 代码字符串中的换行使用 \\n 转义"""
+- 代码必须是合法 JSON（换行符由 JSON 标准自动转义，无需手动处理）"""
 
 
 def _build_user_prompt(analysis_plan: dict) -> str:

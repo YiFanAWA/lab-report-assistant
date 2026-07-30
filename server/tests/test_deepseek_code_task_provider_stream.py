@@ -360,3 +360,151 @@ class TestLocalRuleStreamGenerateInterface:
             "CodeTaskDraftProvider 抽象基类必须定义 stream_generate 抽象方法，"
             "确保所有 Provider 实现流式接口"
         )
+
+
+# ============================================================
+# SPEC 0022 回归测试：prompt 换行转义 bug
+# ============================================================
+
+
+class TestPromptNoDoubleEscapeInstruction:
+    """SPEC 0022 回归测试：prompt 不应包含导致换行符双重转义的指令。
+
+    bug 根因：
+    _SYSTEM_PROMPT 曾包含 "代码字符串中的换行使用 \\n 转义" 指令，导致
+    DeepSeek 返回的 JSON 中 code 字段换行被双重转义为字面量 \\n（反斜杠+n），
+    json.loads 解析后仍为字面量 \\n 而非真正换行符，执行时被 Python 解释器
+    当作行延续符引发语法错误：
+        EXECUTION_IMPORT_FORBIDDEN: 代码语法错误:
+        unexpected character after line continuation character
+
+    修复：
+    删除该错误指令，新增 "代码必须是合法 JSON（换行符由 JSON 标准自动转义，
+    无需手动处理）"，让 LLM 依赖 JSON 标准自动处理换行转义。
+    """
+
+    def test_prompt不包含换行手动转义指令(self):
+        """_SYSTEM_PROMPT 不应包含 '换行使用 \\n 转义' 这类错误指令。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        # 字面量反斜杠+n 不应出现在 prompt 的换行转义指令中
+        assert "换行使用 \\n 转义" not in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 不应包含 '换行使用 \\n 转义' 指令，"
+            "该指令会导致 LLM 双重转义换行符，引发代码执行语法错误"
+        )
+
+    def test_prompt包含合法JSON说明(self):
+        """_SYSTEM_PROMPT 应包含 '合法 JSON' 说明，引导 LLM 正确处理换行。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        assert "合法 JSON" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应包含 '合法 JSON' 说明，"
+            "引导 LLM 依赖 JSON 标准自动转义换行符"
+        )
+
+    def test_流式生成code含真正换行符(self):
+        """流式生成的 code 通过 json.loads 解析后应包含真正换行符。
+
+        回归 bug：双重转义会导致 code 字段值包含字面量 '\\n'（反斜杠+n
+        两个字符），而非真正换行符，执行时引发 Python 行延续符语法错误。
+        """
+        full_json = _make_valid_code_task_json()
+        client = _make_mock_client_streaming(chunks=[full_json])
+        provider = DeepSeekCodeTaskProvider(client=client)
+
+        result = list(provider.stream_generate(_make_analysis_plan()))
+        full = "".join(result)
+        parsed = json.loads(full)
+
+        assert "code" in parsed
+        code = parsed["code"]
+        # code 应包含真正换行符（\n），而非字面量转义字符
+        assert "\n" in code, (
+            "code 应包含真正换行符（\\n），而非字面量转义字符，"
+            "否则执行时会引发 Python 行延续符语法错误"
+        )
+        # code 不应包含字面量反斜杠+n（双重转义的标志）
+        assert "\\n" not in code, (
+            "code 不应包含字面量 '\\n'（反斜杠+n 两个字符），"
+            "这是 prompt 双重转义指令导致的回归 bug 标志"
+        )
+
+    def test_流式生成code可被compile为合法Python(self):
+        """流式生成的 code 应能被 compile() 解析为合法 Python 语法。
+
+        这是对 bug 的端到端回归保护：双重转义的 code 会导致
+        compile() 抛出 SyntaxError。
+        """
+        full_json = _make_valid_code_task_json()
+        client = _make_mock_client_streaming(chunks=[full_json])
+        provider = DeepSeekCodeTaskProvider(client=client)
+
+        result = list(provider.stream_generate(_make_analysis_plan()))
+        full = "".join(result)
+        parsed = json.loads(full)
+        code = parsed["code"]
+
+        # compile() 不抛 SyntaxError 即证明 code 是合法 Python 语法
+        # 这是 bug 修复的直接验证：双重转义的 code 会在此抛出
+        # "unexpected character after line continuation character"
+        compile(code, "<code_task>", "exec")
+
+
+# ============================================================
+# SPEC 0022 回归测试：prompt import 白名单约束
+# ============================================================
+
+
+class TestPromptImportWhitelist:
+    """SPEC 0022 回归测试：prompt 必须明确 import 白名单和禁止模块。
+
+    bug 根因：
+    _SYSTEM_PROMPT 曾未明确列出 import 白名单和禁止模块，导致 DeepSeek
+    生成的代码包含 import os 等被 AST 校验拒绝的模块，执行时返回
+    EXECUTION_IMPORT_FORBIDDEN，代码任务执行失败。
+
+    修复：
+    在 _SYSTEM_PROMPT 中添加明确的 import 白名单（pandas/numpy/matplotlib/
+    scipy/sklearn/openpyxl）和禁止模块列表（os/sys/pathlib/socket 等），
+    并禁止使用 os.path 或 pathlib 进行路径操作。
+    """
+
+    def test_prompt包含import白名单说明(self):
+        """_SYSTEM_PROMPT 应包含 'import 白名单' 说明。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        assert "import 白名单" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应包含 'import 白名单' 说明，"
+            "明确告知 LLM 只允许使用哪些模块"
+        )
+
+    def test_prompt包含白名单模块列表(self):
+        """_SYSTEM_PROMPT 应列出允许的模块：pandas/numpy/matplotlib/scipy/sklearn/openpyxl。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        for module in ["pandas", "numpy", "matplotlib", "scipy", "sklearn", "openpyxl"]:
+            assert module in _SYSTEM_PROMPT, (
+                f"_SYSTEM_PROMPT 应在白名单中列出允许的模块: {module}"
+            )
+
+    def test_prompt明确禁止os模块(self):
+        """_SYSTEM_PROMPT 应明确禁止 import os（最常见的违规模块）。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        # prompt 的禁止模块列表中应包含 os
+        assert "严禁 import" in _SYSTEM_PROMPT or "禁止" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应包含明确的禁止 import 指令"
+        )
+        # os 应在禁止列表中
+        forbidden_section = _SYSTEM_PROMPT[_SYSTEM_PROMPT.index("严禁"):]
+        assert "os" in forbidden_section, (
+            "_SYSTEM_PROMPT 的禁止模块列表应包含 os"
+        )
+
+    def test_prompt禁止pathlib路径操作(self):
+        """_SYSTEM_PROMPT 应禁止使用 os.path 或 pathlib 进行路径操作。"""
+        from app.modules.llm.deepseek_code_task_provider import _SYSTEM_PROMPT
+        assert "os.path" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应提及 os.path 并禁止使用"
+        )
+        assert "pathlib" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应提及 pathlib 并禁止使用"
+        )
+        assert "f-string" in _SYSTEM_PROMPT or "f\"" in _SYSTEM_PROMPT, (
+            "_SYSTEM_PROMPT 应引导使用 f-string 拼接路径"
+        )
