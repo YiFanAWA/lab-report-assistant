@@ -150,50 +150,67 @@ def test_render_charts_not_counted_in_target(tmp_path):
     assert len(prs.slides) >= 4
 
 
+def _slide_has_color(slide, target_color: RGBColor) -> bool:
+    """检查某页是否在文本字体或形状填充中使用了目标颜色（SPEC 0024 空白版式适配）。"""
+    for shape in slide.shapes:
+        # 检查文本 run 的字体颜色
+        if shape.has_text_frame:
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    if run.font.color and run.font.color.rgb == target_color:
+                        return True
+        # 检查形状填充颜色（色块、分隔线、圆点等）
+        try:
+            if shape.fill.type is not None and shape.fill.fore_color.rgb == target_color:
+                return True
+        except Exception:
+            pass
+    return False
+
+
 def test_render_theme_color_purple_applied(tmp_path):
-    """R-COLOR-02：theme_color=#7c3aed 时标题文字为紫色。"""
+    """R-COLOR-02：theme_color=#7c3aed 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。"""
     output_path = _render_ppt(
         tmp_path, config={"theme_color": "#7c3aed"}
     )
     prs = Presentation(str(output_path))
-    # 检查标题页的标题颜色
-    title_slide = prs.slides[0]
-    title_shape = title_slide.shapes.title
-    assert title_shape is not None
-    # 检查标题 run 的颜色
-    for para in title_shape.text_frame.paragraphs:
-        for run in para.runs:
-            if run.font.color and run.font.color.rgb:
-                assert run.font.color.rgb == RGBColor(0x7c, 0x3a, 0xed)
+    # SPEC 0024：空白版式无 title placeholder，主题色改应用到
+    # 封面顶部色块、内容页标题文字、分隔线、要点圆点等元素
+    theme_color = RGBColor(0x7c, 0x3a, 0xed)
+    found = any(
+        _slide_has_color(slide, theme_color) for slide in prs.slides
+    )
+    assert found, "主题色 #7c3aed 未应用到 PPT 任何元素（色块/标题/分隔线/圆点）"
 
 
 def test_render_theme_color_blue_applied(tmp_path):
-    """R-COLOR-03：theme_color=#2563eb 时标题文字为蓝色。"""
+    """R-COLOR-03：theme_color=#2563eb 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。"""
     output_path = _render_ppt(
         tmp_path, config={"theme_color": "#2563eb"}
     )
     prs = Presentation(str(output_path))
-    title_slide = prs.slides[0]
-    title_shape = title_slide.shapes.title
-    for para in title_shape.text_frame.paragraphs:
-        for run in para.runs:
-            if run.font.color and run.font.color.rgb:
-                assert run.font.color.rgb == RGBColor(0x25, 0x63, 0xeb)
+    theme_color = RGBColor(0x25, 0x63, 0xeb)
+    found = any(
+        _slide_has_color(slide, theme_color) for slide in prs.slides
+    )
+    assert found, "主题色 #2563eb 未应用到 PPT 任何元素（色块/标题/分隔线/圆点）"
 
 
 def test_render_theme_color_green_all_slides(tmp_path):
-    """R-COLOR-04：主题色应用到所有页面类型的标题。"""
+    """R-COLOR-04：主题色应用到多个页面（SPEC 0024：封面色块+内容页标题+总结页等）。"""
     output_path = _render_ppt(
         tmp_path, config={"theme_color": "#16a34a"}
     )
     prs = Presentation(str(output_path))
-    for slide in prs.slides:
-        title_shape = slide.shapes.title
-        if title_shape and title_shape.has_text_frame:
-            for para in title_shape.text_frame.paragraphs:
-                for run in para.runs:
-                    if run.font.color and run.font.color.rgb:
-                        assert run.font.color.rgb == RGBColor(0x16, 0xa3, 0x4a)
+    theme_color = RGBColor(0x16, 0xa3, 0x4a)
+    # 统计应用了主题色的页面数
+    slides_with_theme = sum(
+        1 for slide in prs.slides if _slide_has_color(slide, theme_color)
+    )
+    # 主题色应至少应用到封面（色块）和内容页/总结页（标题、分隔线）
+    assert slides_with_theme >= 2, (
+        f"主题色只应用到 {slides_with_theme} 个页面，应至少 2 个（封面色块 + 内容页标题）"
+    )
 
 
 def test_render_no_theme_color_keeps_default(tmp_path):
@@ -229,7 +246,11 @@ def test_render_include_charts_true(tmp_path):
 
 
 def test_render_include_charts_false_skips_chart(tmp_path):
-    """R-CHART-02：include_charts=False 时不生成图表页。"""
+    """R-CHART-02：include_charts=False 时不嵌入图表（SPEC 0024：检查图片 shape 存在性）。
+
+    SPEC 0024 中单张图表会嵌入到内容页右栏（双栏布局），不再额外生成独立图表页，
+    因此页数比较不再适用。改为检查图片 shape（PICTURE 类型）的存在性。
+    """
     chart_path = tmp_path / "chart.png"
     chart_path.write_bytes(
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -251,8 +272,20 @@ def test_render_include_charts_false_skips_chart(tmp_path):
     )
     prs_without = Presentation(str(output_without))
     prs_with = Presentation(str(output_with))
-    # 无图表页时页数比有图表页时少
-    assert len(prs_without.slides) < len(prs_with.slides)
+    # SPEC 0024：include_charts=False 时不应有任何图片 shape
+    has_picture_without = any(
+        shape.shape_type == 13  # PICTURE
+        for slide in prs_without.slides
+        for shape in slide.shapes
+    )
+    # include_charts=True 时应有图片 shape（图表嵌入到内容页右栏）
+    has_picture_with = any(
+        shape.shape_type == 13
+        for slide in prs_with.slides
+        for shape in slide.shapes
+    )
+    assert not has_picture_without, "include_charts=False 时不应嵌入图表图片"
+    assert has_picture_with, "include_charts=True 时应嵌入图表图片"
 
 
 def test_render_include_charts_false_no_artifacts(tmp_path):

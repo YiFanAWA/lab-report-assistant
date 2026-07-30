@@ -59,6 +59,12 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
    - 表格导出（CSV 格式，保存到 OUTPUT_DIR）
 4. 图表保存格式：用 f"{OUTPUT_DIR}/{图表名}.png" 拼接路径
 5. 表格保存格式：用 f"{OUTPUT_DIR}/{表格名}.csv" 拼接路径
+6. matplotlib 必须配置中文字体，否则中文标题和坐标轴会显示为方框：
+   import matplotlib
+   matplotlib.use("Agg")
+   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
+   matplotlib.rcParams['axes.unicode_minus'] = False
+   import matplotlib.pyplot as plt
 
 import 白名单（只允许以下模块，其他一律禁止）：
 - pandas

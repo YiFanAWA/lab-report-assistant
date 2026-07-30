@@ -323,7 +323,7 @@ class TestPptRenderer:
         assert len(prs.slides) >= 2
 
     def test_title_slide_contains_topic(self, tmp_path):
-        """标题页包含课题。"""
+        """标题页包含课题（SPEC 0024：空白版式，遍历 shapes 找文本）。"""
         renderer = PptRenderer()
         output = tmp_path / "out.pptx"
         renderer.render(
@@ -336,8 +336,12 @@ class TestPptRenderer:
 
         prs = Presentation(str(output))
         first_slide = prs.slides[0]
-        title_text = first_slide.shapes.title.text if first_slide.shapes.title else ""
-        assert "胃病数据分析" in title_text
+        # SPEC 0024 空白版式无 title placeholder，遍历 shapes 找文本
+        all_text = ""
+        for shape in first_slide.shapes:
+            if shape.has_text_frame:
+                all_text += shape.text_frame.text
+        assert "胃病数据分析" in all_text
 
     def test_content_slides_from_sections(self, tmp_path):
         """内容页按 source_type 分组渲染。"""
@@ -365,7 +369,7 @@ class TestPptRenderer:
         assert "方法与数据" in joined or "数据描述" in joined
 
     def test_summary_slide_present(self, tmp_path):
-        """总结页存在。"""
+        """总结页存在（SPEC 0024：空白版式，遍历 shapes 找文本）。"""
         renderer = PptRenderer()
         output = tmp_path / "out.pptx"
         renderer.render(
@@ -378,8 +382,12 @@ class TestPptRenderer:
 
         prs = Presentation(str(output))
         last_slide = prs.slides[len(prs.slides) - 1]
-        title = last_slide.shapes.title.text if last_slide.shapes.title else ""
-        assert "总结" in title
+        # SPEC 0024 空白版式无 title placeholder，遍历 shapes 找文本
+        all_text = ""
+        for shape in last_slide.shapes:
+            if shape.has_text_frame:
+                all_text += shape.text_frame.text
+        assert "总结" in all_text
 
     def test_chart_slide_with_png_artifact(self, tmp_path):
         """有 PNG 产物时生成关键图表页。"""

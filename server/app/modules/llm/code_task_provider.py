@@ -101,6 +101,8 @@ import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False
 import matplotlib.pyplot as plt
 from scipy import stats
 
