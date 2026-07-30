@@ -301,7 +301,72 @@ npm.cmd run build   → vite build 成功（116 modules transformed，3.52s）
 | 失败率 | 60%（3/5） | **0%（0/5）** |
 | 失败模式 A（suggested_scope null） | 出现 | 消除 |
 | 失败模式 B（requirements 对象数组） | 出现 | 消除 |
-| 流式用户体验 | 流半天后报错 | 正常完成 |
+| 流式用户体验 | 流了半天后报错 | 正常完成 |
+
+### 6.6 端到端验收（完整流式生成链路）
+
+修复 commit 后，重启后端 uvicorn，用真实 DeepSeek API 对项目 `proj_2759dc9c98d7` 触发完整流式生成请求，验证 SSE 链路以 `done` 而非 `error` 结束、任务单正确落库。
+
+**请求**：`POST /api/projects/proj_2759dc9c98d7/requirements/plans/stream-generate`，body `{"source_id": "6fd42ff5c0e7"}`
+
+**结果**：
+
+| 指标 | 修复前 | 修复后 |
+|------|--------|--------|
+| HTTP 状态 | 200 | 200 |
+| chunk 事件数 | ~1471（全部到达） | **1391**（全部到达） |
+| 最终事件 | `error`（DEEPSEEK_JSON_PARSE_ERROR） | **`done`** ✅ |
+| error 事件 | 1 | **0** |
+| 任务单落库 | ❌ 未保存 | ✅ `plan_id=8f3379669144` |
+| candidate_source | — | DEEPSEEK（真实 LLM，非降级） |
+| fallback_used | — | False |
+| topic | — | 胃病数据分析实验 |
+| required_tasks | — | 7 个 |
+| replication_level | — | L0，`suggested_scope` 有值（非 null） |
+
+**结论**：端到端链路完整跑通，流式生成以 `done` 事件结束，任务单正确保存到数据库，`replication_level.suggested_scope` 字段有值（容错/prompt 强化生效）。**Vite 修复报告的 TODO-1 由本次端到端验收正式关闭。**
+
+### 6.7 完整业务流程链路验证（确认任务单 → ANALYSIS_CONFIRMED）
+
+为验证 DeepSeek 容错修复在真实业务全链路中持续有效，本次在端到端任务单生成（§6.6）之后，继续推进完整业务流程，覆盖从确认任务单到 `ANALYSIS_CONFIRMED` 的全部状态流转，验证每一环节的 LLM 流式生成、Worker 后台任务与状态推进均正常。
+
+**验证环境**：后端 uvicorn（8001）+ 独立 Worker 进程（`python -m worker.main`）+ 真实 DeepSeek API（`.env` 含 `DEEPSEEK_API_KEY`）。项目 `proj_2759dc9c98d7`（胃病数据分析）。
+
+**状态流转与证据**：
+
+| 步骤 | 操作 | 状态流转 | 证据 |
+|------|------|----------|------|
+| 1. 确认任务单 | `POST /requirements/plans/8f3379669144/confirm` | REQUIREMENT_PARSED → **REQUIREMENT_CONFIRMED** | plan.status CANDIDATE→CONFIRMED；project.status REQUIREMENT_CONFIRMED |
+| 2. 上传 PDF 来源 | `POST /sources/pdf`（手工构造最小 PDF，pypdf 可提取 585 字符胃病医学资料） | 来源 PENDING → Worker 领取 PARSE_DOCUMENT → 成功 → **PARSED** | Worker 日志：`领取 56aaeba393a5 (PARSE_DOCUMENT) 成功`；source.status=PARSED |
+| 3. 完成来源收集 | `POST /sources/complete` | REQUIREMENT_CONFIRMED → **SOURCES_COLLECTED** | 至少 1 个 PARSED 来源；project.status=SOURCES_COLLECTED |
+| 4. 流式生成证据卡片 | `POST /sources/142ef7ce9e49/evidence/stream-generate` | —— | SSE 14.8s，424 chunk，`done` 事件，card_count=6，candidate_source=DEEPSEEK，fallback_used=false |
+| 5. 确认证据卡片 | 逐个 `POST /evidence/{card_id}/confirm`（6 张） | 6 张 CANDIDATE → 全部 CONFIRMED | 6 张卡片 status=CONFIRMED |
+| 6. 完成证据确认 | `POST /evidence/complete` | SOURCES_COLLECTED → **EVIDENCE_CONFIRMED** | project.status=EVIDENCE_CONFIRMED |
+| 7. 上传数据集 | `POST /datasets/upload`（100 行胃病 CSV：年龄/性别/病理结果/检查指标） | 数据集 PENDING → Worker 领取 PARSE_DATASET → 成功 → **READY** | Worker 日志：`领取 617ddf6ed5b1 (PARSE_DATASET) 成功`；dataset.status=READY |
+| 8. 完成数据集收集 | `POST /datasets/complete` | EVIDENCE_CONFIRMED → **DATASET_READY** | project.status=DATASET_READY |
+| 9. 确认分析方案 | `POST /analysis/883277c246f4/confirm` | plan CANDIDATE → CONFIRMED | plan.status=CONFIRMED |
+| 10. 完成分析确认 | `POST /analysis/complete` | DATASET_READY → **ANALYSIS_CONFIRMED** | project.status=ANALYSIS_CONFIRMED |
+
+**关键发现**：
+
+1. **Worker 自动触发分析方案生成**：数据集 `PARSE_DATASET` 成功后，`handle_parse_dataset` 调用 `datasets.service.trigger_analysis_plan_generation` 自动创建 `GENERATE_ANALYSIS_PLAN` job；Worker 随后领取该 job，用真实 DeepSeek 生成分析方案候选（`883277c246f4`，CANDIDATE，cleaning_plan 338 字符 / analysis_plan 735 字符 / chart_plan 937 字符），无需手动触发流式生成即得到候选。
+2. **沙箱网络限制**：`FETCH_URL`（en.wikipedia.org）因沙箱网络限制 3 次超时后 FAILED（`FETCH_TIMEOUT`，retry=2 耗尽）。DeepSeek API 可通但通用 URL 抓取不通。改用 PDF 上传方案（本地解析，不触网）完成来源采集，链路不受影响。
+3. **DeepSeek 容错修复持续有效**：全链路中任务单流式生成（§6.6）、证据卡片流式生成（步骤 4）、分析方案生成（Worker 自动触发）均以 DeepSeek 真实调用完成，0 次 `DEEPSEEK_JSON_PARSE_ERROR`，容错 validator 与 prompt 强化稳定生效。
+
+**最终状态汇总**：
+
+| 实体 | ID | 最终状态 |
+|------|----|----------|
+| 项目 | proj_2759dc9c98d7 | **ANALYSIS_CONFIRMED** |
+| 任务单 | 8f3379669144 | CONFIRMED |
+| 来源(PDF) | 142ef7ce9e49 | PARSED |
+| 来源(URL) | ffcddfb7374b | FAILED（沙箱网络，非链路缺陷） |
+| 证据卡片 | 6 张 | 全部 CONFIRMED |
+| 数据集 | 8e4ce0f346bc | READY |
+| 分析方案 | 883277c246f4 | CONFIRMED（DEEPSEEK） |
+| Jobs | 3 SUCCEEDED / 1 FAILED(FETCH_URL) | —— |
+
+**结论**：从确认任务单到 `ANALYSIS_CONFIRMED` 的完整业务流程链路全部打通，覆盖任务单确认、来源采集与解析、证据卡片流式生成与确认、数据集上传与解析、分析方案生成与确认共 6 个状态节点。DeepSeek 容错修复在全链路中持续有效，无 JSON 解析失败。
 
 ## 7. 验收结论
 
@@ -314,8 +379,10 @@ npm.cmd run build   → vite build 成功（116 modules transformed，3.52s）
 | alembic 迁移 | ✅ PASS | 0001→0007 成功 |
 | 前端 lint + build | ✅ PASS | tsc 通过，vite build 成功 |
 | 真实 DeepSeek 复测 | ✅ PASS | 5 次 0 失败（60%→0%） |
+| 端到端完整链路验收 | ✅ PASS | 流式生成收到 `done`，任务单落库 `plan_id=8f3379669144`，真实 LLM 非降级 |
+| 完整业务流程链路验证 | ✅ PASS | 确认任务单→ANALYSIS_CONFIRMED 全链路 10 步打通，6 状态节点，0 次 JSON 解析失败 |
 | 文档回写 | ✅ PASS | 决策 0029 + acceptance + README 索引 |
-| Vite 报告 TODO-1 关闭 | ✅ PASS | 本修复解决了 Vite 报告残留的 `DEEPSEEK_JSON_PARSE_ERROR` |
+| Vite 报告 TODO-1 关闭 | ✅ PASS | 端到端验收正式关闭：流式以 `done` 结束，任务单保存 |
 
 **总体结论：DeepSeek 任务单 JSON 解析失败问题已根治，真实 LLM 调用失败率从 60% 降至 0%，且不引入新依赖、不破坏现有架构。**
 
