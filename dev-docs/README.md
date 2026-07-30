@@ -61,6 +61,7 @@
 - [decisions/0028-start-spec-0022-code-task-streaming.md](decisions/0028-start-spec-0022-code-task-streaming.md)：启动 SPEC 0022 代码任务生成流式化切片的决策记录（SSE 端点绕过 Worker，Provider 输入为 AnalysisPlan 无需上下文聚合提取，复用 SPEC 0018/0019/0020/0021 流式架构，保留 Worker 异步端点兼容，新增并发保护 active_streams + 服务端取消 request.is_disconnected + 错误分层 + Phase 3 状态复核）。
 - [decisions/0029-deepseek-json-tolerance-fix.md](decisions/0029-deepseek-json-tolerance-fix.md)：DeepSeek 任务单 JSON 解析失败容错修复决策记录（Prompt 强化 + Pydantic field_validator 容错，修复 `*_requirements` 返回对象数组与 `suggested_scope` 返回 null 的高频间歇性失败，真实 DeepSeek 5 次复测失败率 60%→0%）。
 - [decisions/0030-confirm-spec-0022-acceptance.md](decisions/0030-confirm-spec-0022-acceptance.md)：确认 SPEC 0022 代码任务生成流式化收口的决策记录（V2.4.0，引用决策 0028 验收证据与决策 0029 同期补充验证，本地 commit c4b5fdf + tag v2.4.0 已建，push 待用户确认）。
+- [decisions/0031-code-task-execution-link-fixes.md](decisions/0031-code-task-execution-link-fixes.md)：SPEC 0022 代码任务执行链路关键修复决策记录（commit 93f1f13，修复 prompt 换行双重转义、import 白名单缺失、python_executor 路径解析三项阻断问题，整理 httpx 代理/CSV 列匹配/Worker 进程三项链路验证环境注意事项，补充 Worker 执行与文档生成模块单元测试 35 个）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 - [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。

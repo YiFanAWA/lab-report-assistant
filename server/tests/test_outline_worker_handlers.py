@@ -424,6 +424,182 @@ class TestHandleGenerateWord:
         assert result2["version"] == 2
         assert result1["version_id"] != result2["version_id"]
 
+    def test_render_failure_marks_version_failed(self, db, monkeypatch):
+        """渲染器抛异常时 DeliverableVersion 标记 FAILED，抛 WORD_RENDER_FAILED。"""
+        from app.infrastructure.renderers.word_renderer import WordRenderer
+
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(db, project_id, outline_id)
+
+        # mock WordRenderer.render 抛异常
+        def _boom(self, **kwargs):
+            raise RuntimeError("模拟渲染失败")
+
+        monkeypatch.setattr(WordRenderer, "render", _boom)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_generate_word(db, job)
+        assert exc_info.value.code == "WORD_RENDER_FAILED"
+
+        # 验证 DeliverableVersion FAILED
+        version = (
+            db.query(DeliverableVersion)
+            .filter(DeliverableVersion.deliverable_id == deliverable_id)
+            .first()
+        )
+        assert version.status == DeliverableVersionStatus.FAILED.value
+        assert version.error_code == "WORD_RENDER_FAILED"
+
+    def test_failed_generation_does_not_overwrite_success(self, db, monkeypatch):
+        """失败生成不覆盖成功版本：v1 SUCCEEDED，v2 FAILED，v1 仍 SUCCEEDED。
+
+        覆盖 project_memory 硬约束：失败生成不覆盖成功版本。
+        """
+        from app.infrastructure.renderers.word_renderer import WordRenderer
+
+        project_id = _create_project(
+            db, status=ProjectStatus.GENERATING.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(db, project_id, outline_id)
+
+        # 第一次成功生成
+        job1 = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+        result1 = worker_handlers.handle_generate_word(db, job1)
+        assert result1["version"] == 1
+
+        # 第二次失败生成
+        def _boom(self, **kwargs):
+            raise RuntimeError("模拟渲染失败")
+
+        monkeypatch.setattr(WordRenderer, "render", _boom)
+
+        job2 = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+        with pytest.raises(AppError):
+            worker_handlers.handle_generate_word(db, job2)
+
+        # 验证两个版本都存在，v1 仍 SUCCEEDED，v2 FAILED
+        versions = (
+            db.query(DeliverableVersion)
+            .filter(DeliverableVersion.deliverable_id == deliverable_id)
+            .order_by(DeliverableVersion.version)
+            .all()
+        )
+        assert len(versions) == 2
+        assert versions[0].version == 1
+        assert versions[0].status == DeliverableVersionStatus.SUCCEEDED.value
+        assert versions[1].version == 2
+        assert versions[1].status == DeliverableVersionStatus.FAILED.value
+
+        # 验证 v1 的文件仍存在（未被覆盖）
+        from app.core.config import settings
+        v1_file = (settings.project_data_root / project_id
+                   / "deliverables" / deliverable_id / "word_v1.docx")
+        assert v1_file.exists(), "成功版本的文件不应被失败生成删除"
+
+    def test_outline_not_found_raises(self, db):
+        """outline_id 在数据库找不到时抛 OUTLINE_NOT_FOUND。"""
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": "ol_nonexist", "deliverable_id": "del_xxx"},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_generate_word(db, job)
+        assert exc_info.value.code == "OUTLINE_NOT_FOUND"
+
+    def test_deliverable_not_found_raises(self, db):
+        """deliverable_id 在数据库找不到时抛 DELIVERABLE_NOT_FOUND。"""
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": outline_id, "deliverable_id": "del_nonexist"},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_generate_word(db, job)
+        assert exc_info.value.code == "DELIVERABLE_NOT_FOUND"
+
+    def test_template_render_failure_falls_back(self, db, monkeypatch):
+        """Word 模板渲染失败时降级到默认渲染，版本仍 SUCCEEDED（SPEC 0010 降级链）。"""
+        from types import SimpleNamespace
+        from app.infrastructure.renderers.word_renderer import WordRenderer
+        from app.modules.outlines import service as outline_service
+
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(db, project_id, outline_id)
+
+        # mock 项目有 Word 模板
+        monkeypatch.setattr(
+            outline_service, "get_word_template",
+            lambda db, pid: SimpleNamespace(file_path="templates/tpl.docx"),
+        )
+
+        call_log = {}
+
+        def _render_with_template(self, **kwargs):
+            call_log["template_called"] = True
+            raise AppError(code="WORD_TEMPLATE_PARSE_FAILED",
+                           message="模板解析失败")
+
+        def _render(self, **kwargs):
+            call_log["default_called"] = True
+            output_path = kwargs.get("output_path")
+            if output_path:
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                Path(output_path).write_bytes(b"fake docx content")
+
+        monkeypatch.setattr(WordRenderer, "render_with_template",
+                            _render_with_template)
+        monkeypatch.setattr(WordRenderer, "render", _render)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_WORD.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+
+        result = worker_handlers.handle_generate_word(db, job)
+
+        # 验证降级：模板渲染被调用且失败，默认渲染被调用
+        assert call_log.get("template_called") is True
+        assert call_log.get("default_called") is True
+
+        # 验证版本仍 SUCCEEDED（降级成功）
+        version = db.query(DeliverableVersion).filter(
+            DeliverableVersion.id == result["version_id"]).first()
+        assert version.status == DeliverableVersionStatus.SUCCEEDED.value
+        assert result["template_used"] is True
+
 
 # --- handle_generate_ppt ---
 
@@ -504,6 +680,152 @@ class TestHandleGeneratePpt:
         with pytest.raises(AppError) as exc_info:
             worker_handlers.handle_generate_ppt(db, job)
         assert exc_info.value.code == "JOB_INPUT_INVALID"
+
+    def test_project_advances_to_generating(self, db):
+        """OUTLINE_CONFIRMED 项目生成 PPT 后推进到 GENERATING。"""
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(
+            db, project_id, outline_id,
+            deliverable_id="del_ppt_adv",
+            deliverable_type=DeliverableType.PPT.value)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_PPT.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+
+        worker_handlers.handle_generate_ppt(db, job)
+
+        project = db.query(Project).filter(Project.id == project_id).first()
+        assert project.status == ProjectStatus.GENERATING.value
+
+    def test_second_generation_creates_new_version(self, db):
+        """第二次生成 PPT 创建新版本，旧版本保留。"""
+        project_id = _create_project(
+            db, status=ProjectStatus.GENERATING.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(
+            db, project_id, outline_id,
+            deliverable_id="del_ppt_v2",
+            deliverable_type=DeliverableType.PPT.value)
+
+        # 第一次生成
+        job1 = job_service.create_job(
+            db, project_id, JobType.GENERATE_PPT.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+        result1 = worker_handlers.handle_generate_ppt(db, job1)
+
+        # 第二次生成
+        job2 = job_service.create_job(
+            db, project_id, JobType.GENERATE_PPT.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+        result2 = worker_handlers.handle_generate_ppt(db, job2)
+
+        assert result1["version"] == 1
+        assert result2["version"] == 2
+        assert result1["version_id"] != result2["version_id"]
+
+        # 验证两个版本文件都存在
+        from app.core.config import settings
+        base = (settings.project_data_root / project_id
+                / "deliverables" / deliverable_id)
+        assert (base / "ppt_v1.pptx").exists()
+        assert (base / "ppt_v2.pptx").exists()
+
+    def test_render_failure_marks_version_failed(self, db, monkeypatch):
+        """PPT 渲染器抛异常时 DeliverableVersion 标记 FAILED，抛 PPT_RENDER_FAILED。"""
+        from app.infrastructure.renderers.ppt_renderer import PptRenderer
+
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(
+            db, project_id, outline_id,
+            deliverable_id="del_ppt_fail",
+            deliverable_type=DeliverableType.PPT.value)
+
+        # mock PptRenderer.render 抛异常
+        def _boom(self, **kwargs):
+            raise RuntimeError("模拟 PPT 渲染失败")
+
+        monkeypatch.setattr(PptRenderer, "render", _boom)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_PPT.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id},
+        )
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            worker_handlers.handle_generate_ppt(db, job)
+        assert exc_info.value.code == "PPT_RENDER_FAILED"
+
+        # 验证 DeliverableVersion FAILED
+        version = (
+            db.query(DeliverableVersion)
+            .filter(DeliverableVersion.deliverable_id == deliverable_id)
+            .first()
+        )
+        assert version.status == DeliverableVersionStatus.FAILED.value
+        assert version.error_code == "PPT_RENDER_FAILED"
+
+    def test_config_render_failure_falls_back(self, db, monkeypatch):
+        """PPT 配置渲染失败时降级到默认渲染，版本仍 SUCCEEDED（SPEC 0011 降级链）。"""
+        from app.infrastructure.renderers.ppt_renderer import PptRenderer
+
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value)
+        _seed_succeeded_execution_run(db, project_id)
+        outline_id = _seed_confirmed_outline(db, project_id)
+        deliverable_id = _seed_pending_deliverable(
+            db, project_id, outline_id,
+            deliverable_id="del_ppt_cfg",
+            deliverable_type=DeliverableType.PPT.value)
+
+        call_log = {"render_calls": []}
+
+        def _render(self, **kwargs):
+            call_log["render_calls"].append(kwargs.get("config"))
+            # 第一次（带 config）抛 AppError 触发降级
+            if kwargs.get("config") is not None and len(call_log["render_calls"]) == 1:
+                raise AppError(code="PPT_CONFIG_INVALID",
+                               message="配置无效")
+            # 降级调用（无 config）正常执行
+            output_path = kwargs.get("output_path")
+            if output_path:
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                Path(output_path).write_bytes(b"fake pptx content")
+
+        monkeypatch.setattr(PptRenderer, "render", _render)
+
+        job = job_service.create_job(
+            db, project_id, JobType.GENERATE_PPT.value,
+            {"outline_id": outline_id, "deliverable_id": deliverable_id,
+             "config": {"target_pages": 10}},
+        )
+        db.commit()
+
+        result = worker_handlers.handle_generate_ppt(db, job)
+
+        # 验证降级：第一次带 config 失败，第二次无 config 成功
+        assert len(call_log["render_calls"]) == 2
+        assert call_log["render_calls"][0] is not None  # 第一次带 config
+        assert call_log["render_calls"][1] is None      # 降级无 config
+
+        # 验证版本 SUCCEEDED（降级成功）
+        version = db.query(DeliverableVersion).filter(
+            DeliverableVersion.id == result["version_id"]).first()
+        assert version.status == DeliverableVersionStatus.SUCCEEDED.value
 
 
 # --- HANDLERS 注册表扩展 ---
