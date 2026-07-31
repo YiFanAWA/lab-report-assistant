@@ -1,6 +1,6 @@
 # SPEC 0028：Nature 风格图表集成（移除 SciencePlots，引入 nature-figure 设计规则）
 
-**状态：** 已完成实现与验收，待项目负责人确认收口
+**状态：** 已由项目负责人确认收口（2026-07-31）
 **起草日期：** 2026-07-31
 **实现完成日期：** 2026-07-31
 **前序 SPEC：** [SPEC 0027](0027-chart-beautification-and-layout-enhancement.md)（图表美化与布局增强）
@@ -21,7 +21,7 @@ SPEC 0027 引入了 `scienceplots` + `seaborn` + `easypptx` 三个依赖，其�
 - `seaborn` 提供统计图表 API（`sns.histplot`、`sns.boxplot` 等）
 - `easypptx` 提供 Grid 布局思路（已内化为 `_GridHelper` 辅助类）
 
-SPEC 0027 已完成实现与验收（commit `958fc8e`），待项目负责人确认收口。
+SPEC 0027 已完成实现与验收（commit `958fc8e`），已由项目负责人确认收口（2026-07-31）。
 
 ### 1.2 移除 SciencePlots 的动机
 
