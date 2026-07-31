@@ -193,7 +193,7 @@ def _build_cleaning_code(cleaning_plan: list[dict]) -> str:
         elif issue_type == "TYPE_CONVERSION":
             if field != "*":
                 lines.append(f"# 尝试转换 {field} 类型")
-                lines.append(f"df['{field}'] = pd.to_numeric(df['{field}'], errors='ignore')")
+                lines.append(f"df['{field}'] = pd.to_numeric(df['{field}'], errors='coerce')")
         elif issue_type == "DUPLICATE_ROW":
             lines.append("df = df.drop_duplicates()")
         elif issue_type == "CONSTANT_VALUE":
