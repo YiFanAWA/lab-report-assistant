@@ -2,9 +2,9 @@
 
 **日期：** 2026-07-31
 **决策类型：** 启动新切片
-**状态：** 已起草，待项目负责人批准
+**状态：** 已完成实现与验收，待项目负责人确认收口
 **关联 SPEC：** [SPEC 0027](../specs/0027-chart-beautification-and-layout-enhancement.md)
-**前序决策：** [决策 0035](0035-start-spec-0026-ppt-visual-effects.md)（SPEC 0026 已完成实现与验收，待确认收口）
+**前序决策：** [决策 0035](0035-start-spec-0026-ppt-visual-effects.md)（SPEC 0026 已完成实现与验收）
 
 ## 一、背景
 
@@ -98,4 +98,40 @@ SPEC 0024（16:9 画布 + 双栏布局）、SPEC 0025（三角色彩 + 三明治
 | SPEC 0024（16:9 画布 + 双栏布局） | 已收口 | 保持布局结构，Grid 辅助方法复用 |
 | SPEC 0025（三角色彩 + 三明治） | 已收口 | 保持色彩系统，图表样式与主题色协调 |
 | SPEC 0026（渐变 + 圆角 + 阴影 + 边框） | 待确认收口 | 保持视觉效果，不破坏现有渲染逻辑 |
-| **SPEC 0027（本决策）** | **起草中** | **在 0024/0025/0026 基础上增强图表层和布局层** |
+| **SPEC 0027（本决策）** | **已完成实现与验收，待确认收口** | **在 0024/0025/0026 基础上增强图表层和布局层** |
+
+## 七、验收证据（2026-07-31 实现收口回写）
+
+### 7.1 测试验收
+
+| 验收项 | 命令 | 结果 |
+| --- | --- | --- |
+| SPEC 0027 专项测试 | `pytest test_local_rule_code_task_provider_format.py test_ppt_config.py test_python_executor.py -k "Spec0027 or default_allowed_imports"` | 45 passed |
+| 受影响测试全套 | `pytest test_ppt_config.py test_renderers.py test_local_rule_code_task_provider_format.py test_python_executor.py` | 204 passed 零回归 |
+| Grid 布局坐标对齐 | `verify_spec0027.py` 程序化验证 | 8/8 单元格全部对齐（精度 ±0.01 英寸） |
+| _pct_to_emu 百分比定位 | `verify_spec0027.py` 程序化验证 | 5/5 用例全部通过 |
+
+### 7.2 真实文件验收
+
+| 验收项 | 结果 |
+| --- | --- |
+| SciencePlots + Seaborn 代码集成检查 | 9/9 项全部通过（import scienceplots / plt.style.use / sns.set_theme / sns.histplot / sns.boxplot / sns.countplot / sns.scatterplot / sns.heatmap） |
+| 沙箱执行真实图表生成 | exit_code=0, 8.19s，生成 5 张图表（HISTOGRAM/BAR/BOXPLOT/SCATTER/HEATMAP） |
+| 6 种预设色 PPT 渲染 | 6/6 全部通过（蓝/紫/绿/红/橙/灰），每色 6 页 4 图，渐变/圆角/阴影/边框全部保持 |
+| HTML 预览文件 | `dev-docs/e2e-screenshots/spec0027/spec0027-preview.html`（176.8 KB，含真实图表 base64） |
+
+### 7.3 实现过程中额外修复
+
+1. **改造 `_place_chart_*` 方法使用 `_GridHelper`**：SPEC 0027 §3.2.4 要求，实现过程中发现三个方法仍为硬编码坐标，已重构，坐标与原硬编码完全一致
+2. **修复 BOXPLOT `savefig` f-string bug**（`code_task_provider.py:296`）：缺少 `f` 前缀导致文件名为 `{safe_name}.png`
+3. **修复 HISTOGRAM 无 data_fields 分支 `savefig` f-string bug**（`code_task_provider.py:288`）：同类问题
+
+### 7.4 约束遵守验证
+
+- 不改变 `PptConfig` 三字段合同 ✓
+- 不改变 `render()` / `generate()` 签名 ✓
+- 不改变 API/service/Worker 接线 ✓
+- 不修改数据库 schema ✓
+- SPEC 0024/0025/0026 视觉效果全部保持 ✓
+- LaTeX 不需要（使用 `no-latex` 样式）✓
+- 新增依赖受控（仅 scienceplots/seaborn/easypptx 三个 PyPI 包）✓

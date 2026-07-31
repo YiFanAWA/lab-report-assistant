@@ -166,9 +166,10 @@ class TestValidateCode:
         validate_code("import json\n", allowed_imports=["json", "pandas"])
 
     def test_default_allowed_imports_content(self):
-        """默认白名单包含 SPEC 0005 决策确认的 6 个模块。"""
+        """默认白名单包含 SPEC 0005 决策确认的 6 个模块 + SPEC 0027 新增 2 个模块。"""
         assert set(DEFAULT_ALLOWED_IMPORTS) == {
-            "pandas", "numpy", "matplotlib", "scipy", "sklearn", "openpyxl"
+            "pandas", "numpy", "matplotlib", "scipy", "sklearn", "openpyxl",
+            "scienceplots", "seaborn",  # SPEC 0027 新增
         }
 
 

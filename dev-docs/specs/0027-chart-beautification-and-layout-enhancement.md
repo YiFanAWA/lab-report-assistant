@@ -1,10 +1,11 @@
 # SPEC 0027：图表美化与布局增强（SciencePlots + Seaborn + EasyPPTX）
 
-**状态：** 草案，待项目负责人批准进入实现
+**状态：** 已完成实现与验收，待项目负责人确认收口
 **起草日期：** 2026-07-31
+**实现完成日期：** 2026-07-31
 **前序 SPEC：** [SPEC 0024](0024-ppt-renderer-layout-and-visual-hierarchy.md)、[SPEC 0025](0025-ppt-color-system-and-sandwich-layout.md)、[SPEC 0026](0026-ppt-visual-effects-enhancement.md)
 **调研依据：** [2026-07-31 GitHub 数学建模数据可视化项目调研](../research/2026-07-31-github-math-modeling-visualization-research.md)
-**关联决策：** [决策 0036](../decisions/0036-start-spec-0027-chart-beautification.md)（待新建）
+**关联决策：** [决策 0036](../decisions/0036-start-spec-0027-chart-beautification.md)
 **owner 层：**
 - 图表生成层：`server/app/modules/llm/code_task_provider.py`、`server/app/modules/llm/deepseek_code_task_provider.py`
 - PPT 渲染层：`server/app/infrastructure/renderers/ppt_renderer.py`
@@ -467,3 +468,56 @@ server/.venv/Scripts/python.exe -m pytest server/tests/ -k "code_task or ppt or 
 8. **回归零容忍**：现有所有测试必须全部通过
 9. **文档回写**：实现完成后同步更新所有相关文档
 10. **LaTeX 可选**：使用 `no-latex` 样式，沙箱不安装 LaTeX
+
+## 十一、实现收口说明（2026-07-31）
+
+### 11.1 实现完成情况
+
+本 SPEC 已完成全部实现与验收，具体如下：
+
+**图表层（SciencePlots + Seaborn 集成）：**
+- `code_task_provider.py` 的 `_HEADER` 集成 `import scienceplots` + `plt.style.use(['science', 'no-latex', 'cjk-sc-font', 'bright'])` + `import seaborn as sns` + `sns.set_theme(...)`
+- `_build_chart_code` 升级为 Seaborn API：HISTOGRAM→`sns.histplot`、BOXPLOT→`sns.boxplot`、BAR→`sns.countplot`、SCATTER→`sns.scatterplot`
+- `_build_analysis_code` 的 CORRELATION 分析新增 `sns.heatmap` 热图生成
+- `deepseek_code_task_provider.py` 的 `_SYSTEM_PROMPT` 追加 SciencePlots + Seaborn 使用要求和 API 推荐列表
+
+**PPT 层（EasyPPTX 风格辅助方法）：**
+- 新增 `_pct_to_emu` 静态方法：百分比字符串转 EMU
+- 新增 `_GridHelper` 内部类：N×M 网格坐标计算，支持 h_gap/v_gap
+- 改造 `_place_chart_grid`（2×2 网格）、`_place_chart_side_by_side`（1×2 网格）、`_place_chart_three`（上排 1×2 网格）使用 `_GridHelper`，坐标与原硬编码完全一致
+
+**沙箱层：**
+- `DEFAULT_ALLOWED_IMPORTS` 新增 `scienceplots`、`seaborn`
+- `easypptx` 不入沙箱白名单（仅 PPT 渲染层使用，不在用户代码执行环境中使用）
+
+**依赖声明：**
+- `pyproject.toml` 主 dependencies 新增 `easypptx>=0.5.0`
+- `pyproject.toml` analysis 依赖组新增 `scienceplots>=2.1.0`、`seaborn>=0.13.0`
+
+### 11.2 验收结果
+
+| 验收项 | 结果 |
+| --- | --- |
+| SPEC 0027 专项测试（图表层 16 + PPT 层 18 + 沙箱层 10） | 44 passed（实际 45 passed，含 default_allowed_imports 回归修复） |
+| 受影响测试全套（ppt_config + renderers + code_task + executor） | 204 passed 零回归 |
+| Grid 布局坐标对齐验证 | 8/8 单元格全部对齐（精度 ±0.01 英寸） |
+| _pct_to_emu 百分比定位验证 | 5/5 用例全部通过 |
+| 真实图表生成（沙箱执行） | 5 张图表全部生成成功（exit_code=0, 8.19s），SciencePlots + Seaborn 集成检查 9/9 通过 |
+| 6 种预设色 PPT 渲染 | 6/6 全部通过（渐变/圆角/阴影/边框保持，SPEC 0025/0026 视觉效果无回归） |
+| HTML 预览文件 | 已生成 `dev-docs/e2e-screenshots/spec0027/spec0027-preview.html` |
+
+### 11.3 实现过程中额外修复
+
+1. **改造 `_place_chart_*` 方法使用 `_GridHelper`**：SPEC 0027 §3.2.4 明确要求，实现过程中发现三个方法仍为硬编码坐标，已用 `_GridHelper` 重构，坐标与原硬编码完全一致（无视觉漂移）
+2. **修复 BOXPLOT `savefig` f-string bug**（`code_task_provider.py:296`）：缺少 `f` 前缀导致文件名为 `{safe_name}.png` 而非 `症状评分箱线图.png`
+3. **修复 HISTOGRAM 无 data_fields 分支 `savefig` f-string bug**（`code_task_provider.py:288`）：同类问题
+
+### 11.4 约束遵守验证
+
+- 不改变 `PptConfig` 三字段合同 ✓
+- 不改变 `render()` 签名 ✓
+- 不改变 `LocalRuleCodeTaskProvider.generate()` 签名 ✓
+- 不改变 API/service/Worker 接线 ✓
+- 不修改数据库 schema ✓
+- SPEC 0024/0025/0026 视觉效果全部保持 ✓
+- LaTeX 不需要（使用 `no-latex` 样式）✓

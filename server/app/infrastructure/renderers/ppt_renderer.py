@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
@@ -100,13 +100,73 @@ TEXT_COLOR_MUTED = RGBColor(0x55, 0x55, 0x55)
 
 
 class PptRenderer:
-    """PPT 文档渲染器（SPEC 0026 视觉效果增强）。
+    """PPT 文档渲染器（SPEC 0026 视觉效果增强 + SPEC 0027 布局增强）。
 
     从同一份已确认大纲提炼生成 .pptx 文件。
     采用 16:9 画布 + 空白版式精确定位 + 双栏内容页 + 图表自适应布局
     + 三角色彩系统（主色/辅助色/强调色）+ 深浅对比三明治结构
-    + 渐变填充 + 圆角矩形 + 外阴影 + 细边框（SPEC 0026）。
+    + 渐变填充 + 圆角矩形 + 外阴影 + 细边框（SPEC 0026）
+    + 百分比定位 + Grid 布局辅助（SPEC 0027，借鉴 EasyPPTX 设计思路）。
     """
+
+    # === SPEC 0027 布局增强辅助方法 ===
+
+    @staticmethod
+    def _pct_to_emu(pct_str: str, total_emu: int) -> int:
+        """百分比字符串转 EMU（EasyPPTX 风格，SPEC 0027）。
+
+        参数：
+        - pct_str: 百分比字符串，如 "10%", "50.5%"
+        - total_emu: 总长度（EMU），如 slide_width
+
+        返回：EMU 整数
+
+        异常：非百分比字符串抛出 ValueError。
+
+        示例：
+        - _pct_to_emu("10%", Inches(13.333)) → Inches(1.3333)
+        - _pct_to_emu("50%", Inches(7.5)) → Inches(3.75)
+        """
+        if not isinstance(pct_str, str) or not pct_str.endswith("%"):
+            raise ValueError(f"百分比字符串必须以 % 结尾：{pct_str}")
+        pct = float(pct_str[:-1]) / 100.0
+        return int(total_emu * pct)
+
+    class _GridHelper:
+        """EasyPPTX 风格的 Grid 布局辅助类（SPEC 0027）。
+
+        给定区域 (left, top, width, height) 和 N×M 网格，
+        计算每个单元格的 (left, top, width, height)。
+        支持水平和垂直间距。
+        """
+
+        def __init__(
+            self,
+            left: int,
+            top: int,
+            width: int,
+            height: int,
+            rows: int,
+            cols: int,
+            h_gap: int = 0,
+            v_gap: int = 0,
+        ):
+            self.left = left
+            self.top = top
+            self.width = width
+            self.height = height
+            self.rows = rows
+            self.cols = cols
+            self.h_gap = h_gap
+            self.v_gap = v_gap
+
+        def cell(self, row: int, col: int) -> tuple[int, int, int, int]:
+            """返回 (row, col) 单元格的 (left, top, width, height)。"""
+            cell_w = (self.width - self.h_gap * (self.cols - 1)) // self.cols
+            cell_h = (self.height - self.v_gap * (self.rows - 1)) // self.rows
+            cell_left = self.left + col * (cell_w + self.h_gap)
+            cell_top = self.top + row * (cell_h + self.v_gap)
+            return (cell_left, cell_top, cell_w, cell_h)
 
     def render(
         self,
@@ -801,14 +861,27 @@ class PptRenderer:
     def _place_chart_side_by_side(
         self, slide, artifacts: list[dict],
     ) -> None:
-        """双图左右并排布局（各自适应缩放到可用区域）。"""
-        max_width = 5.8
+        """双图左右并排布局（各自适应缩放到可用区域）。
+
+        SPEC 0027：使用 _GridHelper 计算 1×2 网格坐标，替代硬编码 positions。
+        参数选择确保与原硬编码坐标完全一致（无视觉漂移）。
+        """
         max_height = FOOTER_BAR_TOP - 1.8  # 5.2"
-        positions = [(0.5, 1.8), (7.0, 1.8)]
+        # SPEC 0027：用 _GridHelper 计算 1×2 网格坐标
+        # 验证：cell_w=(12.3-0.7)/2=5.8, cell(0,0)=(0.5,1.8), cell(0,1)=(7.0,1.8)
+        grid = self._GridHelper(
+            left=Inches(0.5), top=Inches(1.8),
+            width=Inches(12.3), height=Inches(max_height),
+            rows=1, cols=2,
+            h_gap=Inches(0.7), v_gap=0,
+        )
         for i, art in enumerate(artifacts[:2]):
             file_path = art.get("file_path", "")
             name = art.get("name", "")
-            left, top = positions[i]
+            cell_left, cell_top, cell_w, _ = grid.cell(0, i)
+            left = Emu(cell_left).inches
+            top = Emu(cell_top).inches
+            max_width = Emu(cell_w).inches
 
             if file_path and Path(file_path).exists():
                 w, h = self._fit_image_size(file_path, max_width, max_height)
@@ -835,19 +908,31 @@ class PptRenderer:
         布局约束（SPEC 0024）：
         - 上排 top=1.5, 下排 top=4.0, 行高 max 2.3"
         - 下排底部最大 6.3"，为页脚（top=7.0）预留空间
+
+        SPEC 0027：上排使用 _GridHelper 计算 1×2 网格坐标，替代硬编码 top_positions。
+        下排保持居中逻辑（动态 left，单图居中不进入网格）。
         """
-        max_width_top = 5.8
         max_width_bottom = 8.0
         max_height = 2.3
-        top_positions = [(0.5, 1.5), (7.0, 1.5)]
+        # SPEC 0027：上排用 _GridHelper 计算 1×2 网格坐标
+        # 验证：cell_w=(12.3-0.7)/2=5.8, cell(0,0)=(0.5,1.5), cell(0,1)=(7.0,1.5)
+        grid_top = self._GridHelper(
+            left=Inches(0.5), top=Inches(1.5),
+            width=Inches(12.3), height=Inches(max_height),
+            rows=1, cols=2,
+            h_gap=Inches(0.7), v_gap=0,
+        )
 
         # 上排 2 张
         for i, art in enumerate(artifacts[:2]):
             file_path = art.get("file_path", "")
             name = art.get("name", "")
-            left, top = top_positions[i]
+            cell_left, cell_top, cell_w, _ = grid_top.cell(0, i)
+            left = Emu(cell_left).inches
+            top = Emu(cell_top).inches
+            max_width = Emu(cell_w).inches
             if file_path and Path(file_path).exists():
-                w, h = self._fit_image_size(file_path, max_width_top, max_height)
+                w, h = self._fit_image_size(file_path, max_width, max_height)
                 try:
                     slide.shapes.add_picture(
                         str(file_path),
@@ -856,12 +941,12 @@ class PptRenderer:
                     )
                 except Exception:
                     self._add_placeholder_textbox(
-                        slide, left, top, max_width_top, max_height,
+                        slide, left, top, max_width, max_height,
                         f"[图片无法嵌入：{name}]",
                     )
             else:
                 self._add_placeholder_textbox(
-                    slide, left, top, max_width_top, max_height,
+                    slide, left, top, max_width, max_height,
                     f"[图片文件不存在：{name}]",
                 )
 
@@ -899,17 +984,28 @@ class PptRenderer:
         - 上排 top=1.5, 下排 top=4.0, 行高 max 2.3"
         - 下排底部最大 6.3"，为截断注释（top=6.5）和页脚（top=7.0）预留空间
         - 避免图片与截断注释/页脚重叠
+
+        SPEC 0027：使用 _GridHelper 计算 2×2 网格坐标，替代硬编码 positions。
+        参数选择确保与原硬编码坐标完全一致（无视觉漂移）。
         """
-        max_width = 3.8
-        max_height = 2.3  # 每行可用高度（原 2.5 收缩以避免与截断注释重叠）
-        positions = [
-            (0.7, 1.5), (6.8, 1.5),
-            (0.7, 4.0), (6.8, 4.0),
-        ]
+        # SPEC 0027：用 _GridHelper 计算 2×2 网格坐标
+        # 验证：cell_w=(9.9-2.3)/2=3.8, cell_h=(4.8-0.2)/2=2.3
+        # cell(0,0)=(0.7,1.5), cell(0,1)=(6.8,1.5), cell(1,0)=(0.7,4.0), cell(1,1)=(6.8,4.0)
+        grid = self._GridHelper(
+            left=Inches(0.7), top=Inches(1.5),
+            width=Inches(9.9), height=Inches(4.8),
+            rows=2, cols=2,
+            h_gap=Inches(2.3), v_gap=Inches(0.2),
+        )
         for i, art in enumerate(artifacts[:4]):
             file_path = art.get("file_path", "")
             name = art.get("name", "")
-            left, top = positions[i]
+            row, col = divmod(i, 2)
+            cell_left, cell_top, cell_w, cell_h = grid.cell(row, col)
+            left = Emu(cell_left).inches
+            top = Emu(cell_top).inches
+            max_width = Emu(cell_w).inches
+            max_height = Emu(cell_h).inches
 
             if file_path and Path(file_path).exists():
                 w, h = self._fit_image_size(file_path, max_width, max_height)

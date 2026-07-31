@@ -65,11 +65,25 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
    matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
    matplotlib.rcParams['axes.unicode_minus'] = False
    import matplotlib.pyplot as plt
+   import scienceplots  # noqa: F401
+   plt.style.use(['science', 'no-latex', 'cjk-sc-font', 'bright'])
+   import seaborn as sns
+   sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
+
+7. 图表生成优先使用 seaborn API（SPEC 0027，统计图表更美观）：
+   - 直方图：sns.histplot(data=df, x=field, kde=True, bins=30)
+   - 箱线图：sns.boxplot(data=df, x=cat, y=num)
+   - 柱状图：sns.countplot(data=df, x=field)
+   - 散点图：sns.scatterplot(data=df, x=f1, y=f2)
+   - 热图：sns.heatmap(df.corr(), annot=True, cmap='coolwarm', fmt='.2f', square=True)
+   - 回归图：sns.regplot(data=df, x=f1, y=f2)
 
 import 白名单（只允许以下模块，其他一律禁止）：
 - pandas
 - numpy
 - matplotlib
+- scienceplots
+- seaborn
 - scipy
 - sklearn
 - openpyxl

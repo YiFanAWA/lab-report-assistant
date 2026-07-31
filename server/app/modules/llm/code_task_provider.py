@@ -104,6 +104,10 @@ matplotlib.use("Agg")
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 import matplotlib.pyplot as plt
+import scienceplots  # noqa: F401  # SPEC 0027：注册 science 样式
+plt.style.use(['science', 'no-latex', 'cjk-sc-font', 'bright'])
+import seaborn as sns
+sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
 from scipy import stats
 
 # 数据读取（根据扩展名自动选择 read_csv 或 read_excel）
@@ -223,6 +227,13 @@ def _build_analysis_code(analysis_plan: list[dict]) -> str:
             lines.append("if len(numeric_df.columns) >= 2:")
             lines.append("    corr = numeric_df.corr()")
             lines.append("    corr.to_csv(OUTPUT_DIR + '/correlation.csv')")
+            lines.append("    # SPEC 0027：生成相关性热图（seaborn heatmap）")
+            lines.append("    plt.figure(figsize=(8, 6))")
+            lines.append("    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', square=True)")
+            lines.append("    plt.title('相关性热图')")
+            lines.append("    plt.tight_layout()")
+            lines.append("    plt.savefig(OUTPUT_DIR + '/correlation_heatmap.png', dpi=100, bbox_inches='tight')")
+            lines.append("    plt.close()")
             lines.append("    print('相关性分析完成')")
         elif analysis_type == "FREQUENCY":
             if target_fields and target_fields != "*":
@@ -262,7 +273,7 @@ def _build_chart_code(chart_plan: list[dict]) -> str:
                 for field in data_fields:
                     lines.append(f"plt.figure(figsize=(8, 5))")
                     lines.append(f"if '{field}' in df.columns:")
-                    lines.append(f"    df['{field}'].hist(bins=30)")
+                    lines.append(f"    sns.histplot(data=df, x='{field}', kde=True, bins=30)")
                     lines.append(f"    plt.title('{title}')")
                     lines.append(f"    plt.xlabel('{field}')")
                     lines.append(f"    plt.ylabel('频次')")
@@ -272,26 +283,27 @@ def _build_chart_code(chart_plan: list[dict]) -> str:
                 lines.append("numeric_cols = df.select_dtypes(include=[np.number]).columns")
                 lines.append("if len(numeric_cols) > 0:")
                 lines.append("    plt.figure(figsize=(8, 5))")
-                lines.append("    df[numeric_cols[0]].hist(bins=30)")
+                lines.append("    sns.histplot(data=df, x=numeric_cols[0], kde=True, bins=30)")
                 lines.append(f"    plt.title('{title}')")
-                lines.append("    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
+                lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
                 lines.append("    plt.close()")
         elif chart_type == "BOXPLOT":
             lines.append("numeric_df = df.select_dtypes(include=[np.number])")
             lines.append("if len(numeric_df.columns) > 0:")
             lines.append("    plt.figure(figsize=(10, 6))")
-            lines.append("    numeric_df.boxplot()")
+            lines.append("    sns.boxplot(data=numeric_df)")
             lines.append(f"    plt.title('{title}')")
-            lines.append("    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
+            lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
             lines.append("    plt.close()")
         elif chart_type == "BAR":
             if data_fields:
                 field = data_fields[0]
                 lines.append(f"plt.figure(figsize=(8, 5))")
                 lines.append(f"if '{field}' in df.columns:")
-                lines.append(f"    df['{field}'].value_counts().plot(kind='bar')")
+                lines.append(f"    sns.countplot(data=df, x='{field}')")
                 lines.append(f"    plt.title('{title}')")
                 lines.append(f"    plt.ylabel('频次')")
+                lines.append(f"    plt.xticks(rotation=45)")
                 lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
                 lines.append(f"    plt.close()")
         elif chart_type == "SCATTER":
@@ -299,7 +311,7 @@ def _build_chart_code(chart_plan: list[dict]) -> str:
                 f1, f2 = data_fields[0], data_fields[1]
                 lines.append(f"plt.figure(figsize=(8, 5))")
                 lines.append(f"if '{f1}' in df.columns and '{f2}' in df.columns:")
-                lines.append(f"    plt.scatter(df['{f1}'], df['{f2}'])")
+                lines.append(f"    sns.scatterplot(data=df, x='{f1}', y='{f2}')")
                 lines.append(f"    plt.title('{title}')")
                 lines.append(f"    plt.xlabel('{f1}')")
                 lines.append(f"    plt.ylabel('{f2}')")
