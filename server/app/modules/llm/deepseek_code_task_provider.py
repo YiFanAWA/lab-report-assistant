@@ -65,8 +65,17 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
    matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
    matplotlib.rcParams['axes.unicode_minus'] = False
    import matplotlib.pyplot as plt
-   import scienceplots  # noqa: F401
-   plt.style.use(['science', 'no-latex', 'cjk-sc-font', 'bright'])
+   # Nature 期刊风格 rcParams（nature-figure 设计规则，SPEC 0028）
+   matplotlib.rcParams['font.family'] = 'sans-serif'
+   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'Arial', 'DejaVu Sans']
+   matplotlib.rcParams['axes.unicode_minus'] = False
+   matplotlib.rcParams['font.size'] = 16
+   matplotlib.rcParams['axes.spines.right'] = False
+   matplotlib.rcParams['axes.spines.top'] = False
+   matplotlib.rcParams['axes.linewidth'] = 2.5
+   matplotlib.rcParams['legend.frameon'] = False
+   matplotlib.rcParams['savefig.dpi'] = 300
+   matplotlib.rcParams['savefig.bbox'] = 'tight'
    import seaborn as sns
    sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
 
@@ -82,7 +91,6 @@ import 白名单（只允许以下模块，其他一律禁止）：
 - pandas
 - numpy
 - matplotlib
-- scienceplots
 - seaborn
 - scipy
 - sklearn

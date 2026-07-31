@@ -284,7 +284,7 @@ SPEC 0004 实际启用的新增后端依赖：
 | `pypdf` | `6.13.2` | `6.14.2` | PyPI | PDF 文本读取 |
 | `beautifulsoup4` | `4.15.0` | `4.15.0` | PyPI | HTML 解析 |
 | `playwright` | `1.60.0` | 未安装 | PyPI | 动态网页后备渲染（推迟到后续切片） |
-| `scienceplots` | `2.1.0` | `2.1.0` | PyPI | 科研图表样式库（SPEC 0027 新增，analysis 可选依赖，用户代码通过沙箱调用） |
+| `scienceplots` | `2.1.0` | 已移除 | PyPI | ~~科研图表样式库（SPEC 0027 新增）~~ **SPEC 0028 已移除**：用 nature-figure rcParams 手动配置替换，不再需要外部样式库依赖 |
 | `seaborn` | `0.13.0` | `0.13.0` | PyPI | 统计数据可视化（SPEC 0027 新增，analysis 可选依赖，用户代码通过沙箱调用） |
 | `easypptx` | `0.5.0` | `0.5.0` | PyPI | python-pptx 封装层（SPEC 0027 新增，主 dependencies，仅借鉴百分比定位 + Grid 布局思路，不替换 PptRenderer 对象模型） |
 
@@ -346,7 +346,7 @@ AGENTS.md 要求"应用托管受控环境，用户不应手动安装 pandas/nump
 | scikit-learn | >=1.9.0 | 机器学习 |
 | matplotlib | >=3.11.0 | 图表生成 |
 | psutil | >=7.2.2 | 执行沙箱内存监控 |
-| scienceplots | >=2.1.0 | 科研图表样式库（SPEC 0027 新增，用户代码通过沙箱调用） |
+| scienceplots | ~~>=2.1.0~~ 已移除 | ~~科研图表样式库（SPEC 0027 新增）~~ **SPEC 0028 已移除**：用 nature-figure rcParams 手动配置替换 |
 | seaborn | >=0.13.0 | 统计数据可视化（SPEC 0027 新增，用户代码通过沙箱调用） |
 
 **SPEC 0027 新增主依赖（非 analysis 组）：**

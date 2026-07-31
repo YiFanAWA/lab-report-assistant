@@ -104,8 +104,19 @@ matplotlib.use("Agg")
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 import matplotlib.pyplot as plt
-import scienceplots  # noqa: F401  # SPEC 0027：注册 science 样式
-plt.style.use(['science', 'no-latex', 'cjk-sc-font', 'bright'])
+# Nature 期刊风格 rcParams（nature-figure 设计规则，SPEC 0028）
+# 参考：https://github.com/Yuan1z0825/nature-skills (Apache-2.0)
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'Arial', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False
+matplotlib.rcParams['font.size'] = 16
+matplotlib.rcParams['axes.spines.right'] = False       # 去右框（Nature 风格）
+matplotlib.rcParams['axes.spines.top'] = False         # 去顶框（Nature 风格）
+matplotlib.rcParams['axes.linewidth'] = 2.5            # 粗轴线（Nature 风格）
+matplotlib.rcParams['legend.frameon'] = False          # 无图例边框
+matplotlib.rcParams['figure.dpi'] = 100
+matplotlib.rcParams['savefig.dpi'] = 300               # 高分辨率输出
+matplotlib.rcParams['savefig.bbox'] = 'tight'
 import seaborn as sns
 sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
 from scipy import stats

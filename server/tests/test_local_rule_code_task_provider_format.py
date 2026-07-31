@@ -530,22 +530,24 @@ class TestSpec0027ChartBeautification:
 
     # === _HEADER 集成测试 ===
 
-    def test_HEADER包含scienceplots导入(self):
-        """C1：_HEADER 包含 import scienceplots。"""
+    def test_HEADER包含nature_figure_rcParams(self):
+        """C1：_HEADER 包含 nature-figure rcParams 配置（SPEC 0028）。"""
         from app.modules.llm.code_task_provider import _HEADER
-        assert "import scienceplots" in _HEADER, "_HEADER 未集成 scienceplots"
+        assert "matplotlib.rcParams" in _HEADER, "_HEADER 未配置 nature-figure rcParams"
+        assert "axes.spines.right" in _HEADER, "_HEADER 未配置去右框 rcParams"
 
-    def test_HEADER包含science样式和no_latex(self):
-        """C2：_HEADER 包含 plt.style.use 且含 science 和 no-latex。"""
+    def test_HEADER包含nature_figure设计规则(self):
+        """C2：_HEADER 包含 nature-figure 核心设计规则（SPEC 0028）。"""
         from app.modules.llm.code_task_provider import _HEADER
-        assert "plt.style.use" in _HEADER
-        assert "science" in _HEADER
-        assert "no-latex" in _HEADER, "必须使用 no-latex 样式避免 LaTeX 依赖"
+        assert "axes.spines.top" in _HEADER, "必须去除顶部轴线（Nature 风格）"
+        assert "axes.linewidth" in _HEADER, "必须配置粗轴线（Nature 风格）"
+        assert "2.5" in _HEADER, "轴线宽度必须为 2.5（Nature 标准）"
 
-    def test_HEADER包含cjk字体支持(self):
-        """C3：_HEADER 包含 cjk-sc-font（中文支持）。"""
+    def test_HEADER包含中文字体配置(self):
+        """C3：_HEADER 的 rcParams 包含 Microsoft YaHei 中文字体（SPEC 0028）。"""
         from app.modules.llm.code_task_provider import _HEADER
-        assert "cjk-sc-font" in _HEADER, "_HEADER 未配置 cjk-sc-font 中文字体支持"
+        assert "Microsoft YaHei" in _HEADER, "_HEADER 未配置 Microsoft YaHei 中文字体"
+        assert "font.sans-serif" in _HEADER, "_HEADER 未配置 font.sans-serif"
 
     def test_HEADER包含seaborn导入(self):
         """C4：_HEADER 包含 import seaborn。"""

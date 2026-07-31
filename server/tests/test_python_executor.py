@@ -166,10 +166,10 @@ class TestValidateCode:
         validate_code("import json\n", allowed_imports=["json", "pandas"])
 
     def test_default_allowed_imports_content(self):
-        """默认白名单包含 SPEC 0005 决策确认的 6 个模块 + SPEC 0027 新增 2 个模块。"""
+        """默认白名单包含 SPEC 0005 决策确认的 6 个模块 + SPEC 0027 新增 seaborn（SPEC 0028 移除 scienceplots）。"""
         assert set(DEFAULT_ALLOWED_IMPORTS) == {
             "pandas", "numpy", "matplotlib", "scipy", "sklearn", "openpyxl",
-            "scienceplots", "seaborn",  # SPEC 0027 新增
+            "seaborn",  # SPEC 0027 新增（scienceplots 已由 SPEC 0028 移除）
         }
 
 
@@ -585,10 +585,10 @@ class TestSpec0027AllowedImports:
     - 实现完成后所有测试应通过
     """
 
-    def test_scienceplots在默认白名单中(self):
-        """S1：scienceplots 在 DEFAULT_ALLOWED_IMPORTS 中。"""
-        assert "scienceplots" in DEFAULT_ALLOWED_IMPORTS, (
-            "scienceplots 未加入沙箱白名单（SPEC 0027 图表美化依赖）"
+    def test_scienceplots已从默认白名单移除(self):
+        """S1：scienceplots 不在 DEFAULT_ALLOWED_IMPORTS 中（SPEC 0028 移除）。"""
+        assert "scienceplots" not in DEFAULT_ALLOWED_IMPORTS, (
+            "scienceplots 应已从沙箱白名单移除（SPEC 0028）"
         )
 
     def test_seaborn在默认白名单中(self):
@@ -603,9 +603,11 @@ class TestSpec0027AllowedImports:
             "easypptx 不应加入沙箱白名单（仅 PPT 渲染层使用，不在用户代码执行环境）"
         )
 
-    def test_validate_code允许import_scienceplots(self):
-        """S4：validate_code 允许 import scienceplots。"""
-        validate_code("import scienceplots\n")
+    def test_scienceplots不在白名单中(self):
+        """S4：scienceplots 不在 DEFAULT_ALLOWED_IMPORTS 中（SPEC 0028 移除）。"""
+        assert "scienceplots" not in DEFAULT_ALLOWED_IMPORTS
+        # scienceplots 不是被阻断的模块（_BLOCKED_MODULES），但不在白名单中
+        # 如果用户代码尝试 import scienceplots，会因不在白名单而被拦截
 
     def test_validate_code允许import_seaborn_as_sns(self):
         """S5：validate_code 允许 import seaborn as sns。"""

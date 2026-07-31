@@ -24,7 +24,7 @@ from pathlib import Path
 import psutil
 
 
-# 默认 import 白名单（SPEC 0005 决策 0016 确认；SPEC 0027 新增 scienceplots/seaborn）
+# 默认 import 白名单（SPEC 0005 决策 0016 确认；SPEC 0027 新增 seaborn；SPEC 0028 移除 scienceplots）
 DEFAULT_ALLOWED_IMPORTS: list[str] = [
     "pandas",
     "numpy",
@@ -32,7 +32,6 @@ DEFAULT_ALLOWED_IMPORTS: list[str] = [
     "scipy",
     "sklearn",
     "openpyxl",
-    "scienceplots",  # SPEC 0027：科研图表样式库
     "seaborn",       # SPEC 0027：统计数据可视化
 ]
 
