@@ -2,7 +2,7 @@
 
 **日期：** 2026-07-31
 **决策类型：** 启动新切片
-**状态：** 已完成端到端验收，待项目负责人确认收口（2026-07-31）
+**状态：** 已由项目负责人确认收口（2026-07-31）
 **关联 SPEC：** [SPEC 0029](../specs/0029-e2e-integration-acceptance.md)
 **前序决策：** [决策 0037](0037-start-spec-0028-nature-figure.md)（SPEC 0028 已由项目负责人确认收口）
 **验收报告：** [e2e-acceptance-report-spec0029.md](../e2e-acceptance-report-spec0029.md)
