@@ -571,3 +571,72 @@ class TestExecuteCodeIntegration:
         csv_artifacts = [a for a in result.artifacts if a.artifact_type == "TABLE_CSV"]
         assert len(csv_artifacts) == 1
         assert csv_artifacts[0].name == "group_stats.csv"
+
+
+# --- SPEC 0027 沙箱白名单测试（scienceplots + seaborn） ---
+
+
+class TestSpec0027AllowedImports:
+    """SPEC 0027 沙箱白名单测试。
+
+    红色阶段说明：
+    - DEFAULT_ALLOWED_IMPORTS 尚未包含 scienceplots/seaborn，相关测试应失败
+    - 实现完成后所有测试应通过
+    """
+
+    def test_scienceplots在默认白名单中(self):
+        """S1：scienceplots 在 DEFAULT_ALLOWED_IMPORTS 中。"""
+        assert "scienceplots" in DEFAULT_ALLOWED_IMPORTS, (
+            "scienceplots 未加入沙箱白名单（SPEC 0027 图表美化依赖）"
+        )
+
+    def test_seaborn在默认白名单中(self):
+        """S2：seaborn 在 DEFAULT_ALLOWED_IMPORTS 中。"""
+        assert "seaborn" in DEFAULT_ALLOWED_IMPORTS, (
+            "seaborn 未加入沙箱白名单（SPEC 0027 统计图表依赖）"
+        )
+
+    def test_easypptx不在默认白名单中(self):
+        """S3：easypptx 不在 DEFAULT_ALLOWED_IMPORTS 中（PPT 渲染层依赖，不在沙箱使用）。"""
+        assert "easypptx" not in DEFAULT_ALLOWED_IMPORTS, (
+            "easypptx 不应加入沙箱白名单（仅 PPT 渲染层使用，不在用户代码执行环境）"
+        )
+
+    def test_validate_code允许import_scienceplots(self):
+        """S4：validate_code 允许 import scienceplots。"""
+        validate_code("import scienceplots\n")
+
+    def test_validate_code允许import_seaborn_as_sns(self):
+        """S5：validate_code 允许 import seaborn as sns。"""
+        validate_code("import seaborn as sns\n")
+
+    def test_validate_code允许from_seaborn_import(self):
+        """S6：validate_code 允许 from seaborn import distplot。"""
+        validate_code("from seaborn import distplot\n")
+
+    def test_原有白名单模块仍可用(self):
+        """S7：原有白名单模块仍可用（回归）。"""
+        validate_code(
+            "import pandas as pd\n"
+            "import numpy as np\n"
+            "import matplotlib\n"
+            "from scipy import stats\n"
+        )
+
+    def test_os仍被拒绝(self):
+        """S8：os 仍被拒绝（回归，确保白名单扩展不引入安全漏洞）。"""
+        with pytest.raises(SandboxError) as exc_info:
+            validate_code("import os\n")
+        assert exc_info.value.code == "EXECUTION_IMPORT_FORBIDDEN"
+
+    def test_socket仍被拒绝(self):
+        """S9：socket 仍被拒绝（回归，确保网络禁用不放松）。"""
+        with pytest.raises(SandboxError) as exc_info:
+            validate_code("import socket\n")
+        assert exc_info.value.code == "EXECUTION_IMPORT_FORBIDDEN"
+
+    def test_requests仍被拒绝(self):
+        """S10：requests 仍被拒绝（回归）。"""
+        with pytest.raises(SandboxError) as exc_info:
+            validate_code("import requests\n")
+        assert exc_info.value.code == "EXECUTION_IMPORT_FORBIDDEN"

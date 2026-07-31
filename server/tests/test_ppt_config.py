@@ -1106,3 +1106,149 @@ class TestSpec0026VisualEffects:
         assert abs(pic_shape.line.width - expected_emu) < 1000, (
             f"图片边框宽度 {pic_shape.line.width} != 1pt ({expected_emu})"
         )
+
+
+# --- SPEC 0027 布局增强测试（百分比定位 + Grid 布局） ---
+
+
+class TestSpec0027LayoutEnhancement:
+    """SPEC 0027 布局增强测试（_pct_to_emu + _GridHelper）。
+
+    红色阶段说明：
+    - _pct_to_emu 和 _GridHelper 尚未实现，相关测试应失败
+    - 实现完成后所有测试应通过
+    """
+
+    # === _pct_to_emu 百分比定位测试 ===
+
+    def test_pct_to_emu方法存在(self):
+        """P1：PptRenderer 类有 _pct_to_emu 方法。"""
+        assert hasattr(PptRenderer, "_pct_to_emu"), (
+            "PptRenderer 未实现 _pct_to_emu（SPEC 0027 百分比定位辅助方法）"
+        )
+
+    def test_pct_to_emu_10pct(self):
+        """P2：_pct_to_emu("10%", 1000) 返回 100。"""
+        result = PptRenderer._pct_to_emu("10%", 1000)
+        assert result == 100, f'_pct_to_emu("10%", 1000) = {result}, 预期 100'
+
+    def test_pct_to_emu_50pct(self):
+        """P3：_pct_to_emu("50%", 1000) 返回 500。"""
+        result = PptRenderer._pct_to_emu("50%", 1000)
+        assert result == 500, f'_pct_to_emu("50%", 1000) = {result}, 预期 500'
+
+    def test_pct_to_emu_100pct(self):
+        """P4：_pct_to_emu("100%", 1000) 返回 1000。"""
+        result = PptRenderer._pct_to_emu("100%", 1000)
+        assert result == 1000, f'_pct_to_emu("100%", 1000) = {result}, 预期 1000'
+
+    def test_pct_to_emu_0pct(self):
+        """P5：_pct_to_emu("0%", 1000) 返回 0。"""
+        result = PptRenderer._pct_to_emu("0%", 1000)
+        assert result == 0, f'_pct_to_emu("0%", 1000) = {result}, 预期 0'
+
+    def test_pct_to_emu_非百分比字符串抛ValueError(self):
+        """P6：_pct_to_emu("non-pct", 1000) 抛出 ValueError。"""
+        with pytest.raises(ValueError, match="百分比"):
+            PptRenderer._pct_to_emu("non-pct", 1000)
+
+    def test_pct_to_emu_与Inches兼容(self):
+        """P7：_pct_to_emu("10%", Inches(10)) ≈ Inches(1)（允许 ±100 EMU 精度误差）。"""
+        from pptx.util import Inches
+        total = Inches(10)
+        result = PptRenderer._pct_to_emu("10%", total)
+        expected = Inches(1)
+        assert abs(result - expected) < 100, (
+            f"百分比转 EMU 与 Inches 不兼容：result={result}, expected={expected}"
+        )
+
+    def test_pct_to_emu_支持小数百分比(self):
+        """P8：_pct_to_emu("12.5%", 1000) 返回 125。"""
+        result = PptRenderer._pct_to_emu("12.5%", 1000)
+        assert result == 125, f'_pct_to_emu("12.5%", 1000) = {result}, 预期 125'
+
+    # === _GridHelper Grid 布局测试 ===
+
+    def test_GridHelper类存在(self):
+        """G1：PptRenderer 有 _GridHelper 内部类。"""
+        assert hasattr(PptRenderer, "_GridHelper"), (
+            "PptRenderer 未实现 _GridHelper（SPEC 0027 Grid 布局辅助类）"
+        )
+
+    def test_GridHelper_2x2_cell_00(self):
+        """G2：2×2 网格 cell(0,0) 返回左上角 (0, 0, 500, 500)。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=2, cols=2)
+        left, top, width, height = grid.cell(0, 0)
+        assert left == 0 and top == 0
+        assert width == 500 and height == 500
+
+    def test_GridHelper_2x2_cell_11(self):
+        """G3：2×2 网格 cell(1,1) 返回右下角 (500, 500, 500, 500)。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=2, cols=2)
+        left, top, width, height = grid.cell(1, 1)
+        assert left == 500 and top == 500
+        assert width == 500 and height == 500
+
+    def test_GridHelper_1x2_带h_gap(self):
+        """G4：1×2 网格带水平间距 100，每格宽 450。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=1, cols=2, h_gap=100)
+        left1, _, width1, _ = grid.cell(0, 0)
+        left2, _, width2, _ = grid.cell(0, 1)
+        # 每个单元格宽度 = (1000 - 100) / 2 = 450
+        assert width1 == 450 and width2 == 450
+        # cell(0,1) 左边界 = 0 + 450 + 100 = 550
+        assert left1 == 0 and left2 == 550
+
+    def test_GridHelper_2x1_带v_gap(self):
+        """G5：2×1 网格带垂直间距 100，每格高 450。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=2, cols=1, v_gap=100)
+        _, top1, _, height1 = grid.cell(0, 0)
+        _, top2, _, height2 = grid.cell(1, 0)
+        # 每个单元格高度 = (1000 - 100) / 2 = 450
+        assert height1 == 450 and height2 == 450
+        # cell(1,0) 上边界 = 0 + 450 + 100 = 550
+        assert top1 == 0 and top2 == 550
+
+    def test_GridHelper_3x3_cell_22(self):
+        """G6：3×3 网格 cell(2,2) 返回右下角 (600, 600, 300, 300)。"""
+        grid = PptRenderer._GridHelper(0, 0, 900, 900, rows=3, cols=3)
+        left, top, width, height = grid.cell(2, 2)
+        assert left == 600 and top == 600
+        assert width == 300 and height == 300
+
+    def test_GridHelper_2x2_单元格水平不重叠(self):
+        """G7：2×2 网格 cell(0,0) 和 cell(0,1) 水平不重叠。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=2, cols=2)
+        l1, _, w1, _ = grid.cell(0, 0)
+        l2, _, _, _ = grid.cell(0, 1)
+        # cell(0,0) 右边界 = l1 + w1 = 500，应 <= cell(0,1) 左边界 = 500
+        assert l1 + w1 <= l2, (
+            f"单元格水平重叠：cell(0,0) 右边界={l1 + w1} > cell(0,1) 左边界={l2}"
+        )
+
+    def test_GridHelper_2x2_单元格垂直不重叠(self):
+        """G8：2×2 网格 cell(0,0) 和 cell(1,0) 垂直不重叠。"""
+        grid = PptRenderer._GridHelper(0, 0, 1000, 1000, rows=2, cols=2)
+        _, t1, _, h1 = grid.cell(0, 0)
+        _, t2, _, _ = grid.cell(1, 0)
+        # cell(0,0) 下边界 = t1 + h1 = 500，应 <= cell(1,0) 上边界 = 500
+        assert t1 + h1 <= t2, (
+            f"单元格垂直重叠：cell(0,0) 下边界={t1 + h1} > cell(1,0) 上边界={t2}"
+        )
+
+    def test_GridHelper_带非零起点偏移(self):
+        """G9：Grid 带非零起点偏移 (100, 200)。"""
+        grid = PptRenderer._GridHelper(100, 200, 600, 400, rows=1, cols=2)
+        left, top, width, height = grid.cell(0, 0)
+        assert left == 100 and top == 200
+        assert width == 300 and height == 400
+        # cell(0,1) 左边界 = 100 + 300 = 400
+        left2, _, _, _ = grid.cell(0, 1)
+        assert left2 == 400
+
+    def test_GridHelper_1x1_返回完整区域(self):
+        """G10：1×1 网格返回完整区域。"""
+        grid = PptRenderer._GridHelper(50, 60, 700, 800, rows=1, cols=1)
+        left, top, width, height = grid.cell(0, 0)
+        assert left == 50 and top == 60
+        assert width == 700 and height == 800

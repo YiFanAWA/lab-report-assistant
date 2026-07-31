@@ -468,3 +468,161 @@ class TestFakeCodeTaskProviderFormat:
         from app.modules.llm.code_task_provider import FakeCodeTaskProvider
         provider = FakeCodeTaskProvider()
         assert provider.source_label() == "LOCAL_RULE"
+
+
+# --- SPEC 0027 图表美化测试（SciencePlots + Seaborn 集成） ---
+
+
+def _make_full_plan_with_charts() -> dict:
+    """构造包含多种图表类型的 AnalysisPlan（SPEC 0027 测试用）。"""
+    base = _make_full_plan()
+    base["chart_plan"] = [
+        {
+            "chart_type": "HISTOGRAM",
+            "title": "age 分布",
+            "data_fields": ["age"],
+            "description": "展示分布",
+        },
+        {
+            "chart_type": "BOXPLOT",
+            "title": "数值字段箱线图",
+            "data_fields": ["age"],
+            "description": "展示离群值",
+        },
+        {
+            "chart_type": "BAR",
+            "title": "诊断分布",
+            "data_fields": ["diagnosis"],
+            "description": "展示分类分布",
+        },
+        {
+            "chart_type": "SCATTER",
+            "title": "年龄 vs 血压",
+            "data_fields": ["age", "bp"],
+            "description": "展示相关性",
+        },
+    ]
+    return base
+
+
+def _make_plan_with_correlation() -> dict:
+    """构造包含 CORRELATION 分析类型的 AnalysisPlan（SPEC 0027 HEATMAP 测试用）。"""
+    base = _make_full_plan()
+    base["analysis_plan"] = [
+        {
+            "analysis_type": "CORRELATION",
+            "target_fields": ["age", "bp", "glucose"],
+            "method": "计算相关系数矩阵",
+            "expected_output": "相关性热图",
+        },
+    ]
+    return base
+
+
+class TestSpec0027ChartBeautification:
+    """SPEC 0027 图表美化测试（SciencePlots + Seaborn 集成）。
+
+    红色阶段说明：
+    - _HEADER 尚未集成 scienceplots/seaborn，相关测试应失败
+    - _build_chart_code 尚未升级为 seaborn API，相关测试应失败
+    - 实现完成后所有测试应通过
+    """
+
+    # === _HEADER 集成测试 ===
+
+    def test_HEADER包含scienceplots导入(self):
+        """C1：_HEADER 包含 import scienceplots。"""
+        from app.modules.llm.code_task_provider import _HEADER
+        assert "import scienceplots" in _HEADER, "_HEADER 未集成 scienceplots"
+
+    def test_HEADER包含science样式和no_latex(self):
+        """C2：_HEADER 包含 plt.style.use 且含 science 和 no-latex。"""
+        from app.modules.llm.code_task_provider import _HEADER
+        assert "plt.style.use" in _HEADER
+        assert "science" in _HEADER
+        assert "no-latex" in _HEADER, "必须使用 no-latex 样式避免 LaTeX 依赖"
+
+    def test_HEADER包含cjk字体支持(self):
+        """C3：_HEADER 包含 cjk-sc-font（中文支持）。"""
+        from app.modules.llm.code_task_provider import _HEADER
+        assert "cjk-sc-font" in _HEADER, "_HEADER 未配置 cjk-sc-font 中文字体支持"
+
+    def test_HEADER包含seaborn导入(self):
+        """C4：_HEADER 包含 import seaborn。"""
+        from app.modules.llm.code_task_provider import _HEADER
+        assert "import seaborn" in _HEADER, "_HEADER 未集成 seaborn"
+
+    def test_HEADER包含set_theme(self):
+        """C5：_HEADER 包含 sns.set_theme。"""
+        from app.modules.llm.code_task_provider import _HEADER
+        assert "sns.set_theme" in _HEADER, "_HEADER 未配置 seaborn 主题"
+
+    # === 图表代码升级测试 ===
+
+    def test_HISTOGRAM使用seaborn_histplot(self):
+        """C6：HISTOGRAM 图表生成 sns.histplot。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "sns.histplot" in result.code, "HISTOGRAM 未升级为 sns.histplot"
+
+    def test_BOXPLOT使用seaborn_boxplot(self):
+        """C7：BOXPLOT 图表生成 sns.boxplot。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan_with_charts())
+        assert "sns.boxplot" in result.code, "BOXPLOT 未升级为 sns.boxplot"
+
+    def test_BAR使用seaborn_countplot(self):
+        """C8：BAR 图表生成 sns.countplot。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan_with_charts())
+        assert "sns.countplot" in result.code, "BAR 未升级为 sns.countplot"
+
+    def test_SCATTER使用seaborn_scatterplot(self):
+        """C9：SCATTER 图表生成 sns.scatterplot。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan_with_charts())
+        assert "sns.scatterplot" in result.code, "SCATTER 未升级为 sns.scatterplot"
+
+    def test_CORRELATION分析生成heatmap(self):
+        """C10：CORRELATION 分析时额外生成 sns.heatmap。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_plan_with_correlation())
+        assert "sns.heatmap" in result.code, "CORRELATION 分析未生成 sns.heatmap"
+
+    # === 回归测试 ===
+
+    def test_集成后代码仍包含pandas导入(self):
+        """C11：集成后代码仍包含 pandas 导入（回归）。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "import pandas" in result.code
+
+    def test_集成后代码仍包含matplotlib导入(self):
+        """C12：集成后代码仍包含 matplotlib 导入（回归）。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "import matplotlib" in result.code
+
+    def test_集成后代码可通过ast语法检查(self):
+        """C13：集成后代码仍可通过 ast.parse 语法检查。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan_with_charts())
+        ast.parse(result.code)
+
+    def test_集成后代码包含中文字体配置(self):
+        """C14：集成后代码仍包含中文字体配置（回归）。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "Microsoft YaHei" in result.code, "中文字体配置丢失"
+
+    def test_集成后代码包含DATA_PATH引用(self):
+        """C15：集成后代码仍引用 DATA_PATH（回归）。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "DATA_PATH" in result.code
+
+    def test_集成后代码包含OUTPUT_DIR引用(self):
+        """C16：集成后代码仍引用 OUTPUT_DIR（回归）。"""
+        provider = LocalRuleCodeTaskProvider()
+        result = provider.generate(_make_full_plan())
+        assert "OUTPUT_DIR" in result.code
