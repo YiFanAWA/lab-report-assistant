@@ -1,6 +1,6 @@
 # SPEC 0026：PPT 视觉效果增强（渐变 + 圆角 + 阴影 + 边框）
 
-**状态：** 已完成实现与验收（2026-07-31）
+**状态：** 已由项目负责人确认收口（2026-07-31）
 **起草日期：** 2026-07-31
 **完成日期：** 2026-07-31
 **前序 SPEC：** [SPEC 0024](0024-ppt-renderer-layout-and-visual-hierarchy.md)、[SPEC 0025](0025-ppt-color-system-and-sandwich-layout.md)
