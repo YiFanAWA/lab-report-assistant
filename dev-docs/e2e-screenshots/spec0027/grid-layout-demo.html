@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SPEC 0027 网格布局演示</title>
+<style>
+  body { font-family: "Microsoft YaHei", sans-serif; margin: 20px; background: #fff; }
+  h1 { color: #2563EB; border-bottom: 3px solid #2563EB; padding-bottom: 10px; }
+  h2 { color: #1E40AF; margin-top: 40px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+  .slide-preview { position: relative; width: 100%; padding-bottom: 56.25%;
+    background: #F3F4F6; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 12px;
+    font-size: 12px; font-weight: bold; }
+  .badge-green { background: #D1FAE5; color: #065F46; }
+  .badge-orange { background: #FEF3C7; color: #92400E; }
+  .note { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; margin: 16px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>SPEC 0027 网格布局演示</h1>
+<p>本页面演示 PptRenderer 在不同图表数量下的自适应布局行为，
+使用生产代码 <code>PptRenderer.render()</code> 生成。</p>
+
+<div class="note">
+  <strong>布局规则（SPEC 0024/0027）：</strong>
+  <ul>
+    <li>1 张图表 → <code>_place_chart_centered</code> 单图居中（8" 宽）</li>
+    <li>2 张图表 → <code>_place_chart_side_by_side</code> 双图并排（1×2 Grid，5.8" 宽/图）</li>
+    <li>3 张图表 → <code>_place_chart_three</code> 上排 2 张 + 下排 1 张居中</li>
+    <li>4 张图表 → <code>_place_chart_grid</code> 2×2 网格（3.8" 宽/图）</li>
+    <li><strong>超过 4 张 → 截断为前 4 张 + 底部截断注释</strong></li>
+  </ul>
+</div>
+
+<h2>场景一：4 张图表 → 2×2 网格布局</h2>
+<p><span class="badge badge-green">布局类型：_place_chart_grid（2×2）</span></p>
+
+<div class="grid">
+  <div class="card">
+    <h3>幻灯片预览（坐标可视化）</h3>
+    <div class="slide-preview">
+      <div style="margin-bottom:20px;">
+    <h3>第 2 页</h3>
+    <div style="position:relative; width:100%; padding-bottom:56.25%;
+    background:#F3F4F6; border:1px solid #ccc; border-radius:6px; overflow:hidden;">
+      <div style="position:absolute; left:0.00%; top:0.00%;
+    width:99.98%; height:13.33%; background: #1E40AF; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    标题栏
+  </div>
+<div style="position:absolute; left:3.75%; top:1.33%;
+    width:92.48%; height:10.67%; background: #1E40AF; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    数据分析概述
+  </div>
+<div style="position:absolute; left:3.75%; top:16.00%;
+    width:39.75%; height:74.67%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    
+  </div>
+<div style="position:absolute; left:4.88%; top:17.33%;
+    width:37.50%; height:72.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    ● 数据分析概述
+  本实验对胃病数据进行分析，包括描述性统
+  </div>
+<div style="position:absolute; left:45.75%; top:16.00%;
+    width:50.25%; height:54.80%; background: #3B82F622; border: 2px solid #3B82F6;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    图表<br>6.7×4.11"
+  </div>
+<div style="position:absolute; left:0.00%; top:93.33%;
+    width:99.98%; height:6.67%; background: #1E3A8A; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    页脚
+  </div>
+<div style="position:absolute; left:3.75%; top:94.67%;
+    width:45.00%; height:4.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    网格布局演示
+  </div>
+<div style="position:absolute; left:77.48%; top:94.67%;
+    width:18.75%; height:4.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    第 2 / 4 页
+  </div>
+    </div>
+  </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>图表坐标表</h3>
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tr style="background:#2563EB;color:white;">
+            <th style="padding:6px;border:1px solid #ddd;">序号</th>
+            <th style="padding:6px;border:1px solid #ddd;">Left (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Top (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Width (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Height (inches)</th>
+          </tr>
+          <tr><td>1</td><td>6.10"</td><td>1.20"</td><td>6.70"</td><td>4.11"</td></tr>
+        </table>
+  </div>
+</div>
+
+<h2>场景二：6 张图表 → 截断为 4 张 + 注释</h2>
+<p><span class="badge badge-orange">布局类型：_place_chart_grid（2×2）+ _add_truncation_note</span></p>
+
+<div class="grid">
+  <div class="card">
+    <h3>幻灯片预览（坐标可视化）</h3>
+    <div class="slide-preview">
+      <div style="margin-bottom:20px;">
+    <h3>第 2 页</h3>
+    <div style="position:relative; width:100%; padding-bottom:56.25%;
+    background:#F3F4F6; border:1px solid #ccc; border-radius:6px; overflow:hidden;">
+      <div style="position:absolute; left:0.00%; top:0.00%;
+    width:99.98%; height:13.33%; background: #1E40AF; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    标题栏
+  </div>
+<div style="position:absolute; left:3.75%; top:1.33%;
+    width:92.48%; height:10.67%; background: #1E40AF; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    数据分析概述
+  </div>
+<div style="position:absolute; left:3.75%; top:16.00%;
+    width:39.75%; height:74.67%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    
+  </div>
+<div style="position:absolute; left:4.88%; top:17.33%;
+    width:37.50%; height:72.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    ● 数据分析概述
+  本实验对胃病数据进行分析，包括描述性统
+  </div>
+<div style="position:absolute; left:45.75%; top:16.00%;
+    width:50.25%; height:54.80%; background: #3B82F622; border: 2px solid #3B82F6;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    图表<br>6.7×4.11"
+  </div>
+<div style="position:absolute; left:0.00%; top:93.33%;
+    width:99.98%; height:6.67%; background: #1E3A8A; color: white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    页脚
+  </div>
+<div style="position:absolute; left:3.75%; top:94.67%;
+    width:45.00%; height:4.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    网格布局演示
+  </div>
+<div style="position:absolute; left:77.48%; top:94.67%;
+    width:18.75%; height:4.00%; background: #6B728011; border: 1px solid #6B728066;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; text-align:center; overflow:hidden; border-radius:3px;">
+    第 2 / 4 页
+  </div>
+    </div>
+  </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>图表坐标表</h3>
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tr style="background:#2563EB;color:white;">
+            <th style="padding:6px;border:1px solid #ddd;">序号</th>
+            <th style="padding:6px;border:1px solid #ddd;">Left (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Top (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Width (inches)</th>
+            <th style="padding:6px;border:1px solid #ddd;">Height (inches)</th>
+          </tr>
+          <tr><td>1</td><td>6.10"</td><td>1.20"</td><td>6.70"</td><td>4.11"</td></tr>
+        </table>
+  </div>
+</div>
+
+<h2>Grid 坐标计算验证</h2>
+<p>以下为 <code>_GridHelper</code> 在 2×2 网格中计算的坐标值（来自生产代码）：</p>
+<table style="border-collapse:collapse;width:100%;font-size:13px;">
+  <tr style="background:#2563EB;color:white;">
+    <th style="padding:8px;border:1px solid #ddd;">单元格</th>
+    <th style="padding:8px;border:1px solid #ddd;">Left</th>
+    <th style="padding:8px;border:1px solid #ddd;">Top</th>
+    <th style="padding:8px;border:1px solid #ddd;">Width</th>
+    <th style="padding:8px;border:1px solid #ddd;">Height</th>
+    <th style="padding:8px;border:1px solid #ddd;">说明</th>
+  </tr>
+  <tr>
+    <td style="padding:8px;border:1px solid #ddd;">cell(0,0) 左上</td>
+    <td style="padding:8px;border:1px solid #ddd;">0.70"</td>
+    <td style="padding:8px;border:1px solid #ddd;">1.50"</td>
+    <td style="padding:8px;border:1px solid #ddd;">3.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">2.30"</td>
+    <td style="padding:8px;border:1px solid #ddd;">上排左</td>
+  </tr>
+  <tr>
+    <td style="padding:8px;border:1px solid #ddd;">cell(0,1) 右上</td>
+    <td style="padding:8px;border:1px solid #ddd;">6.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">1.50"</td>
+    <td style="padding:8px;border:1px solid #ddd;">3.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">2.30"</td>
+    <td style="padding:8px;border:1px solid #ddd;">上排右</td>
+  </tr>
+  <tr>
+    <td style="padding:8px;border:1px solid #ddd;">cell(1,0) 左下</td>
+    <td style="padding:8px;border:1px solid #ddd;">0.70"</td>
+    <td style="padding:8px;border:1px solid #ddd;">4.00"</td>
+    <td style="padding:8px;border:1px solid #ddd;">3.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">2.30"</td>
+    <td style="padding:8px;border:1px solid #ddd;">下排左</td>
+  </tr>
+  <tr>
+    <td style="padding:8px;border:1px solid #ddd;">cell(1,1) 右下</td>
+    <td style="padding:8px;border:1px solid #ddd;">6.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">4.00"</td>
+    <td style="padding:8px;border:1px solid #ddd;">3.80"</td>
+    <td style="padding:8px;border:1px solid #ddd;">2.30"</td>
+    <td style="padding:8px;border:1px solid #ddd;">下排右</td>
+  </tr>
+</table>
+<p style="margin-top:12px;color:#666;font-size:13px;">
+  网格参数：left=0.7", top=1.5", width=9.9", height=4.8", rows=2, cols=2,
+  h_gap=2.3", v_gap=0.2"<br>
+  计算：cell_w = (9.9 - 2.3×1) // 2 = 3.8",
+  cell_h = (4.8 - 0.2×1) // 2 = 2.3"
+</p>
+
+</div>
+</body>
+</html>

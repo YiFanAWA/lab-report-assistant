@@ -2,7 +2,7 @@
 
 **日期：** 2026-07-31
 **决策类型：** 启动新切片
-**状态：** 已完成实现与验收，待项目负责人确认收口
+**状态：** 已由项目负责人确认收口（2026-07-31）
 **关联 SPEC：** [SPEC 0027](../specs/0027-chart-beautification-and-layout-enhancement.md)
 **前序决策：** [决策 0035](0035-start-spec-0026-ppt-visual-effects.md)（SPEC 0026 已完成实现与验收）
 
