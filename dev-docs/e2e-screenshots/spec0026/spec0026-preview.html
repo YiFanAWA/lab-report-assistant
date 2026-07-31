@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SPEC 0026 PPT 视觉效果增强预览</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  padding: 20px;
+}
+h1 { text-align: center; margin-bottom: 10px; font-size: 28px; }
+.subtitle { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
+
+/* 主题色选择器 */
+.color-selector {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+.color-btn {
+  padding: 10px 24px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+.color-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.color-btn.active { border-color: #333; transform: scale(1.05); }
+
+/* 三角色彩显示 */
+.palette-display {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+.palette-item {
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  min-width: 140px;
+}
+.palette-item .label { font-size: 13px; margin-bottom: 6px; font-weight: 600; }
+.palette-item .hex { font-size: 12px; font-family: monospace; }
+
+/* PPT 幻灯片模拟 */
+.slide-container {
+  max-width: 960px;
+  margin: 0 auto 30px;
+}
+.slide {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  position: relative;
+  margin-bottom: 20px;
+}
+.slide-label {
+  position: absolute;
+  top: -25px;
+  left: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+}
+
+/* 封面页 */
+.cover-slide {
+  display: flex;
+  flex-direction: column;
+}
+.cover-top-block {
+  height: 35%;
+  background: linear-gradient(180deg, var(--primary), var(--darkened));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cover-top-block h2 { color: var(--title-text); font-size: 28px; }
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.cover-body h3 { font-size: 22px; margin-bottom: 10px; color: #333; }
+.cover-body p { font-size: 14px; color: #666; }
+.cover-bottom-strip {
+  height: 8px;
+  background: linear-gradient(90deg, var(--darkened), var(--primary));
+}
+
+/* 内容页 */
+.content-slide {
+  display: flex;
+  flex-direction: column;
+}
+.title-bar {
+  height: 13%;
+  background: linear-gradient(180deg, var(--primary), var(--darkened-15));
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+}
+.title-bar h3 { color: var(--title-text); font-size: 20px; }
+.content-body {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  gap: 16px;
+}
+.content-left {
+  width: 40%;
+  background: var(--auxiliary);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.content-left h4 { font-size: 14px; color: var(--accent); margin-bottom: 10px; }
+.content-left ul { list-style: none; }
+.content-left li {
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 8px;
+  padding-left: 16px;
+  position: relative;
+}
+.content-left li::before {
+  content: "●";
+  color: var(--accent);
+  position: absolute;
+  left: 0;
+  font-size: 10px;
+}
+.content-right {
+  width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chart-box {
+  width: 85%;
+  height: 80%;
+  background: linear-gradient(135deg, #e8eef5, #d5e0ed);
+  border: 1px solid var(--auxiliary);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.chart-box .chart-icon { font-size: 36px; margin-bottom: 8px; }
+.chart-box .chart-text { font-size: 13px; color: #555; }
+.footer-bar {
+  height: 6%;
+  background: linear-gradient(90deg, var(--darkened-15), var(--primary));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+.footer-bar span { color: var(--title-text); font-size: 11px; }
+
+/* 总结页 */
+.summary-slide {
+  display: flex;
+  flex-direction: column;
+}
+.summary-body {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.summary-body h4 { font-size: 16px; color: var(--accent); margin-bottom: 12px; }
+.summary-body p { font-size: 14px; color: #444; line-height: 1.6; }
+
+/* 效果说明 */
+.effects-info {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.effects-info h3 { font-size: 18px; margin-bottom: 16px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+.effects-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.effect-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+}
+.effect-card h4 { font-size: 15px; margin-bottom: 8px; color: var(--primary); }
+.effect-card p { font-size: 13px; color: #555; line-height: 1.5; }
+.effect-card .tech { font-size: 12px; color: #888; margin-top: 8px; font-family: monospace; }
+
+/* 对比表 */
+.comparison {
+  max-width: 960px;
+  margin: 30px auto 0;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.comparison h3 { font-size: 18px; margin-bottom: 16px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+.comparison table { width: 100%; border-collapse: collapse; }
+.comparison th, .comparison td {
+  border: 1px solid #e0e0e0;
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: left;
+}
+.comparison th { background: #f5f7fa; font-weight: 600; }
+.comparison .yes { color: #16a34a; font-weight: 600; }
+.comparison .no { color: #dc2626; }
+</style>
+</head>
+<body>
+<h1>SPEC 0026 PPT 视觉效果增强预览</h1>
+<p class="subtitle">渐变填充 + 圆角矩形 + 外阴影 + 细边框 ｜ 点击下方按钮切换主题色查看实时效果</p>
+
+<!-- 主题色选择器 -->
+<div class="color-selector" id="colorSelector"></div>
+
+<!-- 三角色彩显示 -->
+<div class="palette-display" id="paletteDisplay"></div>
+
+<!-- PPT 幻灯片模拟 -->
+<div class="slide-container">
+  <!-- 封面页 -->
+  <div class="slide cover-slide" style="margin-top: 30px;">
+    <div class="slide-label">封面页 — 渐变顶部色块</div>
+    <div class="cover-top-block">
+      <h2>胃病数据分析报告</h2>
+    </div>
+    <div class="cover-body">
+      <h3>实验报告助手 · SPEC 0026 视觉增强</h3>
+      <p>描述性统计与数据可视化</p>
+    </div>
+    <div class="cover-bottom-strip"></div>
+  </div>
+
+  <!-- 内容页 -->
+  <div class="slide content-slide" style="margin-top: 30px;">
+    <div class="slide-label">内容页 — 渐变标题栏 + 圆角左栏 + 阴影边框图表</div>
+    <div class="title-bar">
+      <h3>实验结果</h3>
+    </div>
+    <div class="content-body">
+      <div class="content-left">
+        <h4>关键发现</h4>
+        <ul>
+          <li>数据清洗完成，200 条有效记录</li>
+          <li>诊断分布以胃炎为主（45%）</li>
+          <li>年龄分布集中在 40-60 岁</li>
+          <li>血常规指标在正常范围内</li>
+        </ul>
+      </div>
+      <div class="content-right">
+        <div class="chart-box">
+          <div class="chart-icon">📊</div>
+          <div class="chart-text">诊断分布柱状图<br><span style="font-size:11px;color:#999;">（辅助色 1pt 边框 + 外阴影）</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bar">
+      <span>实验报告助手</span>
+      <span>第 2 页 / 共 5 页</span>
+    </div>
+  </div>
+
+  <!-- 总结页 -->
+  <div class="slide summary-slide" style="margin-top: 30px;">
+    <div class="slide-label">总结页 — 渐变标题栏 + 渐变页脚栏</div>
+    <div class="title-bar">
+      <h3>总结</h3>
+    </div>
+    <div class="summary-body">
+      <h4>实验结论</h4>
+      <p>本实验完成了胃病数据分析与可视化，验证了描述性统计方法在医学数据分析中的有效性。通过 pandas 进行数据清洗，matplotlib 绘制分布图，成功生成了诊断分布柱状图和年龄分布直方图。</p>
+    </div>
+    <div class="footer-bar">
+      <span>实验报告助手</span>
+      <span>第 5 页 / 共 5 页</span>
+    </div>
+  </div>
+</div>
+
+<!-- 视觉效果说明 -->
+<div class="effects-info">
+  <h3>SPEC 0026 四项视觉增强</h3>
+  <div class="effects-grid">
+    <div class="effect-card">
+      <h4>① 渐变填充</h4>
+      <p>封面顶部色块、标题栏、页脚栏改为线性渐变（主色 → 主色暗化），增强层次感和立体感。</p>
+      <div class="tech">fill.gradient() + gradient_angle=90</div>
+    </div>
+    <div class="effect-card">
+      <h4>② 圆角矩形</h4>
+      <p>左栏背景衬托改为圆角矩形（半径 0.05），柔化硬边缘，提升视觉精致度。</p>
+      <div class="tech">MSO_SHAPE.ROUNDED_RECTANGLE</div>
+    </div>
+    <div class="effect-card">
+      <h4>③ 外阴影效果</h4>
+      <p>右栏图表添加柔和外阴影（模糊半径 8pt，距离 4pt，方向 315°，不透明度 30%），增强层次感。</p>
+      <div class="tech">oxml: a:effectLst + a:outerShdw</div>
+    </div>
+    <div class="effect-card">
+      <h4>④ 形状细边框</h4>
+      <p>右栏图表添加辅助色 1pt 细边框，与左栏背景色呼应，形成色彩统一。</p>
+      <div class="tech">shape.line.color.rgb = auxiliary</div>
+    </div>
+  </div>
+</div>
+
+<!-- SPEC 0025 vs SPEC 0026 对比 -->
+<div class="comparison">
+  <h3>SPEC 0025 → SPEC 0026 视觉效果对比</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>视觉特征</th>
+        <th>SPEC 0025（三角色彩 + 三明治结构）</th>
+        <th>SPEC 0026（视觉效果增强）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>封面顶部色块</td>
+        <td class="no">纯色填充（主色）</td>
+        <td class="yes">✓ 渐变填充（主色 → 主色暗化 20%）</td>
+      </tr>
+      <tr>
+        <td>标题栏背景</td>
+        <td class="no">纯色填充（主色）</td>
+        <td class="yes">✓ 渐变填充（主色 → 主色暗化 15%）</td>
+      </tr>
+      <tr>
+        <td>页脚栏背景</td>
+        <td class="no">纯色填充（主色）</td>
+        <td class="yes">✓ 渐变填充（主色暗化 15% → 主色）</td>
+      </tr>
+      <tr>
+        <td>左栏背景</td>
+        <td class="no">纯色矩形（辅助色）</td>
+        <td class="yes">✓ 圆角矩形（辅助色，半径 0.05）</td>
+      </tr>
+      <tr>
+        <td>右栏图表</td>
+        <td class="no">无阴影无边框</td>
+        <td class="yes">✓ 外阴影 + 辅助色 1pt 边框</td>
+      </tr>
+      <tr>
+        <td>整体视觉感</td>
+        <td>扁平化、层次感弱</td>
+        <td class="yes">立体感、层次感、精致度提升</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+// 6 种预设色
+const PRESET_COLORS = [
+  { name: "蓝", hex: "#2563eb" },
+  { name: "紫", hex: "#7c3aed" },
+  { name: "绿", hex: "#16a34a" },
+  { name: "红", hex: "#dc2626" },
+  { name: "橙", hex: "#ea580c" },
+  { name: "灰", hex: "#475569" },
+];
+
+// RGB ↔ HLS 转换（模拟 Python colorsys）
+function rgbToHls(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, l, s = 0;
+  l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h, l, s];
+}
+
+function hlsToRgb(h, l, s) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace("#", "");
+  return [parseInt(hex.substr(0,2),16), parseInt(hex.substr(2,2),16), parseInt(hex.substr(4,2),16)];
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+// 色彩派生（模拟 Python ppt_renderer._derive_color_palette + _darken_color）
+function derivePalette(themeHex) {
+  const [r, g, b] = hexToRgb(themeHex);
+  const [h, l, s] = rgbToHls(r, g, b);
+
+  // 主色 = 原色
+  const primary = themeHex;
+
+  // 辅助色 = 高亮度(0.92) 低饱和度(≤0.30)
+  const auxS = Math.min(s, 0.30);
+  const [ar, ag, ab] = hlsToRgb(h, 0.92, auxS);
+  const auxiliary = rgbToHex(ar, ag, ab);
+
+  // 暗化色（渐变结束色）= 亮度降低 0.20，下限 0.10
+  const darkL = Math.max(l - 0.20, 0.10);
+  const [dr, dg, db] = hlsToRgb(h, darkL, s);
+  const darkened = rgbToHex(dr, dg, db);
+
+  // 暗化 15%（标题栏/页脚栏渐变结束色）
+  const dark15L = Math.max(l - 0.15, 0.10);
+  const [d15r, d15g, d15b] = hlsToRgb(h, dark15L, s);
+  const darkened15 = rgbToHex(d15r, d15g, d15b);
+
+  // 强调色 = 互补色相, 亮度 0.45, 饱和度 0.50-0.70
+  let accent;
+  if (s < 0.20) {
+    accent = "#2563eb"; // 低饱和度固定蓝色
+  } else {
+    const accH = (h + 0.5) % 1.0;
+    const accS = Math.min(Math.max(s, 0.50), 0.70);
+    const [acr, acg, acb] = hlsToRgb(accH, 0.45, accS);
+    accent = rgbToHex(acr, acg, acb);
+  }
+
+  // 标题文字色：亮度 > 0.60 用深灰，否则用白色
+  const titleText = l > 0.60 ? "#333333" : "#ffffff";
+
+  return { primary, auxiliary, darkened, darkened15, accent, titleText, l };
+}
+
+// 渲染主题色选择器
+function renderColorSelector() {
+  const container = document.getElementById("colorSelector");
+  container.innerHTML = "";
+  PRESET_COLORS.forEach((c, i) => {
+    const btn = document.createElement("button");
+    btn.className = "color-btn" + (i === 0 ? " active" : "");
+    btn.style.background = c.hex;
+    btn.textContent = c.name;
+    btn.onclick = () => {
+      document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyTheme(c.hex);
+    };
+    container.appendChild(btn);
+  });
+}
+
+// 应用主题色
+function applyTheme(themeHex) {
+  const palette = derivePalette(themeHex);
+  const root = document.documentElement;
+  root.style.setProperty("--primary", palette.primary);
+  root.style.setProperty("--auxiliary", palette.auxiliary);
+  root.style.setProperty("--darkened", palette.darkened);
+  root.style.setProperty("--darkened-15", palette.darkened15);
+  root.style.setProperty("--accent", palette.accent);
+  root.style.setProperty("--title-text", palette.titleText);
+
+  // 更新三角色彩显示
+  const display = document.getElementById("paletteDisplay");
+  display.innerHTML = "";
+  const items = [
+    { label: "主色 Primary", hex: palette.primary, bg: palette.primary, text: palette.titleText },
+    { label: "辅助色 Auxiliary", hex: palette.auxiliary, bg: palette.auxiliary, text: "#333" },
+    { label: "强调色 Accent", hex: palette.accent, bg: palette.accent, text: "#fff" },
+    { label: "暗化色 Darkened", hex: palette.darkened, bg: palette.darkened, text: "#fff" },
+  ];
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "palette-item";
+    div.style.background = item.bg;
+    div.style.color = item.text;
+    div.innerHTML = `<div class="label">${item.label}</div><div class="hex">${item.hex}</div>`;
+    display.appendChild(div);
+  });
+}
+
+// 初始化
+renderColorSelector();
+applyTheme(PRESET_COLORS[0].hex);
+</script>
+</body>
+</html>

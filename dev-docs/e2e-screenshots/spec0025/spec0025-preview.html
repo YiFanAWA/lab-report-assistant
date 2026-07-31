@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEC 0025 PPT 三角色彩系统与深浅对比三明治结构 — 预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "SimHei", -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #333;
+            padding: 20px;
+        }
+
+        /* === 顶部标题 === */
+        .page-header {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* === 主题色选择器 === */
+        .color-selector {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            padding: 10px 20px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .color-btn.active {
+            border-color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.3);
+        }
+
+        /* === 三角色彩展示 === */
+        .color-palette {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .color-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            min-width: 140px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .color-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .color-card .role {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .color-card .hex {
+            font-size: 12px;
+            color: #888;
+            font-family: monospace;
+        }
+
+        /* === PPT 画布模拟 === */
+        .ppt-canvas {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 三明治结构 - 标题栏 */
+        .title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            padding: 0 36px;
+        }
+
+        .title-bar .title-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* 三明治结构 - 内容区 */
+        .content-area {
+            position: absolute;
+            top: 86px;
+            left: 0;
+            width: 100%;
+            height: 403px;
+            display: flex;
+            padding: 0 36px;
+            gap: 20px;
+        }
+
+        .left-column {
+            width: 38%;
+            border-radius: 6px;
+            padding: 20px;
+        }
+
+        .left-column .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .left-column .bullet {
+            font-size: 13px;
+            line-height: 1.8;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .left-column .bullet::before {
+            content: "●";
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .right-column {
+            width: 62%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .right-column .content-text {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .right-column .chart-placeholder {
+            margin-top: 16px;
+            height: 120px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* 三明治结构 - 页脚栏 */
+        .footer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+        }
+
+        .footer-bar .project-name {
+            font-size: 11px;
+            color: #fff;
+        }
+
+        .footer-bar .page-number {
+            font-size: 11px;
+            color: #fff;
+        }
+
+        /* === 对比展示 === */
+        .comparison {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .comparison-item {
+            flex: 1;
+            min-width: 460px;
+            max-width: 480px;
+        }
+
+        .comparison-label {
+            text-align: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        /* SPEC 0024 旧版样式 */
+        .old-title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 72px;
+            background: #fff;
+            border-bottom: 2px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 36px;
+        }
+
+        .old-title-bar .title-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .old-content-area {
+            position: absolute;
+            top: 86px;
+            left: 0;
+            width: 100%;
+            height: 403px;
+            display: flex;
+            padding: 0 36px;
+            gap: 20px;
+            background: #fff;
+        }
+
+        .old-left-column {
+            width: 38%;
+            padding: 20px;
+        }
+
+        .old-left-column .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .old-left-column .bullet {
+            font-size: 13px;
+            line-height: 1.8;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            color: #333;
+        }
+
+        .old-left-column .bullet::before {
+            content: "●";
+            font-size: 14px;
+            flex-shrink: 0;
+            color: #333;
+        }
+
+        .old-footer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 36px;
+            border-top: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            background: #fff;
+        }
+
+        .old-footer-bar .project-name {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .old-footer-bar .page-number {
+            font-size: 11px;
+            color: #555;
+        }
+
+        /* === 封面页模拟 === */
+        .cover-canvas {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 30px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-top-block {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cover-top-block .cover-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+        }
+
+        .cover-info {
+            position: absolute;
+            top: 230px;
+            left: 36px;
+            width: calc(100% - 72px);
+        }
+
+        .cover-info .project-name {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .cover-info .date {
+            font-size: 14px;
+            color: #777;
+        }
+
+        .cover-bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 36px;
+        }
+
+        /* === 说明文字 === */
+        .info-section {
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 30px;
+            max-width: 960px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .info-section h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .info-section table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .info-section th,
+        .info-section td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .info-section th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .info-section .highlight {
+            background: #fffde7;
+        }
+
+        /* === 标签 === */
+        .slide-label {
+            text-align: center;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        /* === 深浅对比指示 === */
+        .sandwich-indicator {
+            position: absolute;
+            right: -50px;
+            top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #aaa;
+            writing-mode: vertical-rl;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h1>SPEC 0025 PPT 三角色彩系统与深浅对比三明治结构</h1>
+    <p>V2.6.0 · 2026-07-31 · commit 323904e</p>
+</div>
+
+<!-- 主题色选择器 -->
+<div class="color-selector">
+    <button class="color-btn active" style="background:#2563eb" onclick="switchTheme('blue')">蓝色</button>
+    <button class="color-btn" style="background:#7c3aed" onclick="switchTheme('purple')">紫色</button>
+    <button class="color-btn" style="background:#16a34a" onclick="switchTheme('green')">绿色</button>
+    <button class="color-btn" style="background:#dc2626" onclick="switchTheme('red')">红色</button>
+    <button class="color-btn" style="background:#ea580c" onclick="switchTheme('orange')">橙色</button>
+    <button class="color-btn" style="background:#475569" onclick="switchTheme('gray')">灰色</button>
+</div>
+
+<!-- 三角色彩展示 -->
+<div class="color-palette" id="palette">
+    <div class="color-card">
+        <div class="color-swatch" id="swatch-primary"></div>
+        <div class="role">主色 Primary</div>
+        <div class="hex" id="hex-primary"></div>
+    </div>
+    <div class="color-card">
+        <div class="color-swatch" id="swatch-auxiliary"></div>
+        <div class="role">辅助色 Auxiliary</div>
+        <div class="hex" id="hex-auxiliary"></div>
+    </div>
+    <div class="color-card">
+        <div class="color-swatch" id="swatch-accent"></div>
+        <div class="role">强调色 Accent</div>
+        <div class="hex" id="hex-accent"></div>
+    </div>
+    <div class="color-card">
+        <div class="color-swatch" id="swatch-title" style="display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#333;">Aa</div>
+        <div class="role">标题文字色</div>
+        <div class="hex" id="hex-title"></div>
+    </div>
+</div>
+
+<!-- 封面页模拟 -->
+<div class="slide-label">封面页 — 顶部主色块 + 底部主色窄条（三明治收口）</div>
+<div class="cover-canvas">
+    <div class="cover-top-block" id="cover-top">
+        <div class="cover-title">胃病数据分析实验报告</div>
+    </div>
+    <div class="cover-info">
+        <div class="project-name">项目：胃病数据分析</div>
+        <div class="date">生成日期：2026-07-31</div>
+    </div>
+    <div class="cover-bottom-bar" id="cover-bottom"></div>
+</div>
+
+<!-- 内容页模拟 -->
+<div class="slide-label">内容页 — 深色标题栏 → 浅色内容区（辅助色左栏）→ 深色页脚栏（三明治结构）</div>
+<div class="ppt-canvas">
+    <!-- 标题栏 -->
+    <div class="title-bar" id="title-bar">
+        <div class="title-text">实验目的</div>
+    </div>
+    <!-- 内容区 -->
+    <div class="content-area">
+        <div class="left-column" id="left-column">
+            <div class="section-title" id="section-title">实验目的</div>
+            <div class="bullet" id="bullet-1">分析胃病数据分布特征</div>
+            <div class="bullet" id="bullet-2">探索不同诊断类型指标差异</div>
+            <div class="bullet" id="bullet-3">验证统计分析方法有效性</div>
+        </div>
+        <div class="right-column">
+            <div class="content-text">
+                本实验旨在通过胃病数据分析，探索不同诊断类型（胃炎、胃溃疡、胃癌、功能性消化不良）的检验指标差异，为临床诊断提供数据支持。
+            </div>
+            <div class="chart-placeholder" id="chart-area" style="border: 1px dashed #ccc;">
+                📊 图表区域（右栏 60%）
+            </div>
+        </div>
+    </div>
+    <!-- 页脚栏 -->
+    <div class="footer-bar" id="footer-bar">
+        <div class="project-name">胃病数据分析</div>
+        <div class="page-number">第 2 / 7 页</div>
+    </div>
+</div>
+
+<!-- SPEC 0024 vs SPEC 0025 对比 -->
+<div class="info-section">
+    <h2>SPEC 0024 vs SPEC 0025 布局对比</h2>
+    <div class="comparison">
+        <!-- SPEC 0024 旧版 -->
+        <div class="comparison-item">
+            <div class="comparison-label" style="background:#666;">SPEC 0024（改进前）— 全浅色单色</div>
+            <div class="ppt-canvas" style="width:100%;height:300px;">
+                <div class="old-title-bar">
+                    <div class="title-text" style="color:#2563eb;">实验目的</div>
+                </div>
+                <div class="old-content-area" style="top:74px;height:190px;">
+                    <div class="old-left-column">
+                        <div class="section-title" style="color:#2563eb;">实验目的</div>
+                        <div class="bullet">分析胃病数据分布特征</div>
+                        <div class="bullet">探索不同诊断类型指标差异</div>
+                    </div>
+                    <div class="right-column" style="padding:20px 0;">
+                        <div class="content-text" style="font-size:12px;">
+                            本实验旨在通过胃病数据分析，探索不同诊断类型的检验指标差异。
+                        </div>
+                    </div>
+                </div>
+                <div class="old-footer-bar" style="height:36px;">
+                    <div class="project-name">胃病数据分析</div>
+                    <div class="page-number">第 2 / 7 页</div>
+                </div>
+            </div>
+            <p style="text-align:center;color:#999;font-size:12px;margin-top:8px;">
+                白色背景 + 主题色文字/圆点 + 浅灰细线页脚<br>
+                缺乏色彩层次和深浅对比
+            </p>
+        </div>
+        <!-- SPEC 0025 新版 -->
+        <div class="comparison-item">
+            <div class="comparison-label" id="new-label" style="background:#2563eb;">SPEC 0025（改进后）— 三角色彩三明治</div>
+            <div class="ppt-canvas" style="width:100%;height:300px;">
+                <div class="title-bar" id="cmp-title-bar" style="height:50px;">
+                    <div class="title-text">实验目的</div>
+                </div>
+                <div class="content-area" style="top:60px;height:190px;padding:0 20px;gap:10px;">
+                    <div class="left-column" id="cmp-left-column" style="padding:12px;">
+                        <div class="section-title" id="cmp-section-title" style="font-size:13px;">实验目的</div>
+                        <div class="bullet" id="cmp-bullet-1" style="font-size:11px;">分析胃病数据分布特征</div>
+                        <div class="bullet" id="cmp-bullet-2" style="font-size:11px;">探索不同诊断类型指标差异</div>
+                    </div>
+                    <div class="right-column" style="padding:12px 0;">
+                        <div class="content-text" style="font-size:12px;">
+                            本实验旨在通过胃病数据分析，探索不同诊断类型的检验指标差异。
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bar" id="cmp-footer-bar" style="height:25px;">
+                    <div class="project-name">胃病数据分析</div>
+                    <div class="page-number">第 2 / 7 页</div>
+                </div>
+            </div>
+            <p style="text-align:center;color:#999;font-size:12px;margin-top:8px;">
+                主色标题栏 + 辅助色左栏背景 + 强调色要点 + 主色页脚栏<br>
+                三色协调，深浅对比分明
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 色彩派生算法说明 -->
+<div class="info-section">
+    <h2>三角色彩派生算法</h2>
+    <table>
+        <tr>
+            <th>角色</th>
+            <th>用途</th>
+            <th>派生方式</th>
+        </tr>
+        <tr class="highlight">
+            <td><strong>主色 Primary</strong></td>
+            <td>标题栏/页脚栏背景、封面色块</td>
+            <td>= theme_color 原值</td>
+        </tr>
+        <tr>
+            <td><strong>辅助色 Auxiliary</strong></td>
+            <td>左栏背景衬托</td>
+            <td>L=0.92（高亮度）, S≤0.30（低饱和度）→ 浅色</td>
+        </tr>
+        <tr>
+            <td><strong>强调色 Accent</strong></td>
+            <td>圆点标记、章节标题</td>
+            <td>H+0.5（互补色相）, L=0.45, S=0.50-0.70；低饱和度(S&lt;0.20)固定蓝色</td>
+        </tr>
+        <tr>
+            <td><strong>标题文字色</strong></td>
+            <td>标题栏/页脚栏文字</td>
+            <td>主色亮度 > 0.60 → 深灰；否则 → 白色</td>
+        </tr>
+    </table>
+</div>
+
+<!-- 6 种预设色派生结果 -->
+<div class="info-section">
+    <h2>6 种预设色派生结果</h2>
+    <table>
+        <tr>
+            <th>主题色</th>
+            <th>主色</th>
+            <th>辅助色</th>
+            <th>强调色</th>
+            <th>标题文字</th>
+        </tr>
+        <tr>
+            <td>蓝 #2563eb</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#2563eb;border:1px solid #999;vertical-align:middle;"></span> 2563EB</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#E4E8F0;border:1px solid #999;vertical-align:middle;"></span> E4E8F0</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#C39022;border:1px solid #999;vertical-align:middle;"></span> C39022</td>
+            <td>白 FFFFFF</td>
+        </tr>
+        <tr>
+            <td>紫 #7c3aed</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#7c3aed;border:1px solid #999;vertical-align:middle;"></span> 7C3AED</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#E8E4F0;border:1px solid #999;vertical-align:middle;"></span> E8E4F0</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#87C322;border:1px solid #999;vertical-align:middle;"></span> 87C322</td>
+            <td>白 FFFFFF</td>
+        </tr>
+        <tr>
+            <td>绿 #16a34a</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#16a34a;border:1px solid #999;vertical-align:middle;"></span> 16A34A</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#E4F0E8;border:1px solid #999;vertical-align:middle;"></span> E4F0E8</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#C32287;border:1px solid #999;vertical-align:middle;"></span> C32287</td>
+            <td>白 FFFFFF</td>
+        </tr>
+        <tr>
+            <td>红 #dc2626</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#dc2626;border:1px solid #999;vertical-align:middle;"></span> DC2626</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#F0E4E4;border:1px solid #999;vertical-align:middle;"></span> F0E4E4</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#22C3C3;border:1px solid #999;vertical-align:middle;"></span> 22C3C3</td>
+            <td>白 FFFFFF</td>
+        </tr>
+        <tr>
+            <td>橙 #ea580c</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#ea580c;border:1px solid #999;vertical-align:middle;"></span> EA580C</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#F0E8E4;border:1px solid #999;vertical-align:middle;"></span> F0E8E4</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#228CC3;border:1px solid #999;vertical-align:middle;"></span> 228CC3</td>
+            <td>白 FFFFFF</td>
+        </tr>
+        <tr>
+            <td>灰 #475569</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#475569;border:1px solid #999;vertical-align:middle;"></span> 475569</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#E6E9EE;border:1px solid #999;vertical-align:middle;"></span> E6E9EE</td>
+            <td><span style="display:inline-block;width:16px;height:16px;background:#2563EB;border:1px solid #999;vertical-align:middle;"></span> 2563EB（蓝色特殊处理）</td>
+            <td>白 FFFFFF</td>
+        </tr>
+    </table>
+</div>
+
+<!-- 测试验收结果 -->
+<div class="info-section">
+    <h2>测试验收结果</h2>
+    <table>
+        <tr>
+            <th>测试范围</th>
+            <th>结果</th>
+        </tr>
+        <tr>
+            <td>SPEC 0025 新增测试</td>
+            <td>16 passed（8 色彩派生 + 7 三明治结构 + 1 紫色阈值）</td>
+        </tr>
+        <tr>
+            <td>SPEC 0025 核心模块</td>
+            <td>158 passed</td>
+        </tr>
+        <tr>
+            <td>纯单元测试模块</td>
+            <td>214 passed</td>
+        </tr>
+        <tr>
+            <td>cleanup/worker 模块</td>
+            <td>132 passed</td>
+        </tr>
+        <tr>
+            <td>service 层模块</td>
+            <td>86 passed</td>
+        </tr>
+        <tr class="highlight">
+            <td><strong>合计</strong></td>
+            <td><strong>590 passed，0 failed，零回归</strong></td>
+        </tr>
+        <tr>
+            <td>前端 lint + build</td>
+            <td>通过</td>
+        </tr>
+        <tr>
+            <td>Alembic 迁移</td>
+            <td>通过（不修改 schema）</td>
+        </tr>
+    </table>
+</div>
+
+<script>
+    // 6 种预设色配置
+    const themes = {
+        blue: {
+            primary: '#2563eb', auxiliary: '#E4E8F0', accent: '#C39022',
+            titleText: '#FFFFFF', name: '蓝色'
+        },
+        purple: {
+            primary: '#7c3aed', auxiliary: '#E8E4F0', accent: '#87C322',
+            titleText: '#FFFFFF', name: '紫色'
+        },
+        green: {
+            primary: '#16a34a', auxiliary: '#E4F0E8', accent: '#C32287',
+            titleText: '#FFFFFF', name: '绿色'
+        },
+        red: {
+            primary: '#dc2626', auxiliary: '#F0E4E4', accent: '#22C3C3',
+            titleText: '#FFFFFF', name: '红色'
+        },
+        orange: {
+            primary: '#ea580c', auxiliary: '#F0E8E4', accent: '#228CC3',
+            titleText: '#FFFFFF', name: '橙色'
+        },
+        gray: {
+            primary: '#475569', auxiliary: '#E6E9EE', accent: '#2563EB',
+            titleText: '#FFFFFF', name: '灰色'
+        }
+    };
+
+    function switchTheme(colorName) {
+        const theme = themes[colorName];
+
+        // 更新按钮状态
+        document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // 更新三角色彩展示
+        document.getElementById('swatch-primary').style.background = theme.primary;
+        document.getElementById('swatch-auxiliary').style.background = theme.auxiliary;
+        document.getElementById('swatch-accent').style.background = theme.accent;
+        document.getElementById('hex-primary').textContent = theme.primary;
+        document.getElementById('hex-auxiliary').textContent = theme.auxiliary;
+        document.getElementById('hex-accent').textContent = theme.accent;
+        document.getElementById('hex-title').textContent = theme.titleText;
+
+        // 更新封面页
+        document.getElementById('cover-top').style.background = theme.primary;
+        document.getElementById('cover-bottom').style.background = theme.primary;
+
+        // 更新内容页
+        document.getElementById('title-bar').style.background = theme.primary;
+        document.getElementById('left-column').style.background = theme.auxiliary;
+        document.getElementById('section-title').style.color = theme.accent;
+        document.getElementById('bullet-1').style.color = theme.accent;
+        document.getElementById('bullet-2').style.color = theme.accent;
+        document.getElementById('bullet-3').style.color = theme.accent;
+        document.getElementById('footer-bar').style.background = theme.primary;
+        document.getElementById('chart-area').style.borderColor = theme.accent;
+
+        // 更新对比区域
+        document.getElementById('cmp-title-bar').style.background = theme.primary;
+        document.getElementById('cmp-left-column').style.background = theme.auxiliary;
+        document.getElementById('cmp-section-title').style.color = theme.accent;
+        document.getElementById('cmp-bullet-1').style.color = theme.accent;
+        document.getElementById('cmp-bullet-2').style.color = theme.accent;
+        document.getElementById('cmp-footer-bar').style.background = theme.primary;
+        document.getElementById('new-label').style.background = theme.primary;
+    }
+
+    // 初始化为蓝色主题
+    switchTheme('blue');
+</script>
+
+</body>
+</html>

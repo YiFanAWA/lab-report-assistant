@@ -1,0 +1,3212 @@
+{
+  "blue": {
+    "color_info": {
+      "theme_color": "#2563eb",
+      "primary": "2563EB",
+      "auxiliary": "E4E8F0",
+      "accent": "C39022",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-blue.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-blue\n生成日期：2026-07-31",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4E8F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "C39022"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4E8F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "C39022"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4E8F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "C39022"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4E8F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "C39022"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4E8F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "C39022"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-blue",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  },
+  "purple": {
+    "color_info": {
+      "theme_color": "#7c3aed",
+      "primary": "7C3AED",
+      "auxiliary": "E8E4F0",
+      "accent": "87C322",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-purple.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-purple\n生成日期：2026-07-31",
+            "font_color": "7C3AED"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E8E4F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "87C322"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E8E4F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "87C322"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E8E4F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "87C322"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E8E4F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "87C322"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E8E4F0"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "87C322"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "7C3AED"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-purple",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  },
+  "green": {
+    "color_info": {
+      "theme_color": "#16a34a",
+      "primary": "16A34A",
+      "auxiliary": "E4F0E8",
+      "accent": "C32287",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-green.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-green\n生成日期：2026-07-31",
+            "font_color": "16A34A"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4F0E8"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "C32287"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4F0E8"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "C32287"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4F0E8"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "C32287"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4F0E8"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "C32287"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E4F0E8"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "C32287"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "16A34A"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-green",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  },
+  "red": {
+    "color_info": {
+      "theme_color": "#dc2626",
+      "primary": "DC2626",
+      "auxiliary": "F0E4E4",
+      "accent": "22C3C3",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-red.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-red\n生成日期：2026-07-31",
+            "font_color": "DC2626"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E4E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "22C3C3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E4E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "22C3C3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E4E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "22C3C3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E4E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "22C3C3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E4E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "22C3C3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "DC2626"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-red",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  },
+  "orange": {
+    "color_info": {
+      "theme_color": "#ea580c",
+      "primary": "EA580C",
+      "auxiliary": "F0E8E4",
+      "accent": "228CC3",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-orange.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-orange\n生成日期：2026-07-31",
+            "font_color": "EA580C"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E8E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "228CC3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E8E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "228CC3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E8E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "228CC3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E8E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "228CC3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "F0E8E4"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "228CC3"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "EA580C"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-orange",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  },
+  "gray": {
+    "color_info": {
+      "theme_color": "#475569",
+      "primary": "475569",
+      "auxiliary": "E6E9EE",
+      "accent": "2563EB",
+      "title_text_color": "FFFFFF"
+    },
+    "pptx_file": "spec0025-gray.pptx",
+    "slides": [
+      {
+        "slide_index": 0,
+        "shapes_count": 4,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 2.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.7,
+            "width": 12.33,
+            "height": 1.2,
+            "text": "胃病数据分析实验报告",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 3.2,
+            "width": 12.33,
+            "height": 1.5,
+            "text": "项目：胃病数据分析-gray\n生成日期：2026-07-31",
+            "font_color": "475569"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          }
+        ]
+      },
+      {
+        "slide_index": 1,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验目的",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E6E9EE"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验目的\n  分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "分析胃病数据分布特征，探索不同诊断类型的检验指标差异",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 2 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 2,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验背景",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E6E9EE"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验背景\n  胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "胃病发病率近年上升，早期诊断和数据分析对医学研究具有重要意义",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 3 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 3,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "数据描述",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E6E9EE"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 数据描述\n  数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "数据集规模：200 行 × 15 列，包含血常规、生化指标、肿瘤标志物",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 4 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 4,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "分析方案",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E6E9EE"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 分析方案\n  描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "描述性统计 + 分组对比 + 相关性分析",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 5 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 5,
+        "shapes_count": 8,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "实验结果",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 3",
+            "left": 0.5,
+            "top": 1.2,
+            "width": 5.3,
+            "height": 5.6,
+            "fill_color": "E6E9EE"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 4",
+            "left": 0.65,
+            "top": 1.3,
+            "width": 5.0,
+            "height": 5.4,
+            "text": "● 实验结果\n  执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "2563EB"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 6.1,
+            "top": 1.2,
+            "width": 6.7,
+            "height": 5.6,
+            "text": "执行成功，生成诊断分布图、年龄分布直方图等 4 张图表",
+            "font_color": "555555"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 6",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 7",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 8",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 6 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      },
+      {
+        "slide_index": 6,
+        "shapes_count": 6,
+        "shapes": [
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 1",
+            "left": 0.0,
+            "top": 0.0,
+            "width": 13.33,
+            "height": 1.0,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 2",
+            "left": 0.5,
+            "top": 0.1,
+            "width": 12.33,
+            "height": 0.8,
+            "text": "总结",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 3",
+            "left": 0.5,
+            "top": 2.5,
+            "width": 12.33,
+            "height": 3.5,
+            "text": "本实验完成既定分析目标，各诊断类型指标差异显著。",
+            "font_color": "333333"
+          },
+          {
+            "shape_type": "AUTO_SHAPE (1)",
+            "name": "Rectangle 4",
+            "left": 0.0,
+            "top": 7.0,
+            "width": 13.33,
+            "height": 0.5,
+            "fill_color": "475569"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 5",
+            "left": 0.5,
+            "top": 7.1,
+            "width": 6.0,
+            "height": 0.3,
+            "text": "胃病数据分析-gray",
+            "font_color": "FFFFFF"
+          },
+          {
+            "shape_type": "TEXT_BOX (17)",
+            "name": "TextBox 6",
+            "left": 10.33,
+            "top": 7.1,
+            "width": 2.5,
+            "height": 0.3,
+            "text": "第 7 / 7 页",
+            "font_color": "FFFFFF"
+          }
+        ]
+      }
+    ]
+  }
+}

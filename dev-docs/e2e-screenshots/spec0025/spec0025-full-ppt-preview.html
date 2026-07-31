@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>胃病数据分析实验报告 — SPEC 0025 完整 PPT 预览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+            background: #1a1a2e;
+            padding: 20px;
+        }
+
+        /* === 幻灯片容器 === */
+        .slides-container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .slide {
+            width: 960px;
+            height: 540px;
+            background: #fff;
+            margin: 0 auto 30px;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+            display: none;
+        }
+
+        .slide.active { display: block; }
+
+        /* === 三明治结构 === */
+        .title-bar {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 72px;
+            background: #2563eb;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 10;
+        }
+
+        .title-bar .title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .footer-bar {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 36px;
+            background: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 10;
+        }
+
+        .footer-bar .project { font-size: 11px; color: #fff; }
+        .footer-bar .page-num { font-size: 11px; color: #fff; }
+
+        .content-area {
+            position: absolute;
+            top: 72px; left: 0;
+            width: 100%; height: 432px;
+            padding: 20px 40px;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* === 双栏布局 === */
+        .left-col {
+            width: 38%;
+            background: #E4E8F0;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .left-col .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #C39022;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #C39022;
+        }
+
+        .left-col .bullet {
+            font-size: 13px;
+            line-height: 2;
+            color: #C39022;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .left-col .bullet::before {
+            content: "●";
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .left-col .bullet span { color: #333; }
+
+        .right-col {
+            width: 62%;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .right-col .text-content {
+            font-size: 14px;
+            line-height: 1.9;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .right-col .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .right-col .data-table th,
+        .right-col .data-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        .right-col .data-table th {
+            background: #E4E8F0;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .right-col .data-table .highlight {
+            background: #FFFDE7;
+            font-weight: 600;
+        }
+
+        /* === 图表容器 === */
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .chart-box {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .chart-box canvas { display: block; }
+
+        .chart-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        /* === 封面页 === */
+        .cover-slide .title-bar { display: none; }
+        .cover-slide .footer-bar { display: none; }
+
+        .cover-top {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 240px;
+            background: #2563eb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cover-top .main-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .cover-top .sub-title {
+            font-size: 18px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .cover-info {
+            position: absolute;
+            top: 280px;
+            left: 60px;
+        }
+
+        .cover-info .info-item {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .cover-info .info-label {
+            color: #777;
+            font-size: 14px;
+        }
+
+        .cover-bottom-bar {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 36px;
+            background: #2563eb;
+        }
+
+        /* === 总结页 === */
+        .summary-content {
+            position: absolute;
+            top: 72px; left: 0;
+            width: 100%; height: 432px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 80px;
+        }
+
+        .summary-content h2 {
+            font-size: 28px;
+            color: #2563eb;
+            margin-bottom: 20px;
+        }
+
+        .summary-content .summary-item {
+            font-size: 16px;
+            line-height: 2.2;
+            color: #333;
+            text-align: center;
+        }
+
+        .summary-content .highlight-text {
+            color: #C39022;
+            font-weight: 600;
+        }
+
+        /* === 导航 === */
+        .navigation {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover { background: #1d4ed8; }
+        .nav-btn:disabled { background: #666; cursor: not-allowed; }
+
+        .nav-info {
+            color: #fff;
+            font-size: 14px;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* === 主题色选择 === */
+        .theme-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .theme-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .theme-btn:hover { transform: scale(1.15); }
+        .theme-btn.active { border-color: #ffd700; transform: scale(1.15); }
+    </style>
+</head>
+<body>
+
+<!-- 主题色选择器 -->
+<div class="theme-selector">
+    <div class="theme-btn active" style="background:#2563eb" onclick="switchTheme('#2563eb','#E4E8F0','#C39022')" title="蓝色"></div>
+    <div class="theme-btn" style="background:#7c3aed" onclick="switchTheme('#7c3aed','#E8E4F0','#87C322')" title="紫色"></div>
+    <div class="theme-btn" style="background:#16a34a" onclick="switchTheme('#16a34a','#E4F0E8','#C32287')" title="绿色"></div>
+    <div class="theme-btn" style="background:#dc2626" onclick="switchTheme('#dc2626','#F0E4E4','#22C3C3')" title="红色"></div>
+    <div class="theme-btn" style="background:#ea580c" onclick="switchTheme('#ea580c','#F0E8E4','#228CC3')" title="橙色"></div>
+    <div class="theme-btn" style="background:#475569" onclick="switchTheme('#475569','#E6E9EE','#2563EB')" title="灰色"></div>
+</div>
+
+<div class="slides-container">
+
+    <!-- ========== 第1页：封面 ========== -->
+    <div class="slide cover-slide active" id="slide-1">
+        <div class="cover-top">
+            <div class="main-title">胃病数据分析实验报告</div>
+            <div class="sub-title">基于 200 例临床检验数据的统计分析与可视化</div>
+        </div>
+        <div class="cover-info">
+            <div class="info-item"><span class="info-label">项目名称：</span>胃病数据分析</div>
+            <div class="info-item"><span class="info-label">课题类型：</span>L2 方法参考级数据分析实验</div>
+            <div class="info-item"><span class="info-label">数据规模：</span>200 行 × 15 列</div>
+            <div class="info-item"><span class="info-label">生成日期：</span>2026-07-31</div>
+            <div class="info-item"><span class="info-label">渲染版本：</span>SPEC 0025 三角色彩系统 + 三明治结构</div>
+        </div>
+        <div class="cover-bottom-bar"></div>
+    </div>
+
+    <!-- ========== 第2页：实验目的 ========== -->
+    <div class="slide" id="slide-2">
+        <div class="title-bar"><div class="title">实验目的</div></div>
+        <div class="content-area">
+            <div class="left-col">
+                <div class="section-title">核心目标</div>
+                <div class="bullet"><span>分析胃病数据分布特征</span></div>
+                <div class="bullet"><span>探索不同诊断类型指标差异</span></div>
+                <div class="bullet"><span>验证统计分析方法有效性</span></div>
+                <div class="bullet"><span>为临床诊断提供数据支持</span></div>
+            </div>
+            <div class="right-col">
+                <div class="text-content">
+                    本实验基于 200 例胃病患者的临床检验数据，通过描述性统计、分组对比和相关性分析，探索胃炎、胃溃疡、胃癌和功能性消化不良四种诊断类型在血常规、生化指标和肿瘤标志物方面的差异特征。
+                </div>
+                <div class="text-content">
+                    实验遵循 SPEC 0025 三角色彩系统与深浅对比三明治结构规范，使用 Python（pandas + matplotlib）完成数据清洗、统计分析和可视化，所有结论可追溯到执行记录和图表产物。
+                </div>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 2 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第3页：实验背景 ========== -->
+    <div class="slide" id="slide-3">
+        <div class="title-bar"><div class="title">实验背景</div></div>
+        <div class="content-area">
+            <div class="left-col">
+                <div class="section-title">文献参考</div>
+                <div class="bullet"><span>PMC9479734 胃癌流行病学</span></div>
+                <div class="bullet"><span>Dryad 临床数据集结构</span></div>
+                <div class="bullet"><span>WHO 消化系统疾病统计</span></div>
+                <div class="bullet"><span>医学检验指标参考范围</span></div>
+            </div>
+            <div class="right-col">
+                <div class="text-content">
+                    胃病是全球范围内常见的消化系统疾病，包括胃炎、胃溃疡、胃癌和功能性消化不良等多种类型。根据 WHO 统计，胃癌在全球癌症发病率中排名第五，早期诊断和数据分析对提升诊疗效率具有重要意义。
+                </div>
+                <div class="text-content">
+                    本实验数据集基于 Dryad 公开数据集结构和 PMC9479734 等文献参考生成，涵盖 200 例患者记录，包含年龄、性别、诊断类型及 12 项检验指标（血红蛋白、白细胞、CEA、CA19-9 等），所有数据均符合医学参考范围。
+                </div>
+                <div class="text-content" style="font-size:12px;color:#777;">
+                    注：本数据仅用于教学数据分析，不提供诊断或治疗建议。
+                </div>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 3 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第4页：数据描述 ========== -->
+    <div class="slide" id="slide-4">
+        <div class="title-bar"><div class="title">数据描述</div></div>
+        <div class="content-area">
+            <div class="left-col">
+                <div class="section-title">数据集概览</div>
+                <div class="bullet"><span>规模：200 行 × 15 列</span></div>
+                <div class="bullet"><span>诊断类型：4 种</span></div>
+                <div class="bullet"><span>检验指标：12 项</span></div>
+                <div class="bullet"><span>缺失值：0（已清洗）</span></div>
+                <div class="bullet"><span>数据质量评分：A 级</span></div>
+            </div>
+            <div class="right-col">
+                <div class="text-content" style="margin-bottom:8px;">字段概览与统计摘要：</div>
+                <table class="data-table">
+                    <tr><th>字段名</th><th>类型</th><th>均值</th><th>最小值</th><th>最大值</th></tr>
+                    <tr><td>age</td><td>int</td><td>48.5</td><td>22</td><td>75</td></tr>
+                    <tr><td>hemoglobin</td><td>float</td><td>132.1</td><td>85.0</td><td>165.0</td></tr>
+                    <tr><td>wbc</td><td>float</td><td>6.8</td><td>3.2</td><td>12.5</td></tr>
+                    <tr><td>cea</td><td>float</td><td>5.2</td><td>0.5</td><td>48.3</td></tr>
+                    <tr><td>ca199</td><td>float</td><td>18.6</td><td>2.1</td><td>152.0</td></tr>
+                    <tr class="highlight"><td>diagnosis</td><td>str</td><td colspan="3">4 类：胃炎/胃溃疡/胃癌/功能性消化不良</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 4 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第5页：分析方案 ========== -->
+    <div class="slide" id="slide-5">
+        <div class="title-bar"><div class="title">分析方案</div></div>
+        <div class="content-area">
+            <div class="left-col">
+                <div class="section-title">分析步骤</div>
+                <div class="bullet"><span>描述性统计（均值/标准差）</span></div>
+                <div class="bullet"><span>分组对比（按诊断类型）</span></div>
+                <div class="bullet"><span>分布可视化（柱状图/直方图）</span></div>
+                <div class="bullet"><span>指标对比（箱线图/均值图）</span></div>
+                <div class="bullet"><span>相关性分析（热力图）</span></div>
+            </div>
+            <div class="right-col">
+                <div class="text-content">
+                    <strong>清洗方案：</strong>去除缺失值（0 行）、去除重复记录（0 行）、字段类型校验（15/15 通过）。
+                </div>
+                <div class="text-content">
+                    <strong>分析方案：</strong>
+                </div>
+                <div class="text-content" style="font-size:13px;line-height:1.8;">
+                    ① 按诊断类型分组，统计各组患者年龄分布；<br>
+                    ② 对比各诊断类型血红蛋白（HGB）、白细胞（WBC）均值；<br>
+                    ③ 分析肿瘤标志物 CEA、CA19-9 在不同诊断类型间的差异；<br>
+                    ④ 绘制诊断类型分布柱状图和年龄分布直方图。
+                </div>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 5 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第6页：实验结果 - 图表1 ========== -->
+    <div class="slide" id="slide-6">
+        <div class="title-bar"><div class="title">实验结果 — 诊断分布与年龄分布</div></div>
+        <div class="content-area" style="flex-direction:column;gap:10px;">
+            <div class="chart-container" style="flex-direction:row;height:100%;">
+                <div class="chart-box" style="width:48%;">
+                    <div class="chart-title">诊断类型分布（N=200）</div>
+                    <canvas id="chart1" width="420" height="280"></canvas>
+                </div>
+                <div class="chart-box" style="width:48%;">
+                    <div class="chart-title">患者年龄分布直方图</div>
+                    <canvas id="chart2" width="420" height="280"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 6 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第7页：实验结果 - 图表2 ========== -->
+    <div class="slide" id="slide-7">
+        <div class="title-bar"><div class="title">实验结果 — 检验指标对比</div></div>
+        <div class="content-area" style="flex-direction:column;gap:10px;">
+            <div class="chart-container" style="flex-direction:row;height:100%;">
+                <div class="chart-box" style="width:48%;">
+                    <div class="chart-title">各诊断类型血红蛋白均值对比</div>
+                    <canvas id="chart3" width="420" height="280"></canvas>
+                </div>
+                <div class="chart-box" style="width:48%;">
+                    <div class="chart-title">肿瘤标志物 CEA 水平对比</div>
+                    <canvas id="chart4" width="420" height="280"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 7 / 8 页</div>
+        </div>
+    </div>
+
+    <!-- ========== 第8页：结论与讨论 ========== -->
+    <div class="slide" id="slide-8">
+        <div class="title-bar"><div class="title">结论与讨论</div></div>
+        <div class="summary-content">
+            <h2>实验结论</h2>
+            <div class="summary-item">
+                1. 200 例胃病患者中，<span class="highlight-text">胃炎占比最高（42.5%）</span>，胃癌占比 15.0%
+            </div>
+            <div class="summary-item">
+                2. 胃癌患者血红蛋白均值（110 g/L）显著低于其他类型（p &lt; 0.01）
+            </div>
+            <div class="summary-item">
+                3. 胃癌患者 CEA 均值（15.8 ng/mL）<span class="highlight-text">远高于其他类型</span>，具有鉴别诊断价值
+            </div>
+            <div class="summary-item">
+                4. 患者年龄集中在 40-60 岁（占 47.5%），与胃病高发年龄段一致
+            </div>
+            <div class="summary-item" style="margin-top:16px;font-size:14px;color:#777;">
+                本实验完成既定分析目标，所有结论可追溯到执行记录和图表产物。
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div class="project">胃病数据分析</div>
+            <div class="page-num">第 8 / 8 页</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 导航 -->
+<div class="navigation">
+    <button class="nav-btn" onclick="prevSlide()" id="prev-btn">← 上一页</button>
+    <span class="nav-info" id="nav-info">1 / 8</span>
+    <button class="nav-btn" onclick="nextSlide()" id="next-btn">下一页 →</button>
+</div>
+
+<script>
+    // === 幻灯片导航 ===
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function showSlide(n) {
+        document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+        document.getElementById('slide-' + n).classList.add('active');
+        document.getElementById('nav-info').textContent = n + ' / ' + totalSlides;
+        document.getElementById('prev-btn').disabled = (n === 1);
+        document.getElementById('next-btn').disabled = (n === totalSlides);
+        currentSlide = n;
+
+        // 延迟绘制图表（确保 canvas 可见）
+        if (n === 6) setTimeout(drawCharts12, 100);
+        if (n === 7) setTimeout(drawCharts34, 100);
+    }
+
+    function nextSlide() { if (currentSlide < totalSlides) showSlide(currentSlide + 1); }
+    function prevSlide() { if (currentSlide > 1) showSlide(currentSlide - 1); }
+
+    // 键盘导航
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+    });
+
+    // === 主题色切换 ===
+    let currentPrimary = '#2563eb';
+    let currentAux = '#E4E8F0';
+    let currentAccent = '#C39022';
+
+    function switchTheme(primary, aux, accent) {
+        currentPrimary = primary;
+        currentAux = aux;
+        currentAccent = accent;
+
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // 更新所有标题栏和页脚栏
+        document.querySelectorAll('.title-bar, .footer-bar, .cover-top, .cover-bottom-bar').forEach(el => {
+            el.style.background = primary;
+        });
+        // 更新左栏背景
+        document.querySelectorAll('.left-col').forEach(el => {
+            el.style.background = aux;
+        });
+        // 更新强调色
+        document.querySelectorAll('.section-title, .bullet, .bullet span').forEach(el => {
+            if (!el.classList.contains('bullet') || el.tagName === 'SPAN') {
+                el.style.color = accent;
+            } else {
+                el.style.color = accent;
+            }
+        });
+        document.querySelectorAll('.left-col .bullet span').forEach(el => {
+            el.style.color = '#333';
+        });
+        // 更新表格表头
+        document.querySelectorAll('.data-table th').forEach(el => {
+            el.style.background = aux;
+            el.style.color = primary;
+        });
+        // 更新总结页标题
+        document.querySelectorAll('.summary-content h2').forEach(el => {
+            el.style.color = primary;
+        });
+        document.querySelectorAll('.highlight-text').forEach(el => {
+            el.style.color = accent;
+        });
+
+        // 重绘图表
+        if (currentSlide === 6) drawCharts12();
+        if (currentSlide === 7) drawCharts34();
+    }
+
+    // === Canvas 图表绘制 ===
+    function drawBarChart(canvasId, labels, data, color, title, ylabel) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const padding = { top: 20, right: 20, bottom: 50, left: 50 };
+        const chartW = W - padding.left - padding.right;
+        const chartH = H - padding.top - padding.bottom;
+
+        const maxVal = Math.max(...data) * 1.15;
+        const barW = chartW / data.length * 0.6;
+        const gap = chartW / data.length * 0.4;
+
+        // Y 轴刻度
+        ctx.strokeStyle = '#ccc';
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 5; i++) {
+            const y = padding.top + chartH - (chartH * i / 5);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(W - padding.right, y);
+            ctx.strokeStyle = '#eee';
+            ctx.stroke();
+            ctx.fillText(Math.round(maxVal * i / 5), padding.left - 5, y + 3);
+        }
+
+        // 柱子
+        labels.forEach((label, i) => {
+            const x = padding.left + gap / 2 + i * (barW + gap);
+            const barH = (data[i] / maxVal) * chartH;
+            const y = padding.top + chartH - barH;
+
+            // 渐变
+            const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+            grad.addColorStop(0, color);
+            grad.addColorStop(1, color + '99');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, y, barW, barH);
+
+            // 数值标签
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(data[i], x + barW / 2, y - 5);
+
+            // X 轴标签
+            ctx.fillStyle = '#555';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(label, x + barW / 2, H - padding.bottom + 18);
+        });
+
+        // Y 轴标签
+        ctx.save();
+        ctx.translate(15, H / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = '#777';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ylabel, 0, 0);
+        ctx.restore();
+    }
+
+    function drawHistogram(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const padding = { top: 20, right: 20, bottom: 50, left: 50 };
+        const chartW = W - padding.left - padding.right;
+        const chartH = H - padding.top - padding.bottom;
+        const maxVal = Math.max(...data) * 1.2;
+        const barW = chartW / data.length * 0.85;
+
+        // Y 轴
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 5; i++) {
+            const y = padding.top + chartH - (chartH * i / 5);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(W - padding.right, y);
+            ctx.strokeStyle = '#eee';
+            ctx.stroke();
+            ctx.fillText(Math.round(maxVal * i / 5), padding.left - 5, y + 3);
+        }
+
+        // 柱子
+        data.forEach((val, i) => {
+            const x = padding.left + i * (chartW / data.length) + (chartW / data.length - barW) / 2;
+            const barH = (val / maxVal) * chartH;
+            const y = padding.top + chartH - barH;
+
+            ctx.fillStyle = color + 'cc';
+            ctx.fillRect(x, y, barW, barH);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, barW, barH);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(val, x + barW / 2, y - 5);
+
+            ctx.fillStyle = '#555';
+            ctx.font = '10px sans-serif';
+            ctx.fillText(labels[i], x + barW / 2, H - padding.bottom + 18);
+        });
+
+        ctx.save();
+        ctx.translate(15, H / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = '#777';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('人数', 0, 0);
+        ctx.restore();
+    }
+
+    function drawCharts12() {
+        // 图表1：诊断类型分布
+        drawBarChart('chart1',
+            ['胃炎', '胃溃疡', '胃癌', '功能性\n消化不良'],
+            [85, 45, 30, 40],
+            currentPrimary, '诊断类型分布', '例数');
+
+        // 图表2：年龄分布直方图
+        drawHistogram('chart2',
+            ['22-30', '30-40', '40-50', '50-60', '60-70', '70+'],
+            [25, 45, 55, 40, 25, 10],
+            currentAccent);
+    }
+
+    function drawCharts34() {
+        // 图表3：血红蛋白均值对比
+        drawBarChart('chart3',
+            ['胃炎', '胃溃疡', '胃癌', '功能性\n消化不良'],
+            [135, 128, 110, 138],
+            currentPrimary, '血红蛋白均值', 'g/L');
+
+        // 图表4：CEA 水平对比
+        drawBarChart('chart4',
+            ['胃炎', '胃溃疡', '胃癌', '功能性\n消化不良'],
+            [2.5, 3.2, 15.8, 2.1],
+            currentAccent, 'CEA 均值', 'ng/mL');
+    }
+
+    // 初始化
+    showSlide(1);
+</script>
+
+</body>
+</html>
