@@ -151,7 +151,11 @@ def test_render_charts_not_counted_in_target(tmp_path):
 
 
 def _slide_has_color(slide, target_color: RGBColor) -> bool:
-    """检查某页是否在文本字体或形状填充中使用了目标颜色（SPEC 0024 空白版式适配）。"""
+    """检查某页是否在文本字体或形状填充中使用了目标颜色。
+
+    SPEC 0026 增强：支持渐变填充检查（检查任一停止点颜色）。
+    """
+    from pptx.enum.dml import MSO_FILL_TYPE
     for shape in slide.shapes:
         # 检查文本 run 的字体颜色
         if shape.has_text_frame:
@@ -159,10 +163,19 @@ def _slide_has_color(slide, target_color: RGBColor) -> bool:
                 for run in para.runs:
                     if run.font.color and run.font.color.rgb == target_color:
                         return True
-        # 检查形状填充颜色（色块、分隔线、圆点等）
+        # 检查形状填充颜色（纯色、渐变）
         try:
-            if shape.fill.type is not None and shape.fill.fore_color.rgb == target_color:
-                return True
+            fill = shape.fill
+            if fill.type is None:
+                continue
+            if fill.type == MSO_FILL_TYPE.SOLID:
+                if fill.fore_color.rgb == target_color:
+                    return True
+            elif fill.type == MSO_FILL_TYPE.GRADIENT:
+                # 渐变填充：检查任一停止点颜色
+                for stop in fill.gradient_stops:
+                    if stop.color.rgb == target_color:
+                        return True
         except Exception:
             pass
     return False
@@ -324,14 +337,67 @@ def test_render_invalid_theme_color_falls_back(tmp_path):
 
 
 def _shape_has_fill_color(slide, target_color: RGBColor) -> bool:
-    """检查幻灯片是否有指定填充色的形状（不含文本字体色）。"""
+    """检查幻灯片是否有指定填充色的形状（支持纯色和渐变填充）。
+
+    SPEC 0026 增强：渐变填充时检查任一停止点颜色是否匹配。
+    """
+    from pptx.enum.dml import MSO_FILL_TYPE
     for shape in slide.shapes:
         try:
-            if shape.fill.type is not None and shape.fill.fore_color.rgb == target_color:
+            fill = shape.fill
+            if fill.type is None:
+                continue
+            if fill.type == MSO_FILL_TYPE.SOLID:
+                if fill.fore_color.rgb == target_color:
+                    return True
+            elif fill.type == MSO_FILL_TYPE.GRADIENT:
+                # 渐变填充：检查任一停止点颜色
+                for stop in fill.gradient_stops:
+                    if stop.color.rgb == target_color:
+                        return True
+        except Exception:
+            pass
+    return False
+
+
+def _shape_has_gradient_fill(slide) -> bool:
+    """检查幻灯片是否有渐变填充形状（SPEC 0026）。"""
+    from pptx.enum.dml import MSO_FILL_TYPE
+    for shape in slide.shapes:
+        try:
+            if shape.fill.type == MSO_FILL_TYPE.GRADIENT:
                 return True
         except Exception:
             pass
     return False
+
+
+def _find_gradient_shape(slide):
+    """返回幻灯片第一个渐变填充形状（SPEC 0026）。"""
+    from pptx.enum.dml import MSO_FILL_TYPE
+    for shape in slide.shapes:
+        try:
+            if shape.fill.type == MSO_FILL_TYPE.GRADIENT:
+                return shape
+        except Exception:
+            pass
+    return None
+
+
+def _find_rounded_shape(slide, target_color: RGBColor):
+    """返回幻灯片第一个填充指定颜色的圆角矩形（SPEC 0026）。"""
+    from pptx.enum.shapes import MSO_SHAPE
+    for shape in slide.shapes:
+        try:
+            # auto_shape_type 仅对自选图形可用，且值为 MSO_SHAPE 枚举
+            if getattr(shape, "auto_shape_type", None) != MSO_SHAPE.ROUNDED_RECTANGLE:
+                continue
+            if (shape.fill.type is not None
+                    and shape.fill.fore_color.rgb == target_color):
+                return shape
+        except Exception:
+            pass
+    return None
 
 
 class TestSpec0025ColorSystem:
@@ -744,3 +810,299 @@ def test_api_generate_ppt_empty_config(client):
         json={"config": {}},
     )
     assert response.status_code == 201
+
+
+# --- SPEC 0026 视觉效果增强测试（渐变 + 圆角 + 阴影 + 边框）---
+
+
+def _make_chart_png(path, width=100, height=75):
+    """生成真实 PNG 图片用于测试（避免占位文本框）。"""
+    try:
+        from PIL import Image
+        img = Image.new("RGB", (width, height), color=(100, 150, 200))
+        img.save(str(path))
+    except ImportError:
+        # Pillow 不可用时写入最小有效 PNG
+        path.write_bytes(
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+            b"\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x00\x03\x00\x01"
+            b"\x82\x8b\x99\xde\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+
+def _render_ppt_with_chart(tmp_path, theme_color="#2563eb"):
+    """渲染带图表的 PPT（用于阴影/边框测试），返回路径。"""
+    chart_path = tmp_path / "chart.png"
+    _make_chart_png(chart_path)
+    artifacts = [
+        {"name": "chart1.png", "artifact_type": "CHART_PNG",
+         "file_path": str(chart_path)},
+    ]
+    return _render_ppt(
+        tmp_path,
+        config={"theme_color": theme_color},
+        artifacts=artifacts,
+    )
+
+
+def _find_picture_in_prs(prs):
+    """遍历所有幻灯片找到第一个图片形状（SPEC 0026 阴影/边框测试）。
+
+    返回 (slide_index, picture_shape) 或 (None, None)。
+    """
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    for idx, slide in enumerate(prs.slides):
+        for shape in slide.shapes:
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                return idx, shape
+    return None, None
+
+
+class TestSpec0026VisualEffects:
+    """SPEC 0026 视觉效果增强测试（渐变 + 圆角 + 阴影 + 边框）。"""
+
+    # === 暗化算法测试 ===
+
+    def test_darken_color_reduces_brightness(self):
+        """D1：_darken_color 返回值亮度低于原色。"""
+        import colorsys
+        renderer = PptRenderer()
+        original = RGBColor(0x25, 0x63, 0xEB)  # 蓝色 #2563eb
+        darkened = renderer._darken_color(original, 0.20)
+
+        # 计算两者亮度
+        def brightness(rgb):
+            hex_str = str(rgb)
+            r = int(hex_str[0:2], 16) / 255
+            g = int(hex_str[2:4], 16) / 255
+            b = int(hex_str[4:6], 16) / 255
+            _, l, _ = colorsys.rgb_to_hls(r, g, b)
+            return l
+
+        assert brightness(darkened) < brightness(original), (
+            f"暗化后亮度未降低：原={brightness(original)}, 暗化={brightness(darkened)}"
+        )
+
+    def test_darken_color_low_brightness_floor(self):
+        """D2：_darken_color 极端情况（L 已很低）不返回负值，亮度接近下限。"""
+        import colorsys
+        renderer = PptRenderer()
+        # 极暗的颜色 #000000（L=0）
+        extreme_dark = RGBColor(0x00, 0x00, 0x00)
+        darkened = renderer._darken_color(extreme_dark, 0.50)
+
+        hex_str = str(darkened)
+        r = int(hex_str[0:2], 16) / 255
+        g = int(hex_str[2:4], 16) / 255
+        b = int(hex_str[4:6], 16) / 255
+        _, l, _ = colorsys.rgb_to_hls(r, g, b)
+        # 亮度应接近下限 0.10（允许 RGB↔HLS 转换浮点误差）
+        assert l >= 0.09, f"暗化后亮度 {l} 远低于下限 0.10"
+
+    # === 渐变填充测试 ===
+
+    def test_gradient_cover_top_block(self, tmp_path):
+        """G1：封面页顶部色块为渐变填充。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        cover_slide = prs.slides[0]
+        assert _shape_has_gradient_fill(cover_slide), "封面页未找到渐变填充形状"
+
+    def test_gradient_content_title_bar(self, tmp_path):
+        """G2：内容页标题栏为渐变填充。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        content_slide = prs.slides[1]
+        assert _shape_has_gradient_fill(content_slide), "内容页未找到渐变填充形状"
+
+    def test_gradient_content_footer_bar(self, tmp_path):
+        """G3：内容页页脚栏为渐变填充。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        content_slide = prs.slides[1]
+        # 页脚栏在底部（top 接近 7.0"），检查底部形状是否有渐变
+        assert _shape_has_gradient_fill(content_slide), "内容页页脚栏未找到渐变填充"
+
+    def test_gradient_angle_is_90(self, tmp_path):
+        """G4：渐变角度为 90°（上→下）。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        cover_slide = prs.slides[0]
+        shape = _find_gradient_shape(cover_slide)
+        assert shape is not None, "封面页未找到渐变形状"
+        # 渐变角度应为 90（允许浮点误差）
+        assert abs(shape.fill.gradient_angle - 90) < 1, (
+            f"渐变角度不是 90°：{shape.fill.gradient_angle}"
+        )
+
+    def test_gradient_start_color_is_primary(self, tmp_path):
+        """G5：渐变起始色 = 主色原值。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        cover_slide = prs.slides[0]
+        shape = _find_gradient_shape(cover_slide)
+        assert shape is not None, "封面页未找到渐变形状"
+        stops = shape.fill.gradient_stops
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        # 起始停止点（position 最小）颜色应为主色
+        start_stop = min(stops, key=lambda s: s.position)
+        assert start_stop.color.rgb == primary, (
+            f"渐变起始色 {start_stop.color.rgb} != 主色 {primary}"
+        )
+
+    def test_gradient_end_color_is_darkened(self, tmp_path):
+        """G6：渐变结束色 = 主色暗化色。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        cover_slide = prs.slides[0]
+        shape = _find_gradient_shape(cover_slide)
+        assert shape is not None, "封面页未找到渐变形状"
+        stops = shape.fill.gradient_stops
+        end_stop = max(stops, key=lambda s: s.position)
+
+        renderer = PptRenderer()
+        primary = RGBColor(0x25, 0x63, 0xEB)
+        expected_end = renderer._darken_color(primary, 0.20)
+        assert end_stop.color.rgb == expected_end, (
+            f"渐变结束色 {end_stop.color.rgb} != 预期暗化色 {expected_end}"
+        )
+
+    # === 圆角矩形测试 ===
+
+    def test_rounded_left_column_shape_type(self, tmp_path):
+        """R1：左栏背景形状类型为 ROUNDED_RECTANGLE。"""
+        from pptx.enum.shapes import MSO_SHAPE
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        content_slide = prs.slides[1]
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        shape = _find_rounded_shape(content_slide, auxiliary)
+        assert shape is not None, "左栏未找到辅助色填充的圆角矩形"
+        assert shape.auto_shape_type == MSO_SHAPE.ROUNDED_RECTANGLE
+
+    def test_rounded_corner_radius_005(self, tmp_path):
+        """R2：圆角半径 adjustments[0] ≈ 0.05。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        content_slide = prs.slides[1]
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        shape = _find_rounded_shape(content_slide, auxiliary)
+        assert shape is not None, "左栏未找到圆角矩形"
+        # 圆角半径应为 0.05（允许浮点误差）
+        assert abs(shape.adjustments[0] - 0.05) < 0.01, (
+            f"圆角半径 {shape.adjustments[0]} 不是 0.05"
+        )
+
+    def test_rounded_left_column_fill_is_auxiliary(self, tmp_path):
+        """R3：左栏背景填充色 = 辅助色。"""
+        output_path = _render_ppt(
+            tmp_path, config={"theme_color": "#2563eb"},
+        )
+        prs = Presentation(str(output_path))
+        content_slide = prs.slides[1]
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        shape = _find_rounded_shape(content_slide, auxiliary)
+        assert shape is not None, "左栏未找到圆角矩形"
+        assert shape.fill.fore_color.rgb == auxiliary
+
+    # === 外阴影测试 ===
+
+    def test_shadow_effect_lst_exists(self, tmp_path):
+        """S1：右栏图表 picture 的 spPr 包含 effectLst 节点。"""
+        from pptx.oxml.ns import qn
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None, "未找到图片形状"
+        spPr = pic_shape._element.spPr
+        effectLst = spPr.find(qn('a:effectLst'))
+        assert effectLst is not None, "图片未包含 a:effectLst 节点"
+
+    def test_shadow_outer_shdw_exists(self, tmp_path):
+        """S2：effectLst 包含 outerShdw 子节点。"""
+        from pptx.oxml.ns import qn
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None
+        spPr = pic_shape._element.spPr
+        effectLst = spPr.find(qn('a:effectLst'))
+        outerShdw = effectLst.find(qn('a:outerShdw'))
+        assert outerShdw is not None, "effectLst 未包含 a:outerShdw 子节点"
+
+    def test_shadow_blur_rad_positive(self, tmp_path):
+        """S3：outerShdw 的 blurRad 属性存在且为正值。"""
+        from pptx.oxml.ns import qn
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None
+        spPr = pic_shape._element.spPr
+        outerShdw = spPr.find(qn('a:effectLst')).find(qn('a:outerShdw'))
+        blur_rad = outerShdw.get('blurRad')
+        assert blur_rad is not None, "outerShdw 缺少 blurRad 属性"
+        assert int(blur_rad) > 0, f"blurRad 非正值：{blur_rad}"
+
+    def test_shadow_has_srgb_color(self, tmp_path):
+        """S4：outerShdw 包含 srgbClr 颜色节点。"""
+        from pptx.oxml.ns import qn
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None
+        spPr = pic_shape._element.spPr
+        outerShdw = spPr.find(qn('a:effectLst')).find(qn('a:outerShdw'))
+        srgbClr = outerShdw.find(qn('a:srgbClr'))
+        assert srgbClr is not None, "outerShdw 未包含 a:srgbClr 颜色节点"
+
+    # === 边框测试 ===
+
+    def test_border_color_is_auxiliary(self, tmp_path):
+        """B1：右栏图表 picture 的 line.color.rgb == 辅助色。"""
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None, "未找到图片形状"
+        renderer = PptRenderer()
+        theme_rgb = renderer._resolve_theme_color("#2563eb")
+        _, auxiliary, _, _ = renderer._derive_color_palette(theme_rgb)
+        # 边框颜色应为辅助色
+        assert pic_shape.line.color.rgb == auxiliary, (
+            f"图片边框色 {pic_shape.line.color.rgb} != 辅助色 {auxiliary}"
+        )
+
+    def test_border_width_is_1pt(self, tmp_path):
+        """B2：右栏图表 picture 的 line.width == Pt(1)。"""
+        from pptx.util import Pt
+        output_path = _render_ppt_with_chart(tmp_path)
+        prs = Presentation(str(output_path))
+        _, pic_shape = _find_picture_in_prs(prs)
+        assert pic_shape is not None
+        # 边框宽度应为 1pt（允许 EMU 精度误差）
+        expected_emu = Pt(1)
+        assert abs(pic_shape.line.width - expected_emu) < 1000, (
+            f"图片边框宽度 {pic_shape.line.width} != 1pt ({expected_emu})"
+        )

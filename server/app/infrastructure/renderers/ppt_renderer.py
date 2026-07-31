@@ -1,4 +1,4 @@
-"""PPT 文档渲染器（SPEC 0025 三角色彩系统与深浅对比三明治结构）。
+"""PPT 文档渲染器（SPEC 0026 视觉效果增强）。
 
 从同一份已确认大纲提炼生成 .pptx 文件。
 使用 python-pptx 库，空白版式 + 精确定位驱动。
@@ -15,6 +15,12 @@
 - 深浅对比三明治结构：深色标题栏 → 浅色内容区 → 深色页脚栏
 - 辅助色浅色背景衬托左栏，强调色用于圆点标记和章节标题
 - 主色亮度 > 0.60 时自动切换深色标题文字（对比度保障，阈值覆盖紫色 #7c3aed）
+
+设计要点（SPEC 0026）：
+- 渐变填充：封面顶部色块、标题栏、页脚栏改为线性渐变（主色 → 主色暗化）
+- 圆角矩形：左栏背景衬托改为圆角矩形（半径 0.05），柔化硬边缘
+- 外阴影效果：右栏图表添加柔和外阴影（oxml 操作 a:effectLst）
+- 形状细边框：右栏图表添加辅助色 1pt 边框
 - SPEC 0011 配置兼容：target_slide_count/theme_color/include_charts 三字段不变
 """
 
@@ -94,11 +100,12 @@ TEXT_COLOR_MUTED = RGBColor(0x55, 0x55, 0x55)
 
 
 class PptRenderer:
-    """PPT 文档渲染器（SPEC 0025 三角色彩系统与深浅对比三明治结构）。
+    """PPT 文档渲染器（SPEC 0026 视觉效果增强）。
 
     从同一份已确认大纲提炼生成 .pptx 文件。
     采用 16:9 画布 + 空白版式精确定位 + 双栏内容页 + 图表自适应布局
-    + 三角色彩系统（主色/辅助色/强调色）+ 深浅对比三明治结构。
+    + 三角色彩系统（主色/辅助色/强调色）+ 深浅对比三明治结构
+    + 渐变填充 + 圆角矩形 + 外阴影 + 细边框（SPEC 0026）。
     """
 
     def render(
@@ -317,6 +324,26 @@ class PptRenderer:
 
         return primary, auxiliary, accent, title_text_color
 
+    # === SPEC 0026 视觉效果增强 ===
+
+    def _darken_color(
+        self, rgb: RGBColor, factor: float = 0.20,
+    ) -> RGBColor:
+        """降低颜色亮度（SPEC 0026 渐变派生）。
+
+        在 HLS 空间将 L 降低 factor，下限 0.10 保护极暗颜色。
+        用于渐变填充的结束色派生。
+        """
+        hex_str = str(rgb)
+        r = int(hex_str[0:2], 16) / 255
+        g = int(hex_str[2:4], 16) / 255
+        b = int(hex_str[4:6], 16) / 255
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        # 亮度降低 factor，下限 0.10 保护
+        l = max(l - factor, 0.10)
+        dr, dg, db = colorsys.hls_to_rgb(h, l, s)
+        return RGBColor(int(dr * 255), int(dg * 255), int(db * 255))
+
     # === 内容页候选构建 ===
 
     def _build_content_groups(
@@ -429,14 +456,15 @@ class PptRenderer:
         primary: RGBColor,
         title_text_color: RGBColor,
     ) -> None:
-        """渲染封面页：顶部主色块 + 白色大标题 + 副标题 + 底部主色窄条（三明治）。"""
+        """渲染封面页：顶部渐变色块 + 白色大标题 + 副标题 + 底部主色窄条（三明治）。"""
         slide = prs.slides.add_slide(prs.slide_layouts[6])  # 空白版式
 
-        # 1. 顶部主色全幅色块（SPEC 0024 保持）
-        self._add_color_block(
+        # 1. 顶部渐变色块（SPEC 0026：主色 → 主色暗化 20%）
+        primary_dark_20 = self._darken_color(primary, 0.20)
+        self._add_gradient_block(
             slide, Inches(0), Inches(0),
             Inches(SLIDE_WIDTH), Inches(TITLE_BANNER_HEIGHT),
-            primary,
+            primary, primary_dark_20, angle_deg=90,
         )
 
         # 2. 主标题（色块内白色文字，36pt Bold，居中）
@@ -508,7 +536,7 @@ class PptRenderer:
 
         # 3. 右栏图表或补充文本（60%）
         if chart_artifact:
-            self._add_content_right_chart(slide, chart_artifact)
+            self._add_content_right_chart(slide, chart_artifact, auxiliary)
         else:
             self._add_content_right_text(slide, sections)
 
@@ -525,13 +553,14 @@ class PptRenderer:
         primary: RGBColor,
         title_text_color: RGBColor,
     ) -> None:
-        """添加深色标题栏（主色背景 + 白色/深灰标题文字，SPEC 0025 三明治结构）。"""
-        # 1. 主色背景栏（全幅，高 TITLE_BAR_HEIGHT）
-        self._add_color_block(
+        """添加深色标题栏（渐变背景 + 白色/深灰标题文字，SPEC 0025/0026）。"""
+        # 1. 渐变背景栏（SPEC 0026：主色 → 主色暗化 15%，全幅，高 TITLE_BAR_HEIGHT）
+        primary_dark_15 = self._darken_color(primary, 0.15)
+        self._add_gradient_block(
             slide,
             Inches(0), Inches(0),
             Inches(SLIDE_WIDTH), Inches(TITLE_BAR_HEIGHT),
-            primary,
+            primary, primary_dark_15, angle_deg=90,
         )
 
         # 2. 标题文字（title_text_color，28pt Bold，垂直居中）
@@ -556,13 +585,13 @@ class PptRenderer:
         accent: RGBColor,
         auxiliary: RGBColor,
     ) -> None:
-        """添加左栏文本要点（辅助色背景 + 强调色圆点/标题 + 深灰说明，16pt）。"""
-        # 1. 辅助色浅色背景矩形（SPEC 0025）
-        self._add_color_block(
+        """添加左栏文本要点（辅助色圆角背景 + 强调色圆点/标题 + 深灰说明，16pt）。"""
+        # 1. 辅助色浅色圆角背景（SPEC 0026：圆角矩形替代直角矩形）
+        self._add_rounded_color_block(
             slide,
             Inches(MARGIN_LEFT), Inches(CONTENT_TOP),
             Inches(CONTENT_LEFT_WIDTH), Inches(CONTENT_HEIGHT),
-            auxiliary,
+            auxiliary, corner_radius=0.05,
         )
 
         # 2. 文本要点（叠在背景上，留 0.1" 内边距）
@@ -615,8 +644,10 @@ class PptRenderer:
                 more_run, FONT_SIZE_BODY, accent,
             )
 
-    def _add_content_right_chart(self, slide, artifact: dict) -> None:
-        """添加右栏图表（自适应缩放到右栏可用区域）。"""
+    def _add_content_right_chart(
+        self, slide, artifact: dict, auxiliary: RGBColor,
+    ) -> None:
+        """添加右栏图表（自适应缩放 + 边框 + 阴影，SPEC 0026）。"""
         file_path = artifact.get("file_path", "")
         name = artifact.get("name", "")
 
@@ -627,11 +658,16 @@ class PptRenderer:
         if file_path and Path(file_path).exists():
             w, h = self._fit_image_size(file_path, max_width, max_height)
             try:
-                slide.shapes.add_picture(
+                pic = slide.shapes.add_picture(
                     str(file_path),
                     Inches(CONTENT_RIGHT_LEFT), Inches(CONTENT_TOP),
                     width=Inches(w), height=Inches(h),
                 )
+                # SPEC 0026：细边框（辅助色 1pt）
+                pic.line.color.rgb = auxiliary
+                pic.line.width = Pt(1)
+                # SPEC 0026：外阴影效果
+                self._add_picture_shadow(pic)
             except Exception:
                 self._add_placeholder_textbox(
                     slide, CONTENT_RIGHT_LEFT, CONTENT_TOP,
@@ -1011,6 +1047,106 @@ class PptRenderer:
         shape.fill.fore_color.rgb = color_rgb
         shape.line.fill.background()  # 无边框
 
+    def _add_gradient_block(
+        self,
+        slide,
+        left,
+        top,
+        width,
+        height,
+        color_start: RGBColor,
+        color_end: RGBColor,
+        angle_deg: float = 90,
+    ) -> None:
+        """添加渐变色块（线性渐变，SPEC 0026）。
+
+        使用 python-pptx 原生 fill.gradient() API。
+        参数：
+        - color_start: 起始色（position=0.0）
+        - color_end: 结束色（position=1.0）
+        - angle_deg: 渐变角度（90=上→下）
+        """
+        shape = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, left, top, width, height,
+        )
+        fill = shape.fill
+        fill.gradient()
+        fill.gradient_angle = angle_deg
+        # 设置两端颜色（默认 gradient() 生成两停止点）
+        stops = fill.gradient_stops
+        stops[0].color.rgb = color_start
+        stops[0].position = 0.0
+        stops[1].color.rgb = color_end
+        stops[1].position = 1.0
+        shape.line.fill.background()  # 无边框
+
+    def _add_rounded_color_block(
+        self,
+        slide,
+        left,
+        top,
+        width,
+        height,
+        color_rgb: RGBColor,
+        corner_radius: float = 0.05,
+    ) -> None:
+        """添加圆角色块（圆角矩形 + 纯色填充，SPEC 0026）。
+
+        参数：
+        - corner_radius: 圆角半径（0.0-1.0，相对短边比例）
+        """
+        shape = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height,
+        )
+        shape.adjustments[0] = corner_radius
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = color_rgb
+        shape.line.fill.background()  # 无边框
+
+    def _add_picture_shadow(
+        self,
+        picture,
+        blur_radius_pt: float = 8,
+        distance_pt: float = 4,
+        direction_deg: float = 315,
+        alpha_pct: int = 30,
+    ) -> None:
+        """为图片添加外阴影效果（oxml 操作 a:effectLst，SPEC 0026）。
+
+        python-pptx 未暴露 effect_format API，需直接操作 oxml。
+        参数：
+        - blur_radius_pt: 模糊半径（Pt）
+        - distance_pt: 阴影距离（Pt）
+        - direction_deg: 阴影方向（度，0=右，90=下，180=左，270=上）
+        - alpha_pct: 不透明度百分比（0-100）
+        """
+        # EMU 转换常量：1 Pt = 12700 EMU；1 度 = 60000（1/60000 度）
+        blur_emu = str(int(blur_radius_pt * 12700))
+        dist_emu = str(int(distance_pt * 12700))
+        dir_emu = str(int(direction_deg * 60000))
+        # alpha 百分比 → 千分比（100% = 100000）
+        alpha_val = str(int(alpha_pct * 1000))
+
+        spPr = picture._element.spPr
+        # 移除已有 effectLst（避免重复）
+        existing = spPr.find(qn('a:effectLst'))
+        if existing is not None:
+            spPr.remove(existing)
+
+        effect_lst = spPr.makeelement(qn('a:effectLst'), {})
+        outer_shdw = effect_lst.makeelement(qn('a:outerShdw'), {
+            'blurRad': blur_emu,
+            'dist': dist_emu,
+            'dir': dir_emu,
+            'rotWithShape': '0',
+        })
+        clr = outer_shdw.makeelement(qn('a:srgbClr'), {'val': '000000'})
+        alpha = clr.makeelement(qn('a:alpha'), {'val': alpha_val})
+        clr.append(alpha)
+        outer_shdw.append(clr)
+        effect_lst.append(outer_shdw)
+        spPr.append(effect_lst)
+
     def _add_divider(
         self,
         slide,
@@ -1038,13 +1174,14 @@ class PptRenderer:
         primary: RGBColor,
         title_text_color: RGBColor,
     ) -> None:
-        """添加深色页脚栏（主色背景 + 白色项目名和页码，SPEC 0025 三明治结构）。"""
-        # 1. 主色背景栏（全幅，高 FOOTER_BAR_HEIGHT）
-        self._add_color_block(
+        """添加深色页脚栏（渐变背景 + 白色项目名和页码，SPEC 0025/0026）。"""
+        # 1. 渐变背景栏（SPEC 0026：主色暗化 15% → 主色，全幅，高 FOOTER_BAR_HEIGHT）
+        primary_dark_15 = self._darken_color(primary, 0.15)
+        self._add_gradient_block(
             slide,
             Inches(0), Inches(FOOTER_BAR_TOP),
             Inches(SLIDE_WIDTH), Inches(FOOTER_BAR_HEIGHT),
-            primary,
+            primary_dark_15, primary, angle_deg=90,
         )
 
         # 2. 项目名（左，title_text_color）
