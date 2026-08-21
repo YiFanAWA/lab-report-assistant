@@ -11,7 +11,7 @@
 ## 工程入口
 
 当前并行推进：V2.10.0 SPEC 0030、SPEC 0031、SPEC 0032 已完成实现与验收；SPEC 0033 论文级自适应版式与语义布局规划器已完成实现与验收；SPEC 0034 正式论文 Word/PDF 与高级答辩 PPT 已获项目负责人确认并完成实现与验收；SPEC 0035 大样本公开论文解读案例已完成实现与预览验收，见决策 0044；SPEC 0036 论文解读深度整改已完成实现与验收，见决策 0045；SPEC 0037 语义图表选择与 PPT 组件优化已完成实现与验收，见决策 0046；SPEC 0038 正式学术论文规范化改造已完成实现与视觉验收，待项目负责人确认收口，见决策 0047；SPEC 0039 论文级多语义图形系统已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0048；SPEC 0040 期刊级论证图表与论文视觉语法改造已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0049；SPEC 0041 论文级异构图形编排与语义选图系统已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0050；SPEC 0042 开放许可科研图形资产库与科研示意图组件系统已完成实现与本地验收，待项目负责人查看视觉样例后确认收口，见决策 0051。
-当前切片：SPEC 0044 已完成本地实现、真实 DOCX/PDF/manifest 生成、19 页 PDF 逐页视觉复核和项目门禁；等待项目负责人确认成品风格后收口。Windows ACL helper 仍不能直接读取 PNG，但本轮已用 Poppler 逐页渲染并将实际 PNG 送入当前视觉上下文复核，详见 acceptance.md 和 SPEC 0044。
+当前切片：SPEC 0045 已完成统计完整性修订、真实 DOCX/PDF/manifest 生成和定向测试；本轮明确把案例定位为教学性论文复核报告，不是独立研究论文。PDF 共 21 页，Word→PDF 导出和结构验收通过；因环境缺少 pdf2image/Poppler、LibreOffice，且 Windows ACL/剪贴板替代路径不可用，21 页 PNG 逐页视觉验收仍待项目负责人查看或补充渲染工具后完成。详见 acceptance.md 和 SPEC 0045。
 
 - [../server/](../server/)：后端 FastAPI 服务
 - [../apps/web/](../apps/web/)：前端 React 工作台
@@ -120,6 +120,7 @@
 - [specs/0041-heterogeneous-figure-orchestration.md](specs/0041-heterogeneous-figure-orchestration.md)：SPEC 0041 论文级异构图形编排与语义选图系统（流程、关系、矩阵、统计、时间线和论证图按数据前提组合，禁止用单一模板覆盖整篇论文；已完成实现与真实视觉验收，待项目负责人确认收口）。
 - [specs/0042-open-scientific-asset-library-and-schematic-components.md](specs/0042-open-scientific-asset-library-and-schematic-components.md)：SPEC 0042 开放许可科研图形资产库与科研示意图组件系统（资产/许可证唯一 owner、SVG 安全清洗与哈希、自动署名、具象科研组件和 Word/PDF/PPT 同源渲染；实现与本地验收完成，待视觉确认收口）。
 - [specs/0044-standardized-paper-presentation-and-layout.md](specs/0044-standardized-paper-presentation-and-layout.md)：SPEC 0044 标准化论文成品展示与排版，规定读者优先正文、统一版式、图表部署、可回指字段和逐页视觉验收。
+- [specs/0045-paper-review-statistical-integrity.md](specs/0045-paper-review-statistical-integrity.md)：SPEC 0045 论文复核统计完整性，固定患者级样本、死亡/临终关怀排除、HbA1c 三态缺失语义、主要诊断交互、聚类稳健标准误、敏感性分析和正式论文定位。
 
 ## 当前复核与方向决策
 

@@ -218,3 +218,10 @@ SPEC 0044 已完成本地实现、真实成品生成和逐页视觉复核，当�
 - 真实 spec0043_publication.docx/pdf 来自同一轮生成，PDF 为 A4 19 页；Poppler 已生成 19 张 PNG，并检查联系图及前置第 1—7 页、正文第 8、10、12、14、17 页，未发现空白页、裁切、重叠、题注错位或正文起始页码异常。
 - Windows ACL helper 仍不能直接读取 PNG；视觉复核使用 Poppler 实际 PNG 与当前视觉上下文完成，证据位于 server/dev-docs/e2e-screenshots/spec0044_frontmatter_qa_20260821/。
 - 停止条件：项目负责人确认成品风格后再进行精确 git 收口；本轮禁止 stage、commit、push。
+
+
+## SPEC 0045 实施回写
+
+SPEC 0045 已完成统计完整性修订：分析脚本现在按患者首记录形成主队列，排除死亡/临终关怀首记录，区分 HbA1c 已检测/明确未检测/真正缺失，加入主要诊断分层和 HbA1c 交互，并提供患者聚类稳健标准误与两组敏感性分析。正式论文配置统一声明教学性论文复核报告（非独立研究论文），补齐结构化中英文摘要、模型合同、变量编码、软件版本、文献、图表注释和敏感性分析表。
+
+实际生成命令退出码 0；定向测试 10 passed；Word/PDF/manifest 同轮生成，PDF 21 页。由于当前环境缺少 pdf2image/Poppler、LibreOffice，且 Windows ACL/剪贴板替代路径不可用，逐页 PNG 视觉验收未宣称完成。当前不 stage、commit 或 push，等待项目负责人查看 PDF 并确认收口。
