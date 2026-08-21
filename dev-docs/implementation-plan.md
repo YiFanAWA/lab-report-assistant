@@ -181,6 +181,10 @@
 
 **验收方式说明：** V1.0 端到端验收通过 `worker_e2e_verify.py` 脚本（proj_6c52304bf9fb 完整流转 RESULT_CONFIRMED → COMPLETED，Word 37032 bytes、PPT 32231 bytes）+ API 测试套件（覆盖 source_type/source_ids 追溯链、SOURCE_URL_NOT_PUBLIC/SOURCE_ACCESS_RESTRICTED 拒绝路径）+ e2e-acceptance-report-v1.0.md（16 项验收全部通过）完成。未做手动 UI 点击端到端（因无 in-app Browser 工具，已记录为非阻断债务，以 Vitest 411 个组件测试作为替代证据）。
 
+## SPEC 0041 实施回写
+
+SPEC 0041 已完成实现与真实文件验收：以 `figure_planner.py` 为唯一图形语义 owner，新增图形家族、异构组合计划和结构化拒绝候选；论文案例实际组合统计、流程、关系、矩阵和证据论证五个图形家族。Word/PDF 与两套 PPT 消费同一套 artifact 编排元数据，分别生成 19 页 A4 PDF 和 17 页答辩 PPT；全量后端 1173 项测试、Alembic、前端 lint/build 均通过。当前等待项目负责人确认成品视觉结果后收口，详细证据见 [acceptance.md](acceptance.md) 的 SPEC 0041 记录。
+
 ## 覆盖关系
 
 | 立项要求 | 计划任务 |
@@ -199,3 +203,18 @@
 ## 停止条件
 
 本计划文档完成的停止条件是：项目负责人能从该计划判断第一阶段如何从文档进入代码，并且每个任务都能映射回 `project-charter.md` 的范围和 `acceptance.md` 的验收门禁。
+
+## SPEC 0042 实施回写
+
+SPEC 0042 已完成本地实现与验收，等待项目负责人查看视觉样例后确认收口。实现建立开放许可科研资产注册表、许可/哈希/SVG 安全闸、CC0 首批资产、`ScientificSchematicSpec` 和确定性 renderer；同一产物已接入正式 Word/PDF 和 academic PPT。定向 81 passed、全量后端 1215 passed、Alembic、前端 lint/build、Windows 与 Docker SVG 转换、PDFium PDF 页面渲染以及 PowerPoint 原生页面导出均通过。禁止把该能力扩展为受限素材抓取、水印绕过、任意 SVG 执行或未经证据确认的医学机制图。
+
+## SPEC 0044 实施回写
+
+SPEC 0044 已完成本地实现、真实成品生成和逐页视觉复核，当前工作项停在项目负责人确认成品风格后收口。
+
+- 唯一 owner 仍为 server/app/modules/outlines/document_planner.py 的论文计划与 server/app/infrastructure/renderers/word_renderer.py 的 DOCX 适配。
+- 正式论文采用作者/单位封面、结构化中英文摘要、连续章节分页、分层书签目录、分开的图目录/表目录、全局图/表编号、REF/PAGEREF 回指、图表组合版式和重复表头；正文继续隐藏工程追溯字段。
+- SPEC 0044 定向测试 9 passed；后端全量 1235 passed in 67.78s；Alembic、前端 lint/build 通过。
+- 真实 spec0043_publication.docx/pdf 来自同一轮生成，PDF 为 A4 19 页；Poppler 已生成 19 张 PNG，并检查联系图及前置第 1—7 页、正文第 8、10、12、14、17 页，未发现空白页、裁切、重叠、题注错位或正文起始页码异常。
+- Windows ACL helper 仍不能直接读取 PNG；视觉复核使用 Poppler 实际 PNG 与当前视觉上下文完成，证据位于 server/dev-docs/e2e-screenshots/spec0044_frontmatter_qa_20260821/。
+- 停止条件：项目负责人确认成品风格后再进行精确 git 收口；本轮禁止 stage、commit、push。

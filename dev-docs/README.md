@@ -10,6 +10,9 @@
 
 ## 工程入口
 
+当前并行推进：V2.10.0 SPEC 0030、SPEC 0031、SPEC 0032 已完成实现与验收；SPEC 0033 论文级自适应版式与语义布局规划器已完成实现与验收；SPEC 0034 正式论文 Word/PDF 与高级答辩 PPT 已获项目负责人确认并完成实现与验收；SPEC 0035 大样本公开论文解读案例已完成实现与预览验收，见决策 0044；SPEC 0036 论文解读深度整改已完成实现与验收，见决策 0045；SPEC 0037 语义图表选择与 PPT 组件优化已完成实现与验收，见决策 0046；SPEC 0038 正式学术论文规范化改造已完成实现与视觉验收，待项目负责人确认收口，见决策 0047；SPEC 0039 论文级多语义图形系统已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0048；SPEC 0040 期刊级论证图表与论文视觉语法改造已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0049；SPEC 0041 论文级异构图形编排与语义选图系统已完成实现与真实视觉验收，待项目负责人确认收口，见决策 0050；SPEC 0042 开放许可科研图形资产库与科研示意图组件系统已完成实现与本地验收，待项目负责人查看视觉样例后确认收口，见决策 0051。
+当前切片：SPEC 0044 已完成本地实现、真实 DOCX/PDF/manifest 生成、19 页 PDF 逐页视觉复核和项目门禁；等待项目负责人确认成品风格后收口。Windows ACL helper 仍不能直接读取 PNG，但本轮已用 Poppler 逐页渲染并将实际 PNG 送入当前视觉上下文复核，详见 acceptance.md 和 SPEC 0044。
+
 - [../server/](../server/)：后端 FastAPI 服务
 - [../apps/web/](../apps/web/)：前端 React 工作台
 - [commands.md](commands.md)：实际运行命令索引
@@ -68,6 +71,20 @@
 - [decisions/0035-start-spec-0026-ppt-visual-effects.md](decisions/0035-start-spec-0026-ppt-visual-effects.md)：启动 SPEC 0026 PPT 视觉效果增强切片的决策记录（V2.7.0，渐变填充 + 圆角矩形 + 外阴影 + 细边框；python-pptx 原生 fill.gradient() + MSO_SHAPE.ROUNDED_RECTANGLE + oxml 操作 a:effectLst；不引入新依赖，不改变 PptConfig 合同，仅重构 ppt_renderer.py 内部视觉效果方法）。
 - [decisions/0036-start-spec-0027-chart-beautification.md](decisions/0036-start-spec-0027-chart-beautification.md)：启动 SPEC 0027 图表美化与布局增强切片的决策记录（V2.8.0，SciencePlots + Seaborn + EasyPPTX；_HEADER 集成 scienceplots 样式 + sns.set_theme，_build_chart_code 升级为 seaborn API；ppt_renderer 新增 _pct_to_emu + _GridHelper 辅助方法，改造 _place_chart_* 使用 Grid；沙箱白名单新增 scienceplots/seaborn；引入 3 个新依赖，不改变 PptConfig 合同）。
 - [decisions/0037-start-spec-0028-nature-figure.md](decisions/0037-start-spec-0028-nature-figure.md)：启动 SPEC 0028 Nature 风格图表集成切片的决策记录（V2.8.1，移除 scienceplots 依赖，用 nature-figure rcParams 替换 plt.style.use；保留 seaborn + _GridHelper；修改 5 个受影响测试 C1/C2/C3/S1/S4；不引入新依赖，不改变 PptConfig 合同，回归零容忍）。
+- [decisions/0038-start-spec-0029-e2e-acceptance.md](decisions/0038-start-spec-0029-e2e-acceptance.md)：启动 SPEC 0029 端到端集成验收切片的决策记录（V2.9.0，验证 V2.5.0~V2.8.1 五个 PPT/图表切片后完整工作流仍打通；8 步主路径覆盖项目创建→要求拆解→证据→数据分析→大纲→Word/PPT 生成；新建 verify_spec0029_e2e.py 验收脚本；不引入新功能，不改变 owner 边界，不引入新依赖，不修改数据库 schema；已由项目负责人确认收口，E2E_RESULT=PASS，1100 passed 零回归）。
+- [decisions/0039-start-spec-0030-pptxforge-chart-beautification.md](decisions/0039-start-spec-0030-pptxforge-chart-beautification.md)：启动 SPEC 0030 pptxforge 集成与图表美化增强切片的决策记录（V2.10.0，引入 pptxforge 10 主题 + 视觉原语 + Morph 转场；图表美化 NPG 期刊配色 + a/b/c 面板标签 + fill_between 误差带 + 多面板布局；修复 SPEC 0028 dpi 不一致缺陷；PptConfig 扩展为四字段合同（方案 B，新增 theme_preset 可选字段）；不改变 render() 签名，不改变 Provider 接口；引入 1 个新依赖 pptxforge MIT；实现中）。
+- [decisions/0040-start-spec-0031-academic-document-visual-quality.md](decisions/0040-start-spec-0031-academic-document-visual-quality.md)：启动 SPEC 0031 论文级 Word/PPT 视觉质量切片（统一 Word 页面/字体/标题/图题/表题/页眉页脚，PPT 图表图注与正文层级，图表字体回退与真实渲染验收；不改变 API、Worker、数据库和渲染入口合同）。
+- [decisions/0041-start-spec-0032-ppt-master-sjtu-adapter.md](decisions/0041-start-spec-0032-ppt-master-sjtu-adapter.md)：启动 SPEC 0032 PPT Master 与上海交大模板适配（能力适配，不整仓库嵌入；增加 PPT 工作流模式注册表；不接入校园账号和无关校园功能）。
+- [decisions/0042-start-spec-0033-paper-adaptive-layout.md](decisions/0042-start-spec-0033-paper-adaptive-layout.md)：启动 SPEC 0033 论文级自适应版式与语义布局规划器（共享规划器 + PPT/Word 薄渲染适配，不回档已有渲染能力）。
+- [decisions/0043-start-spec-0034-formal-thesis-defense-deck.md](decisions/0043-start-spec-0034-formal-thesis-defense-deck.md)：确认并实施 SPEC 0034 正式论文 Word/PDF 与高级答辩 PPT（共享论文/答辩结构规划、正式章节编号、图表追溯和逐页视觉验收）。
+- [decisions/0044-start-spec-0035-large-sample-paper-review.md](decisions/0044-start-spec-0035-large-sample-paper-review.md)：启动 SPEC 0035 大样本公开论文解读案例（Diabetes 130-US Hospitals + Strack 2014 开放论文，区分原文结论与本地复核）。
+- [decisions/0045-start-spec-0036-paper-review-depth-remediation.md](decisions/0045-start-spec-0036-paper-review-depth-remediation.md)：启动 SPEC 0036 论文解读深度整改（真实复核分析、论文级章节和 12–15 页答辩叙事）。
+- [decisions/0046-start-spec-0037-semantic-chart-selection.md](decisions/0046-start-spec-0037-semantic-chart-selection.md)：启动 SPEC 0037 语义图表选择与论文级 PPT 组件优化（按数据语义选择图表，复用现有 `pptxforge` 组件）。
+- [decisions/0047-start-spec-0038-formal-academic-paper-normalization.md](decisions/0047-start-spec-0038-formal-academic-paper-normalization.md)：启动 SPEC 0038 正式学术论文规范化改造（论文结构、引用、参考文献、题注和三线表）。
+- [decisions/0048-start-spec-0039-semantic-figure-system.md](decisions/0048-start-spec-0039-semantic-figure-system.md)：启动 SPEC 0039 论文级多语义图形系统（共享 `FigurePlan`、研究框架/流程/关系/证据链/数据图语义选择，复用现有 PPT 组件，不新增运行时依赖）。
+- [decisions/0049-start-spec-0040-journal-argumentation.md](decisions/0049-start-spec-0040-journal-argumentation.md)：启动 SPEC 0040 期刊级论证图表与论文视觉语法改造（共享 `ArgumentPlan`、证据/结果/边界合同、期刊论证图和双交付物适配，不新增运行时依赖）。
+- [decisions/0050-start-spec-0041-heterogeneous-figure-orchestration.md](decisions/0050-start-spec-0041-heterogeneous-figure-orchestration.md)：启动并完成 SPEC 0041 论文级异构图形编排与语义选图系统（以 `FigurePlan`/`ChartPlan` 为唯一 owner，按数据前提组合流程、关系、矩阵、统计、时间线和论证图；已完成实现与真实视觉验收，待项目负责人确认收口）。
+- [decisions/0051-start-spec-0042-open-scientific-assets.md](decisions/0051-start-spec-0042-open-scientific-assets.md)：启动 SPEC 0042 开放许可科研图形资产库与科研示意图组件系统（开放许可证与 SVG 安全门禁、资产注册表、自动署名、确定性科研示意图渲染；禁止绕过水印或复制受限素材）。
 - [specs/0009-frontend-test-coverage.md](specs/0009-frontend-test-coverage.md)：V1.1.0 前端测试覆盖补全规划（8 模块 API + 9 组件，预计新增 ~189 测试）。
 - [specs/0010-word-template-support.md](specs/0010-word-template-support.md)：V1.1.0 Word 模板支持 SPEC（项目级上传、Jinja2 风格占位符、章节循环渲染、无模板降级）。
 - [specs/0011-ppt-config-options.md](specs/0011-ppt-config-options.md)：V1.1.0 PPT 配置选项 SPEC（目标页数、预设色板主题色、图表全局开关、配置不持久化）。
@@ -89,6 +106,26 @@
 - [specs/0027-chart-beautification-and-layout-enhancement.md](specs/0027-chart-beautification-and-layout-enhancement.md)：V2.8.0 图表美化与布局增强 SPEC（SciencePlots + Seaborn + EasyPPTX；_HEADER 集成 scienceplots 样式 + sns.set_theme，_build_chart_code 升级为 sns.histplot/boxplot/countplot/scatterplot/heatmap；ppt_renderer 新增 _pct_to_emu 百分比定位 + _GridHelper N×M 网格辅助类，改造 _place_chart_grid/side_by_side/three 使用 Grid；沙箱白名单新增 scienceplots/seaborn；引入 3 个新依赖，不改变 PptConfig 合同），已完成实现与验收（45 个新增测试 + 204 passed 零回归 + 5 张真实图表沙箱执行验收 + 6 种预设色 PPT 渲染 + Grid 布局 8/8 对齐验证；决策 0036）。
 - [specs/0028-nature-figure-integration.md](specs/0028-nature-figure-integration.md)：V2.8.1 Nature 风格图表集成 SPEC（移除 SciencePlots，引入 nature-figure 设计规则；用 matplotlib rcParams 手动配置替换 plt.style.use，保留 Seaborn + _GridHelper；移除 1 个依赖 scienceplots，不引入新依赖，不改变 PptConfig 合同），已完成实现与验收（修改 5 个受影响测试 C1/C2/C3/S1/S4 + 修复遗漏测试 test_default_allowed_imports_content + 204 passed 零回归 + 3 张真实图表沙箱执行验收 + 6 种预设色 PPT 渲染；决策 0037）。
 - [specs/0029-e2e-integration-acceptance.md](specs/0029-e2e-integration-acceptance.md)：V2.9.0 端到端集成验收 SPEC（已由项目负责人确认收口；验证 V2.5.0~V2.8.1 五个 PPT/图表切片后完整工作流仍打通，8 步主路径覆盖项目创建→要求拆解→证据→数据分析→大纲→Word/PPT 生成；新建 verify_spec0029_e2e.py 验收脚本，E2E_RESULT=PASS，1100 passed 零回归，Word 332KB/103 段落 + PPT 334KB/8 幻灯片；修复 2 项集成断点：pd.to_numeric(errors='coerce') + list_execution_runs 元组解包；不引入新功能，不改变 owner 边界，不引入新依赖，不修改数据库 schema；决策 0038）。
+- [specs/0030-pptxforge-and-chart-beautification.md](specs/0030-pptxforge-and-chart-beautification.md)：V2.10.0 pptxforge 集成与图表美化增强 SPEC（已批准进入实现；引入 pptxforge 10 主题 + 视觉原语 + Morph 转场；图表美化 NPG 期刊配色 + a/b/c 面板标签 + fill_between 误差带 + 多面板布局；修复 SPEC 0028 dpi 不一致缺陷；PptConfig 扩展为四字段合同（方案 B，新增 theme_preset 可选字段），不改变 render() 签名，不改变 Provider 接口；引入 1 个新依赖 pptxforge MIT；决策 0039）。
+- [specs/0031-academic-document-visual-quality.md](specs/0031-academic-document-visual-quality.md)：SPEC 0031 论文级 Word/PPT 视觉质量与真实渲染验收（A4 Word 版式、论文式图题/来源、轻量表格、PPT 图注与中文窄栏换行、图表字体/DPI/布局保护；不改变业务合同）。
+- [specs/0032-ppt-master-sjtu-presentation-adapter.md](specs/0032-ppt-master-sjtu-presentation-adapter.md)：SPEC 0032 PPT Master 与上海交大模板适配（`native_editable`、`academic`、`sjtu_academic` 工作流模式；模板来源、许可边界、真实 PPTX 渲染验收）。
+- [specs/0033-paper-adaptive-layout-planner.md](specs/0033-paper-adaptive-layout-planner.md)：SPEC 0033 论文级自适应版式与语义布局规划器（叙事、数据概览、方法流程、单图重点、多图对比、总结六类版式）。
+- [specs/0034-formal-thesis-and-defense-deck.md](specs/0034-formal-thesis-and-defense-deck.md)：SPEC 0034 正式论文 Word/PDF 与高级答辩 PPT（A4 论文结构、编号/题注/追溯、答辩叙事与逐页视觉验收）。
+- [specs/0035-large-sample-paper-review-case.md](specs/0035-large-sample-paper-review-case.md)：SPEC 0035 大样本公开论文解读案例（论文全文来源、101,766 条公开数据、原文/复核口径分离）。
+- [specs/0036-paper-review-depth-remediation.md](specs/0036-paper-review-depth-remediation.md)：SPEC 0036 论文解读深度整改（样本流程、缺失结构、效应量、简化 Logistic、分层结果与 13 页答辩成品）。
+- [specs/0037-semantic-chart-selection-and-ppt-component-polish.md](specs/0037-semantic-chart-selection-and-ppt-component-polish.md)：SPEC 0037 语义图表选择与论文级 PPT 组件优化（按数据语义选择流程图、构成图、Dumbbell、点区间图、趋势图和森林图；复用现有 `pptxforge` 组件）。
+- [specs/0038-formal-academic-paper-normalization.md](specs/0038-formal-academic-paper-normalization.md)：SPEC 0038 正式学术论文规范化改造（A4 论文结构、文内引用、参考文献、章节化题注、三线表与 PDF 视觉验收）。
+- [specs/0039-semantic-figure-system.md](specs/0039-semantic-figure-system.md)：SPEC 0039 论文级多语义图形系统（数据图、研究框架、流程、变量关系、证据链、数据管线、时间线和机制路径的共享语义规划与双交付物适配）。
+- [specs/0040-journal-argumentation-and-visual-grammar.md](specs/0040-journal-argumentation-and-visual-grammar.md)：SPEC 0040 期刊级论证图表与论文视觉语法改造（`ArgumentPlan`、真实证据/结果/边界、无交叉变量关系图和期刊级 Word/PDF/PPT 适配）。
+- [specs/0041-heterogeneous-figure-orchestration.md](specs/0041-heterogeneous-figure-orchestration.md)：SPEC 0041 论文级异构图形编排与语义选图系统（流程、关系、矩阵、统计、时间线和论证图按数据前提组合，禁止用单一模板覆盖整篇论文；已完成实现与真实视觉验收，待项目负责人确认收口）。
+- [specs/0042-open-scientific-asset-library-and-schematic-components.md](specs/0042-open-scientific-asset-library-and-schematic-components.md)：SPEC 0042 开放许可科研图形资产库与科研示意图组件系统（资产/许可证唯一 owner、SVG 安全清洗与哈希、自动署名、具象科研组件和 Word/PDF/PPT 同源渲染；实现与本地验收完成，待视觉确认收口）。
+- [specs/0044-standardized-paper-presentation-and-layout.md](specs/0044-standardized-paper-presentation-and-layout.md)：SPEC 0044 标准化论文成品展示与排版，规定读者优先正文、统一版式、图表部署、可回指字段和逐页视觉验收。
+
+## 当前复核与方向决策
+
+- [paper-quality-review-spec0043-2026-08-14.md](paper-quality-review-spec0043-2026-08-14.md)：SPEC 0043 当前论文质量审查，记录当前成品的优点、正文工程追溯泄漏、学术论证与方法缺口、视觉验收限制和收口门槛；不代表 SPEC 0043 已收口。
+- [decisions/0053-package-distribution-and-local-mcp.md](decisions/0053-package-distribution-and-local-mcp.md)：确认未来采用 Windows 安装包 + 本地 MCP stdio bridge 的分发方向，明确 MCP 只做协议适配、现有模块继续拥有业务语义，并记录进入实现前的验收合同。
+- [decisions/0054-start-spec-0044-standardized-paper-presentation.md](decisions/0054-start-spec-0044-standardized-paper-presentation.md)：确认先编写并确认 SPEC 0044，再修改 ManuscriptPlan 到 WordRenderer；暂不推进 MCP 或新增图表类型。
 
 ## V2.0 发布文档
 

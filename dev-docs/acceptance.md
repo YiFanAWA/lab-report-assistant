@@ -549,6 +549,157 @@
 
 ## 漂移检查清单
 
+## SPEC 0031 论文级 Word/PPT 视觉质量验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 定向回归测试 | `server/.venv/Scripts/python.exe -m pytest server/tests/test_renderers.py server/tests/test_word_template.py server/tests/test_spec0030_pptxforge_chart_beautification.py server/tests/test_local_rule_code_task_provider_format.py -q`：125 passed | ✅ |
+| 2026-08-12 | 真实样例生成 | `server/scripts/generate_spec0031_preview.py` 生成同一份大纲消费的 `spec0031_demo.docx`、`spec0031_demo.pptx`、4 张 PNG 图表和 1 个 CSV | ✅ |
+| 2026-08-12 | PPT 逐页真实渲染 | `render_slides.py` 输出 6 张 PNG；逐页检查封面、正文、图表图注和总结，无裁切、乱码或图片失真 | ✅ |
+| 2026-08-12 | Word 逐页真实渲染 | 本机 Microsoft Word 无界面导出 PDF，再用 Poppler 输出 6 张 PNG；逐页检查 A4 页面、页眉页脚、图题/来源、图表尺寸和附录索引 | ✅ |
+| 2026-08-12 | 结构化 QA | python-docx / python-pptx 可重新打开样例；PPT 16:9；Word A4；PPT 6 页；Word 6 页；图表 PNG 与执行批次一致 | ✅ |
+| 2026-08-12 | 约束遵守 | 不改 API、Worker、数据库 schema 或渲染入口签名；只修改 renderer、图表生成规则、预览脚本和对应真源文档 | ✅ |
+| 2026-08-12 | 全量后端回归 | `server/.venv/Scripts/python.exe -m pytest`：**1135 passed in 81.35s**；首次运行暴露 Windows 子进程缺少 `WINDIR`，已在受控执行环境显式传递只读系统路径后复测通过 | ✅ |
+
+## SPEC 0032 ppt-master / SJTU PPT 工作流适配验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 适配层与配置合同 | 新增 `server/app/modules/outlines/ppt_workflows.py` 工作流注册表；`PptConfig.ppt_workflow` 支持 `native_editable`、`academic`、`sjtu_academic`，非法值拒绝；显式 `theme_preset` 优先级保持不变 | ✅ |
+| 2026-08-12 | 后端回归 | `server/.venv/Scripts/python.exe -m pytest`：**1143 passed in 85.65s** | ✅ |
+| 2026-08-12 | 数据库与前端门禁 | `server/.venv/Scripts/python.exe -m alembic upgrade head` 通过；`npm.cmd run lint` 通过；`npm.cmd run build` 通过，116 modules transformed | ✅ |
+| 2026-08-12 | 三套真实 PPTX 生成与结构校验 | `server/scripts/generate_spec0032_preview.py` 生成三套 6 页 PPTX；python-pptx 重新打开成功，画布均为 13.333×7.5（16:9），图表与图注数量一致 | ✅ |
+| 2026-08-12 | 逐页渲染与版式检查 | `render_slides.py` 为三套 PPTX 各输出 6 张 PNG；检查封面、正文、图表、图注和总结页，无裁切、重叠、乱码或图片失真；代表页见 `server/dev-docs/e2e-screenshots/spec0032_preview/` | ✅ |
+| 2026-08-12 | 溢出检查说明 | `slides_test.py` 在 Windows 临时放大文件路径中触发工具自身 JSON 反斜杠解析错误；已用三套逐页 PNG 检查和 python-pptx 边界/结构校验替代，未发现版式溢出 | ⚠️ 工具债务 |
+| 2026-08-12 | 范围与依赖约束 | 未复制完整 `ppt-master` 或 SJTU 校园技能；不引入校园登录、Canvas、邮件、外部模型或新运行时依赖；只复用可迁移的路由/主题/可编辑 PPT 思路，详见 [SPEC 0032](specs/0032-ppt-master-sjtu-presentation-adapter.md) 和 [决策 0041](decisions/0041-start-spec-0032-ppt-master-sjtu-adapter.md) | ✅ |
+
+## SPEC 0033 论文级自适应版式与语义布局规划器验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 版式规划器定向测试 | `server/.venv/Scripts/python.exe -m pytest tests/test_layout_planner.py tests/test_renderers.py tests/test_ppt_config.py tests/test_word_template.py -q`：**113 passed** | ✅ |
+| 2026-08-12 | 语义版式接线 | 新增 `server/app/modules/outlines/layout_planner.py`；`academic`/`sjtu_academic` 根据章节语义选择叙事、数据概览、方法流程、单图重点、多图对比和总结版式；`native_editable` 保留旧兼容路径 | ✅ |
+| 2026-08-12 | 真实 PPT 生成与渲染 | `server/scripts/generate_spec0033_preview.py` 生成学术版和交大版 PPTX；pptxforge 保存校验通过；两套 PPTX 均真实逐页输出 PNG，检查无裁切、重叠或重复总结页 | ✅ |
+| 2026-08-12 | PPT 视觉结果 | 数据概览使用指标行，方法使用步骤流，结果使用“结果解释 + 多图对比”，不再所有章节使用固定双栏；代表页见 `server/dev-docs/e2e-screenshots/spec0033_preview/` | ✅ |
+| 2026-08-12 | Word 结构校验 | DOCX 可重新打开，包含方法步骤、数据概览表、4 张真实图表、图题/来源和附录索引 | ✅ |
+| 2026-08-12 | Word/PDF 视觉渲染 | 当前机器未安装 LibreOffice 或 Word，`render_docx.py` 无法启动转换进程；未将 Word/PDF 视觉检查标记为通过，需在具备 Office/LibreOffice 的环境补验 | ⚠️ 环境缺口 |
+| 2026-08-12 | 全量项目门禁 | `server/.venv/Scripts/python.exe -m pytest`：**1146 passed in 76.89s**；Alembic upgrade head 通过；`npm.cmd run lint` 通过；`npm.cmd run build` 通过 | ✅ |
+
+## SPEC 0034 正式论文 Word/PDF 与高级答辩 PPT 验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | SPEC 确认与实现范围 | 项目负责人确认 SPEC 0034；更新决策 0043、`dev-docs/README.md`，未改变数据/证据/执行/大纲业务边界 | ✅ |
+| 2026-08-12 | 共享结构规划器 | 新增 `server/app/modules/outlines/document_planner.py`；`ThesisDocumentPlan` 负责章节、摘要、关键词、参考资料，`DefenseDeckPlan` 负责问题→数据→方法→结果→结论页序；Word/PPT renderer 不复制章节语义 | ✅ |
+| 2026-08-12 | 正式论文 DOCX 生成与结构 QA | `server/scripts/generate_spec0034_preview.py` 生成 `spec0034_thesis.docx`；python-docx 重新打开成功，68 段落、1 个数据概览表、4 张真实图表；包含摘要、关键词、目录、6 个一级章节、参考资料、附录，图题含 `图 5-1`、`图 5-2` | ✅ |
+| 2026-08-12 | Word 论文版式规则 | A4 纵向、2.4/2.4/2.2/2.2 cm 页边距、宋体/Times New Roman、Heading 1/2、原生 List Number、固定表格列宽、章节级图表编号与题注来源 | ✅ |
+| 2026-08-12 | PPT 答辩叙事生成 | 同一份大纲与执行产物生成 academic 和 sjtu_academic 两套 16:9 PPTX，各 7 页；包含研究问题、数据概览、方法流程、两页结果证据、结论与局限；每页结果最多 2 张图 | ✅ |
+| 2026-08-12 | PPT 逐页渲染与视觉检查 | `render_slides.py` 为两套 PPTX 各输出 7 张 PNG；已检查标题、数据概览、方法、结果双图和结论页，无裁切、重复总结页或图表错配；拼图见 `server/dev-docs/e2e-screenshots/spec0034_preview/defense_montage.png`、`sjtu_montage.png` | ✅ |
+| 2026-08-12 | PPT 溢出检查 | `slides_test.py` 在 Windows 临时放大文件阶段触发工具自身 JSON 反斜杠解析错误；沿用前序工具债务处理，使用逐页 PNG、python-pptx 可重开和边界/结构检查替代，未发现溢出 | ⚠️ 工具债务 |
+| 2026-08-12 | Word/PDF 视觉渲染 | `render_docx.py --emit_pdf` 因当前机器缺少 LibreOffice/Word 转换进程而失败；已完成 DOCX 结构 QA，PDF 视觉导出留待具备 Office/LibreOffice 的环境补验，未虚报通过 | ⚠️ 环境缺口 |
+| 2026-08-12 | 定向测试 | `server/.venv/Scripts/python.exe -m pytest tests/test_document_planner.py tests/test_layout_planner.py tests/test_renderers.py tests/test_ppt_workflows.py tests/test_ppt_config.py -q`：**105 passed** | ✅ |
+| 2026-08-12 | 全量项目门禁 | `server/.venv/Scripts/python.exe -m pytest`：**1148 passed in 167.50s**；`server/.venv/Scripts/python.exe -m alembic upgrade head` 通过；`npm.cmd run lint` 通过；`npm.cmd run build` 通过（116 modules transformed） | ✅ |
+
+## SPEC 0035 大样本公开论文解读案例验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 公开来源与追溯 | UCI Diabetes 130-US Hospitals 数据集、Strack 2014 开放论文、Europe PMC 全文 XML；来源清单位于 `server/dev-docs/e2e-screenshots/spec0035_paper_review/sources/source_manifest.json` | ✅ |
+| 2026-08-12 | 大样本口径 | 原始 CSV 101766 条记录；数据集页面口径为 47 个特征；原论文最终样本 69984、HbA1c 测量率 18.4%；本地原始 CSV 复核为 17018 条测量记录、16.7%，并明确标注口径差异 | ✅ |
+| 2026-08-12 | 本地复核结果 | 30 天内再入院率：HbA1c 已测 9.8%，未测 11.4%；仅作为描述性复核，不包装为原论文回归复现 | ✅ |
+| 2026-08-12 | 交付物生成 | `generate_spec0035_paper_review.py` 生成正式论文风格 DOCX、academic PPTX、sjtu_academic PPTX；DOCX 结构为 77 段落、4 张表/图表索引、4 张真实图表，PPT 各 7 页 | ✅ |
+| 2026-08-12 | PPT 逐页视觉检查 | 两套 PPTX 经工作区渲染依赖的 `render_slides.py` 各输出 7 张 PNG，已逐页检查标题、数据概览、方法、结果双图和结论页；结果页解释框已压缩，未发现裁切、重叠或图表错配；拼图位于 `server/dev-docs/e2e-screenshots/spec0035_paper_review/defense_montage.png`、`sjtu_montage.png` | ✅ |
+| 2026-08-12 | PPT 溢出检查 | `slides_test.py` 在 Windows 临时文件阶段触发工具自身 JSON 反斜杠解析错误；用逐页 PNG、python-pptx 可重开和 16:9/页数结构检查替代，未发现溢出 | ⚠️ 工具债务 |
+| 2026-08-12 | Word/PDF 视觉转换 | DOCX 可重新打开并通过结构 QA；`render_docx.py --emit_pdf` 因当前机器缺少 LibreOffice/Word 转换进程失败，PDF 视觉导出留待具备 Office/LibreOffice 的环境补验 | ⚠️ 环境缺口 |
+| 2026-08-12 | 定向测试 | `server/.venv/Scripts/python.exe -m pytest tests/test_spec0035_paper_review.py tests/test_document_planner.py tests/test_layout_planner.py tests/test_renderers.py tests/test_ppt_workflows.py tests/test_ppt_config.py -q`：**107 passed** | ✅ |
+| 2026-08-12 | 全量后端门禁 | `server/.venv/Scripts/python.exe -m pytest`：**1150 passed in 59.77s** | ✅ |
+
+## SPEC 0037 语义图表选择与 PPT 组件优化验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 范围与真源 | 已确认 SPEC 0037；新增 `chart_planner.py`、决策 0046，并更新 README | ✅ |
+| 2026-08-12 | 语义图表规划 | `test_chart_planner.py`：6 个规划契约测试通过；规划器输出图表类型、编码和选择理由 | ✅ |
+| 2026-08-12 | 真实图表产物 | `generate_spec0035_paper_review.py` 重新生成 flow、100% 构成图、横向条形图、Dumbbell、点估计 + 95% CI、自然顺序趋势图和 Forest Plot | ✅ |
+| 2026-08-12 | 图表可追溯性 | `analysis_summary.json` 写入 9 个图表的 `chart_kind`、`encoding`、`rationale`；执行 run id 为 `spec0037_semantic_charts` | ✅ |
+| 2026-08-12 | PPT 组件复用 | 两套 PPT 重新生成；答辩页组合现有 `StatRow`、`Callout`、`TwoColumn`、`IconRow`、`Stack` 和 `Grid`，无新模板/装饰资源 | ✅ |
+| 2026-08-12 | PPT 结构验收 | 两套 PPT 均可用 `python-pptx` 重开，16:9、13 页；生成日志未出现 `pptxforge` 溢出降级 | ✅ |
+| 2026-08-12 | 定向测试 | `server/.venv/Scripts/python.exe -m pytest server/tests/test_chart_planner.py server/tests/test_layout_planner.py server/tests/test_ppt_workflows.py server/tests/test_spec0035_paper_review.py`：**21 passed** | ✅ |
+| 2026-08-12 | 标准逐页渲染 | `render_slides.py` 受本机缺少 `pdf2image` 和 Artifact Tool 包路径阻断；`slides_test.py` 同样未完成 | ⚠️ 环境缺口 |
+
+## SPEC 0036 论文解读深度整改验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 范围与真源 | 已确认 SPEC 0036；新增决策 0045、SPEC 文档并更新 `dev-docs/README.md` | ✅ |
+| 2026-08-12 | 真实数据深度分析 | `generate_spec0035_paper_review.py` 从 101766 条 CSV 计算样本口径、缺失率、结局分布、Wilson 95% CI、风险差、分层结果和简化多变量 Logistic | ✅ |
+| 2026-08-12 | 核心复核数字 | HbA1c 已检测 17018 条、覆盖率 16.7%；已检测组早期再入院 9.8%，未检测组 11.4%；风险差 -1.6%，95% CI [-2.1%, -1.1%]；模型 HbA1c OR 0.893，95% CI [0.843, 0.946] | ✅ |
+| 2026-08-12 | 图表与表格 | 新增样本流程、结局分布、缺失率、论文/本地对照、效应量、分层图、Logistic 森林图和 2 张结果 CSV 表，共 11 个执行产物 | ✅ |
+| 2026-08-12 | Word 成品结构 | DOCX 重新打开成功，118 段落、3 个表格、9 张真实图表；包含摘要、目录、6 个一级章节、模型复核、结果、局限和附录 | ✅ |
+| 2026-08-12 | PPT 成品结构 | academic 与 sjtu_academic 两套 PPT 均为 13 页、16:9；叙事覆盖问题、来源、样本、质量、方法、模型、主要结果、分层、对照、局限和证据链 | ✅ |
+| 2026-08-12 | PPT 逐页视觉检查 | 工作区 `render_slides.py` 生成两套各 13 张 PNG；已检查模型森林图、缺失图、主要结果和分层结果页，无标题换行、图表裁切、说明压图题或意外重叠 | ✅ |
+| 2026-08-12 | 定向测试 | `.venv/Scripts/python.exe -m pytest tests/test_spec0035_paper_review.py tests/test_document_planner.py tests/test_layout_planner.py tests/test_renderers.py tests/test_ppt_workflows.py tests/test_ppt_config.py -q`：**109 passed** | ✅ |
+| 2026-08-12 | 全量项目门禁 | `.venv/Scripts/python.exe -m pytest`：**1152 passed in 85.08s**；Alembic upgrade head、`npm.cmd run lint`、`npm.cmd run build` 均通过 | ✅ |
+| 2026-08-12 | Word/PDF 视觉转换 | DOCX 结构 QA 通过；`render_docx.py --emit_pdf` 仍因当前机器缺少 LibreOffice/Word 转换进程失败，PDF 视觉转换保留环境缺口 | ⚠️ 环境缺口 |
+
+## SPEC 0038 正式学术论文规范化验收
+
+| 日期 | 验收项 | 证据 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 论文结构规划 | `ThesisDocumentPlan` 增加正式章节、题名元数据、引用映射和参考文献计划；定向规划器测试通过 | ✅ |
+| 2026-08-12 | 正式 DOCX 结构 | `spec0038_formal_paper.docx` 可重新打开；包含封面、摘要、关键词、目录、6 个一级章节、正文引用、参考文献和附录 | ✅ |
+| 2026-08-12 | 图表与表格规范 | 真实案例包含 9 张语义图表和 2 张统计表；图号/表号随章节编号，结果表采用三线表，题注含数据口径说明 | ✅ |
+| 2026-08-12 | Word → PDF | Word“发布为 PDF 或 XPS”真实流程生成 `spec0038_formal_paper.pdf`，A4 共 15 页 | ✅ |
+| 2026-08-12 | PDF 视觉验收 | 使用 Poppler 渲染 15 页 PNG，检查封面、摘要、结果图表、森林图与三线表、参考文献和附录；未发现裁切、溢出或字体丢失 | ✅ |
+| 2026-08-12 | 定向测试 | `server/.venv/Scripts/python.exe -m pytest tests/test_document_planner.py tests/test_renderers.py -q`：**22 passed** | ✅ |
+| 2026-08-12 | 生成脚本 | `server/.venv/Scripts/python.exe scripts/generate_spec0035_paper_review.py`：真实数据、图表、Word、PPT 均重新生成成功 | ✅ |
+
+## SPEC 0039 论文级多语义图形系统（实现与视觉验收）
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-12 | 共享语义合同 | `server/app/modules/outlines/figure_planner.py` 新增 `FigurePlan`、节点/边校验、10 类图形语义和安全降级规则；定向图形测试 **5 passed** | ✅ |
+| 2026-08-12 | 案例逻辑图 | 真实大样本案例新增研究证据链、数据处理管线、变量关系 3 张逻辑图；共生成 14 个 artifact、12 份 figure plan，图形与统计图语义不重复 | ✅ |
+| 2026-08-12 | owner 与双适配 | Word/PDF 与 PPT 均消费同一份 `FigurePlan`；Word 保留完整题注/来源/限制说明，PPT 复用现有 `pptxforge` Stack/Callout/Image/Text 组件 | ✅ |
+| 2026-08-12 | Word/PDF 视觉验收 | `spec0039_formal_paper.pdf` A4 共 17 页；Poppler 渲染 17 页 PNG，检查封面、证据链、数据管线、统计图、森林图、三线表、参考文献和附录，未发现裁切、溢出或题注错位 | ✅ |
+| 2026-08-12 | PPT 视觉验收 | 两套 PPTX 均生成 16 页；PowerPoint 真实界面检查标题页、证据链、数据处理管线、变量关系图和统计结果页，未发现乱码、溢出、图形错配或过度拥挤 | ✅ |
+| 2026-08-12 | 定向回归 | `server/.venv/Scripts/python.exe -m pytest tests/test_figure_planner.py tests/test_spec0035_paper_review.py tests/test_renderers.py -q`：**30 passed** | ✅ |
+| 2026-08-12 | 全量回归 | `server/.venv/Scripts/python.exe -m pytest`：**1167 passed** | ✅ |
+| 2026-08-12 | PPT 自动渲染替代证据 | `render_slides.py`/`slides_test.py` 受本机缺失 `@oai/artifact-tool` 运行包阻断；改用 PowerPoint 原生界面逐页检查，已完成代表页视觉验收 | ⚠️ 工具限制，替代验收通过 |
+| 2026-08-12 | 依赖与边界 | 不新增运行时依赖，不修改 API、数据库 schema、LLM Gateway、Worker 和产品边界；复用现有 `pptxforge` 组件 | ✅ |
+
+## SPEC 0040 期刊级论证图表与论文视觉语法改造（实现与视觉验收）
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-13 | 论证合同 | `figure_planner.py` 新增 `ArgumentPlan`，统一主张、证据引用、方法、结果、边界和正文引用；缺少证据、结果或边界的输入有负向测试 | ✅ |
+| 2026-08-13 | 真实案例数据 | `analysis_summary.json` 执行批次为 `spec0040_argumentation`，真实公开 CSV 101,766 条、论文最终样本 69,984 条、HbA1c 已检测 17,018 条，14 个 artifact | ✅ |
+| 2026-08-13 | 论证图形 | 研究证据链升级为 A/B/C/D 四面板论证图，包含 11 个语义节点和 `supports/contains/produces/compared_with/bounded_by` 关系；数据处理管线、变量关系图均包含真实计数/字段/执行批次；变量关系采用无交叉连接线，并显式标注“观察性关联” | ✅ |
+| 2026-08-13 | Word 成品 | `spec0040_argumentation.docx` 可重新打开；题注、来源、论证摘要、边界和正文引用随图形计划输出 | ✅ |
+| 2026-08-13 | Word → PDF | Word 内置“创建 PDF/XPS 文档”生成 `spec0040_argumentation.pdf`，A4 共 18 页 | ✅ |
+| 2026-08-13 | PDF 视觉验收 | Poppler 渲染 18 页 PNG，检查封面、证据链、变量关系、统计图、三线表和附录；未发现裁切、重叠、不可读文本或题注错位 | ✅ |
+| 2026-08-13 | PPT 成品 | `spec0040_argumentation.pptx` 与 `spec0040_argumentation_sjtu.pptx` 均为 16 页；标题页、证据链页、数据管线页、变量关系页和统计结果页均使用现有 `pptxforge` 组件 | ✅ |
+| 2026-08-13 | PPT 视觉验收 | PowerPoint 原生界面检查 0040 成品；证据链页改为图形主导的宽版自适应布局，A/B/C/D 面板可读，无乱码、溢出、图形错配或过度拥挤；自动 `artifact-tool` 渲染工具受本机缺失包阻断，已使用原生界面替代 | ⚠️ 工具限制，替代验收通过 |
+| 2026-08-13 | 定向回归 | `server/.venv/Scripts/python.exe -m pytest tests/test_figure_planner.py tests/test_spec0035_paper_review.py tests/test_renderers.py -q`：**33 passed** | ✅ |
+| 2026-08-13 | 全量回归 | `server/.venv/Scripts/python.exe -m pytest`：**1170 passed** | ✅ |
+| 2026-08-13 | 依赖与边界 | 不新增运行时依赖，不修改数据库 schema、API、LLM Gateway、Worker 和产品边界；保留历史文件名供旧夹具回归 | ✅ |
+
+## SPEC 0041 论文级异构图形编排与语义选图系统（实现与视觉验收）
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-13 | 共享编排合同 | `figure_planner.py` 新增 `FigureFamily`、`FigurePortfolioPlan`、`RejectedFigureCandidate` 与 `COMPARISON_MATRIX`；artifact 元数据保留 `figure_kind`、视觉家族、版式、数据前提和选图理由 | ✅ |
+| 2026-08-13 | 真实案例组合 | `analysis_summary.json` 真实执行批次为 `spec0040_argumentation`，公开 CSV 101,766 条、论文最终样本 69,984 条、HbA1c 已检测 17,018 条；生成 15 个 artifact | ✅ |
+| 2026-08-13 | 图形家族覆盖 | 实际组合覆盖 `evidence_argument`、`process`、`relationship`、`matrix`、`statistical` 五个家族；包含证据链、数据管线、变量关系图、比较矩阵和点估计图 | ✅ |
+| 2026-08-13 | 结构化拒绝 | 质量热力图因缺少行×字段矩阵被拒绝；时间线因缺少可排序事件时间字段被拒绝；拒绝理由写入 `figure_portfolio_plan`，不使用伪图填充 | ✅ |
+| 2026-08-13 | 定向与全量回归 | `server/.venv/Scripts/python.exe -m pytest tests/test_figure_planner.py tests/test_layout_planner.py tests/test_spec0035_paper_review.py tests/test_renderers.py -q`：39 passed；`server/.venv/Scripts/python.exe -m pytest`：1173 passed | ✅ |
+| 2026-08-13 | 项目门禁 | `server/.venv/Scripts/python.exe -m alembic upgrade head`、在 `apps/web/` 执行 `npm.cmd run lint`、`npm.cmd run build` 均通过；根目录无 `package.json`，前端门禁在实际工作目录执行 | ✅ |
+| 2026-08-13 | Word/PDF 成品 | `spec0041_heterogeneous.docx` 经 Word 原生导出为 `spec0041_heterogeneous.pdf`，A4 共 19 页；Poppler 生成 19 张 QA PNG，抽检正文、统计图、复核点图、矩阵页和附录，未发现裁切/重叠/题注错位 | ✅ |
+| 2026-08-13 | PPT 成品 | `spec0041_heterogeneous.pptx` 与 `_sjtu.pptx` 均为 17 页；逐页 PNG 渲染并抽检证据链、数据管线、关系图和矩阵页，复用现有 `pptxforge` 组件，无乱码/溢出/线条穿字 | ✅ |
+| 2026-08-13 | 论文文字与布局层级修订 | 新增研究目标、数据口径、方法解释、图前导读和图后结论；正文使用独立段落承载“问题—方法—证据—解释—边界”，图表单元避免导读与图片跨页；独立成品 `spec0042_paper_language.docx/.pdf` 共 24 页，Poppler 逐页 QA，抽检图前导读、证据链图、数据管线图和结果图，无裁切/重叠/题注错位 | ✅ |
+| 2026-08-13 | 论文解读 PPT 文字层级修订 | `spec0042_paper_language.pptx` 与 `_sjtu.pptx` 均为 17 页；研究问题页、证据页、结果页和结论页统一采用“主张—证据—解释—边界”层级，逐页 PNG 渲染抽检通过 | ✅ |
+| 2026-08-13 | 工具限制 | `slides_test.py` 在当前 Windows 路径环境因工具内部 JSON 反斜杠解析失败；已使用同一运行时逐页渲染、PPT 结构检查和人工视觉抽检替代，不把该工具作为唯一门禁 | ⚠️ 环境限制 |
+| 2026-08-13 | 依赖与边界 | 未新增运行时依赖；未修改 API、数据库 schema、LLM Gateway、Worker 和产品边界；PPT 继续复用现有主题与组件 | ✅ |
 每次进入下一阶段前检查：
 
 - 产品边界仍匹配 `project-charter.md`。
@@ -586,3 +737,68 @@
 - “V1 已就绪”
 - “代码可发布”
 - “实验结果已验证”
+
+## SPEC 0042 开放许可科研图形资产库与科研示意图组件系统
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-13 | 许可与资产注册表 | 7 个 Bioicons CC0 SVG 固定上游 commit；manifest 含来源、作者、许可、URL、尺寸、SHA-256 和核验时间；未知/NC/ND 拒绝，BY-SA 人工审核 | ✅ |
+| 2026-08-13 | SVG 安全与完整性 | 覆盖脚本、事件、任意属性外部 `url()`、style 外链、DTD/实体、`foreignObject`、路径逃逸、哈希漂移、NaN/Infinity viewBox、严格布尔字段和资源上界负向测试 | ✅ |
+| 2026-08-13 | 语义合同 | `FigurePlan` 下新增面板、placement、connector；节点标签与边关系必须引用既有 FigureNode/FigureEdge 真源 | ✅ |
+| 2026-08-13 | 三路 Luna 独立审查整改 | 补齐 DAG 环路、连接标签/非因果措辞、PPT 合同选图、全页 speaker notes、SVG 任意属性外链、严格布尔字段、有限 viewBox 和 Word/PPT 同源 PNG 哈希集成门禁 | ✅ |
+| 2026-08-13 | 科研示意图 | 生成 2400×1350、300 DPI 的公开数据分析流程和实验流程样图，包含具象科研组件、分支/汇合、步骤号、图例和解释边界 | ✅ |
+| 2026-08-13 | Word/PDF | 两张同源示意图嵌入正式 DOCX；PDF 使用开放许可 Noto Sans SC 嵌入字体并附原始 PNG/JSON，8 页 A4；PDFium 生成 8 张 1191×1684 PNG | ✅ |
+| 2026-08-13 | PPT 主路径 | 使用显式答辩语义角色与精炼演示文案后 `pptxforge` 学术主路径成功；PowerPoint 原生导出 7 张 1920×1080 PNG；两张科研资产页写入标准 `[Sources]` speaker notes | ✅ |
+| 2026-08-13 | 跨平台转换 | `resvg_py==0.3.3` 在 Windows venv 与一次性 `python:3.13-slim` 容器均成功转换；容器 PNG 签名 `89504e470d0a1a0a` | ✅ |
+| 2026-08-13 | 定向与全量回归 | SPEC 0042 + renderer 定向 **81 passed**；最终全量后端 **1215 passed in 70.26s** | ✅ |
+| 2026-08-13 | 项目门禁 | Alembic upgrade head、`apps/web` 的 `npm.cmd run lint` 与 `npm.cmd run build`（116 modules transformed）通过 | ✅ |
+| 2026-08-13 | 自动视觉工具 | `slides_test.py` 与应用内截图查看受中文路径/Windows ACL helper 影响；已用 PowerPoint 原生导出、PDFium 渲染、PPTX/DOCX 重开和页数/尺寸/媒体/notes/附件/SHA-256 检查替代 | ⚠️ 工具限制，替代验收通过 |
+| 2026-08-13 | 范围安全 | 未绕过水印/付费/登录；未复制受限平台素材；未新增 API、数据库表或自由拖拽编辑器；不生成无证据医学机制 | ✅ |
+
+当前结论：实现与本地门禁完成，等待项目负责人查看成品并确认视觉效果后正式收口。
+补充成品一致性证据：`data_analysis_workflow.png` 与 `experimental_workflow.png` 的 SHA-256 分别为 `8b6ba6647071acc056ac0ff40b0cf79da2c09fabffa1ed9fce6a14fee9e2ab0a`、`1f497d33251c803fe205b5e36824649bb09644a329b5bac3a6b8e41fee96faa9`；DOCX 与 PPTX 的 ZIP 媒体区均实际包含这两份原始 PNG 字节，Word 正文与 PPT speaker notes 均包含相同哈希。PDF 将两份原始 PNG 和对应 JSON 作为附件嵌入。
+
+## SPEC 0044 标准化论文成品展示与排版验收记录
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-15 | 范围与 owner | 仅修改 `ManuscriptPlan -> WordRenderer` 的读者优先论文投影；不扩展 MCP、图表类型、数据库 schema 或 PPT owner | ✅ |
+| 2026-08-15 | 定向回归 | `py_compile` + SPEC 0044/0043 定向测试：**10 passed** | ✅ |
+| 2026-08-15 | 真实成品 | `server/.venv/Scripts/python.exe scripts/generate_spec0035_paper_review.py` 重新生成 DOCX/PDF/manifest | ✅ |
+| 2026-08-15 | DOCX 结构 | 正文工程字段泄漏检查通过；图表目录含图/表条目；TOC、SEQ Figure/Table、REF/PAGEREF、双 section 页码字段存在 | ✅ |
+| 2026-08-15 | DOCX/PDF 一致性 | manifest 中 `source_docx_sha256` 与 DOCX 匹配，`pdf_sha256` 与 PDF 匹配；PDF 为 A4 共 21 页 | ✅ |
+| 2026-08-15 | PDF 渲染替代证据 | bundled Poppler 成功渲染前 6 页为 1191×1684 PNG；页面文本与像素检查未发现空白或渲染失败页 | ✅ |
+| 2026-08-15 | 自动视觉查看 | Windows ACL helper 无法读取 PNG，未宣称已完成工具内视觉查看；最终视觉确认仍需项目负责人查看 `spec0044_pdf_render_final/` | ⚠️ 工具限制 |
+| 2026-08-15 | 完整后端门禁 | 在 `server/` 工作目录运行 `server/.venv/Scripts/python.exe -m pytest -q`：**1235 passed in 64.07s** | ✅ |
+| 2026-08-15 | 其他项目门禁 | `server/.venv/Scripts/python.exe -m alembic upgrade head`、`apps/web` 的 `npm.cmd run lint` 与 `npm.cmd run build` 均通过（116 modules transformed） | ✅ |
+
+当前结论：SPEC 0044 实现与本地门禁完成，等待项目负责人查看最终 DOCX/PDF/PNG 并确认收口；本轮未执行 stage、commit 或 push。
+
+## SPEC 0044 2026-08-20 版式重构复核
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-20 | 版式重构 | 作者/单位封面、连续章节分页、紧凑目录、全局图 1-13/表 1-3、图表目录、REF/PAGEREF 回指、图表组合版式、重复表头；正文隐藏工程字段 | ✅ |
+| 2026-08-20 | 定向回归 | SPEC 0044/0043 相关测试：9 passed | ✅ |
+| 2026-08-20 | 完整后端门禁 | server/.venv/Scripts/python.exe -m pytest：1235 passed in 54.72s | ✅ |
+| 2026-08-20 | 数据库与前端门禁 | Alembic upgrade head；apps/web 的 npm.cmd run lint 与 npm.cmd run build | ✅ |
+| 2026-08-20 | 真实成品 | spec0043_publication.docx/pdf/manifest 同一轮生成；PDF 为 A4 18 页；manifest SHA-256 与实际文件匹配 | ✅ |
+| 2026-08-20 | PDF 视觉复核 | Poppler 生成全部 18 页 PNG；检查联系图及第 6、8、11、12、13、14、17 页，未发现空白页、裁切、重叠、题注错位或目录重复前缀；证据位于 server/dev-docs/e2e-screenshots/spec0044_layout_qa_20260820_final/ | ✅ |
+| 2026-08-20 | 工具边界 | Windows ACL helper 仍不能直接读取 PNG；实际 PNG 已通过 base64 送入当前视觉上下文完成替代复核 | ⚠️ 工具限制，替代验收通过 |
+
+当前结论：SPEC 0044 实现、真实成品、项目门禁和替代视觉复核均完成，等待项目负责人确认成品风格后收口；本轮未执行 stage、commit 或 push。
+
+
+## SPEC 0044 2026-08-21 前置页重构复核
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-21 | 结构化中文摘要 | 摘要按“目的、方法、结果、结论”分段，并保留关键词；内容来自正式论文配置，不由 renderer 临时编造 | ✅ |
+| 2026-08-21 | 英文摘要 | 新增独立 ABSTRACT 页，包含 Purpose、Methods、Results、Conclusion 和 KEYWORDS | ✅ |
+| 2026-08-21 | 目录层级 | 目录包含摘要/ABSTRACT/目录/图目录/表目录前置项，章标题加粗，小节缩进，并支持三级标题和三级书签 | ✅ |
+| 2026-08-21 | 图表目录 | 图目录与表目录分开呈现，并按章节增加分组提示；图 1-13、表 1-3 的 REF/PAGEREF 字段保留 | ✅ |
+| 2026-08-21 | 页码与页眉 | 前置部分使用 lowerRoman 且从 i 开始，正文切换为 decimal 且从 1 开始；页眉统一为“学术论文” | ✅ |
+| 2026-08-21 | 真实成品 | spec0043_publication.docx/pdf/manifest 同一轮生成；PDF 为 A4 19 页；DOCX/PDF SHA-256 与 manifest 一致 | ✅ |
+| 2026-08-21 | 前置页视觉复核 | Poppler 生成 19 页 PNG；已检查联系图及第 1—7 页、正文第 8、10、12、14、17 页，未发现空白页、裁切、重叠或正文起始页码异常；证据位于 server/dev-docs/e2e-screenshots/spec0044_frontmatter_qa_20260821/ | ✅ |
+| 2026-08-21 | 定向回归 | SPEC 0044/0043、document_planner 相关测试：9 passed | ✅ |
+| 2026-08-21 | 完整后端门禁 | server/.venv/Scripts/python.exe -m pytest：1235 passed in 67.78s | ✅ |
