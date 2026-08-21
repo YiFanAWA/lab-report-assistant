@@ -193,3 +193,13 @@
 3. 本索引和 active 真源文档。
 4. 决策记录。
 5. 历史对话、旧草稿和未索引文档。
+
+
+
+## SPEC 0046 Windows 一键运行封装
+
+- [specs/0046-windows-one-click-package.md](specs/0046-windows-one-click-package.md)：Windows x64 portable bundle 的目标、运行合同、验收门禁和边界；当前已确认进入实现。
+- [decisions/0055-start-spec-0046-windows-one-click-package.md](decisions/0055-start-spec-0046-windows-one-click-package.md)：本轮 Windows EXE 分发决策、owner、构建期 PyInstaller 依赖和未闭合风险。
+- [../packaging/windows/README.md](../packaging/windows/README.md)：用户运行和开发机构建说明。
+
+当前状态：服务包与根 EXE 已构建并完成本机黑盒启动、页面、真实窗口、关闭和退出码验收；仅剩独立干净 Windows x64 主机验收缺口。

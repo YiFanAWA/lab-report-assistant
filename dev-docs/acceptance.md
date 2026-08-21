@@ -819,3 +819,24 @@
 | 2026-08-21 | 逐页视觉验收 | `render_docx.py` 缺少 `pdf2image/Poppler`；LibreOffice 不可用；Word 剪贴板复制分页图像因桌面沙箱失败。已完成结构和文本验收，未宣称 21 页 PNG 逐页通过 | ⚠️ 工具限制 |
 
 当前结论：统计完整性修订、文稿定位、真实 Word/PDF 生成和自动门禁完成；项目负责人仍需查看最新 PDF 并确认视觉收口，之后才能执行 Git 版本收口。
+
+
+
+## SPEC 0046 Windows 一键运行封装验收记录
+
+| 日期 | 验收项 | 证据/边界 | 结果 |
+|---|---|---|---|
+| 2026-08-21 | 构建依赖 | packaging/windows/requirements-build.txt；PyInstaller 6.22.2 已安装于构建用 server/.venv，仅作为构建期依赖 | ✅ |
+| 2026-08-21 | 前端生产构建 | packaging/windows/build_windows_bundle.py 内执行 npm.cmd run build；Vite 116 modules transformed | ✅ |
+| 2026-08-21 | 服务包构建 | PyInstaller one-directory service 构建通过；显式携带 Conda 基座 DLL，复制 sandbox_runner.exe | ✅ |
+| 2026-08-21 | 根启动器构建 | PyInstaller one-file、windowed 根入口构建通过；启动器同样携带 ctypes 所需基础 DLL | ✅ |
+| 2026-08-21 | 服务黑盒 | 发布目录 service/service.exe backend 迁移 0001~0007；/health=200、首页=200、SPA 路由=200；数据库文件真实创建 | ✅ |
+| 2026-08-21 | Worker 黑盒 | 发布目录 service/service.exe worker 启动后保持运行，测试结束后回收；worker stderr 为空 | ✅ |
+| 2026-08-21 | 根 EXE 启动 | 实际运行根目录 实验报告助手.exe；one-file 外层/内层进程启动，健康端点在 8787 返回 200，实际运行窗口可发现 | ✅ |
+| 2026-08-21 | 根 EXE 关闭 | 使用 Win32 窗口枚举识别真实“实验报告助手 - 运行中”窗口；发送 WM_CLOSE 后内层/外层退出码均为 0，service.exe 残留数为 0；用户数据和日志已生成 | ✅ |
+| 2026-08-21 | 源合同测试 | server/.venv/Scripts/python.exe -m pytest tests/test_spec0046_windows_packaging.py -q：4 passed（端口测试在端口被占用时允许 skip） | ✅ |
+| 2026-08-21 | 干净 Windows | 当前工作机同时具备 Python/Node.js，未提供独立无开发运行时 Windows x64 机器；发布包直接运行证据已具备 | ⚠️ 环境缺口 |
+| 2026-08-21 | 返回码观察 | 定位为 ctypes 自定义 WNDPROC/浏览器外部调用导致的启动失败；改用系统 STATIC 窗口和非阻断浏览器打开后，正式 EXE 自动关闭退出码为 0 | ✅ |
+| 2026-08-21 | 资源与密钥 | 发布 manifest 记录文件哈希；构建脚本未读取真实密钥，运行包不放 DeepSeek Key；构建输出留在 server/.tmp/windows-package/ | ✅ |
+
+当前结论：Windows 便携包构建、服务黑盒、根 EXE 启动/页面/真实窗口/关闭清理链路和退出码均通过；仅缺少独立无 Python、Node.js、Docker 的全新 Windows x64 主机验收。

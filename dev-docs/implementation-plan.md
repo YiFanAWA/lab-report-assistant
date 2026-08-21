@@ -225,3 +225,18 @@ SPEC 0044 已完成本地实现、真实成品生成和逐页视觉复核，当�
 SPEC 0045 已完成统计完整性修订：分析脚本现在按患者首记录形成主队列，排除死亡/临终关怀首记录，区分 HbA1c 已检测/明确未检测/真正缺失，加入主要诊断分层和 HbA1c 交互，并提供患者聚类稳健标准误与两组敏感性分析。正式论文配置统一声明教学性论文复核报告（非独立研究论文），补齐结构化中英文摘要、模型合同、变量编码、软件版本、文献、图表注释和敏感性分析表。
 
 实际生成命令退出码 0；定向测试 10 passed；Word/PDF/manifest 同轮生成，PDF 21 页。由于当前环境缺少 pdf2image/Poppler、LibreOffice，且 Windows ACL/剪贴板替代路径不可用，逐页 PNG 视觉验收未宣称完成。当前不 stage、commit 或 push，等待项目负责人查看 PDF 并确认收口。
+
+
+
+## SPEC 0046 实施回写
+
+SPEC 0046 已完成 Windows x64 portable bundle 的首版实现：根目录 one-file 启动器负责用户数据目录、端口、后端/Worker 子进程和浏览器打开；service/ 目录承载 PyInstaller one-directory 服务、Alembic、科学计算依赖和 sandbox_runner.exe；web/ 目录承载前端生产构建；发布 manifest 记录文件哈希。
+
+- [x] 新增 Windows 启动器、服务入口、SPA 静态回退和构建脚本。
+- [x] 运行数据隔离到 %LOCALAPPDATA%\\LabReportAssistant，服务绑定 127.0.0.1。
+- [x] 启动时自动迁移 SQLite，健康检查通过后打开浏览器。
+- [x] 增加可见运行窗口和退出入口，退出时回收本轮服务进程。
+- [x] 明确 PyInstaller 为构建期依赖，不改变应用运行时依赖合同。
+- [x] 完成服务目录和根 EXE 黑盒冒烟。
+- [ ] 在没有 Python、Node.js、Docker 的独立 Windows x64 主机完成最小业务路径和 Word/PPT 下载验收。
+- [x] 已修复 one-file 外层自动关闭退出码 1：根因是 ctypes 自定义 WNDPROC/可选浏览器调用，改用系统 STATIC 窗口消息循环后正式 EXE 退出码为 0。
