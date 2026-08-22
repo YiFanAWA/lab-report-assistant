@@ -3,6 +3,10 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router";
 import { App } from "./app/App";
+import "./styles/global.css";
+import "./styles/ProjectListView.css";
+import "./styles/ProjectDetailView.css";
+import "./styles/RequirementWorkspaceView.css";
 
 const queryClient = new QueryClient();
 
