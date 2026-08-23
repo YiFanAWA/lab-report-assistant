@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProject } from "../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../features/projects/hooks";
+import { WorkspaceShell } from "../components/workspace/WorkspaceShell";
+import { EmptyState, ErrorPanel, LoadingState } from "../components/workspace/WorkspaceUI";
 import { useSources } from "../features/sources/hooks";
 import {
   useEvidenceCards,
@@ -15,19 +17,6 @@ import {
 import { useJob } from "../features/jobs/hooks";
 import type { EvidenceCard, EvidenceType } from "../features/evidence/types";
 import type { Source } from "../features/sources/types";
-
-/** 项目状态展示中文映射。 */
-function statusLabel(s: string) {
-  const m: Record<string, string> = {
-    DRAFT: "草稿",
-    REQUIREMENT_PARSED: "要求已解析",
-    REQUIREMENT_CONFIRMED: "需求已确认",
-    SOURCES_COLLECTED: "来源已收集",
-    EVIDENCE_CONFIRMED: "证据已确认",
-    COMPLETED: "已完成",
-  };
-  return m[s] ?? s;
-}
 
 /** 证据卡片状态中文映射。 */
 function cardStatusLabel(s: string) {
@@ -56,10 +45,10 @@ function evidenceTypeLabel(t: string) {
 /** 来源状态中文映射（用于判断来源状态）。 */
 function sourceStatusLabel(s: string) {
   const m: Record<string, string> = {
-    PENDING: "待处理",
+    PENDING: "等待处理",
     FETCHED: "已采集",
     PARSED: "已解析",
-    FAILED: "失败",
+    FAILED: "需要处理",
     DELETED: "已删除",
   };
   return m[s] ?? s;
@@ -123,42 +112,36 @@ function EvidenceCardItem({
 
   return (
     <div
-      style={{
-        padding: "0.75rem",
-        border: `1px solid ${isStale ? "#fcd34d" : "#e5e7eb"}`,
-        borderRadius: "0.5rem",
-        marginBottom: "0.5rem",
-        background: isStale ? "#fffbeb" : "#fff",
-      }}
+
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-        <strong style={{ fontSize: "0.85rem" }}>
+      <div >
+        <strong >
           [{evidenceTypeLabel(card.evidence_type)}] {card.locator}
         </strong>
-        <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
+        <span >
           [{cardStatusLabel(card.status)}]
           {card.candidate_source === "LOCAL_RULE" && " · 本地规则"}
           {card.candidate_source === "MODEL" && " · 模型"}
         </span>
       </div>
       {!isEditing ? (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#1f2937", whiteSpace: "pre-wrap" }}>
+        <div >
           {card.summary}
         </div>
       ) : (
-        <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#f9fafb", borderRadius: "0.25rem" }}>
-          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem" }}>摘要</label>
+        <div >
+          <label >摘要</label>
           <textarea
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             rows={3}
-            style={{ width: "100%", padding: "0.4rem", boxSizing: "border-box", fontSize: "0.85rem" }}
+
           />
-          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem", marginTop: "0.5rem" }}>证据类型</label>
+          <label >证据类型</label>
           <select
             value={evidenceType}
             onChange={(e) => setEvidenceType(e.target.value as EvidenceType)}
-            style={{ width: "100%", padding: "0.4rem", boxSizing: "border-box", fontSize: "0.85rem" }}
+
           >
             {ALL_EVIDENCE_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -166,42 +149,42 @@ function EvidenceCardItem({
               </option>
             ))}
           </select>
-          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem", marginTop: "0.5rem" }}>来源位置</label>
+          <label >来源位置</label>
           <input
             value={locator}
             onChange={(e) => setLocator(e.target.value)}
-            style={{ width: "100%", padding: "0.4rem", boxSizing: "border-box", fontSize: "0.85rem" }}
+
           />
-          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem", marginTop: "0.5rem" }}>原文摘录（可选）</label>
+          <label >原文摘录（可选）</label>
           <textarea
             value={sourceQuote}
             onChange={(e) => setSourceQuote(e.target.value)}
             rows={2}
-            style={{ width: "100%", padding: "0.4rem", boxSizing: "border-box", fontSize: "0.85rem" }}
+
           />
         </div>
       )}
       {card.source_quote && !isEditing && (
-        <div style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "#6b7280", fontStyle: "italic" }}>
+        <div >
           原文：{card.source_quote}
         </div>
       )}
-      <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+      <div >
         来源 ID：{card.source_id}
         {card.confirmed_at && ` · 确认于 ${new Date(card.confirmed_at).toLocaleString("zh-CN")}`}
       </div>
       {isStale && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#92400e" }}>
+        <div >
           原始来源已变化，此卡片已失效，请重新评估或编辑后确认。
         </div>
       )}
       {editErr && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#c00" }}>{editErr}</div>
+        <div >{editErr}</div>
       )}
       {editOk && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#16a34a" }}>{editOk}</div>
+        <div >{editOk}</div>
       )}
-      <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      <div >
         {canEdit && (
           <>
             <button
@@ -233,15 +216,7 @@ function EvidenceCardItem({
                 }
               }}
               disabled={updateMutation.isPending}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                background: "#e0e7ff",
-                color: "#3730a3",
-                border: "1px solid #c7d2fe",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {isEditing
                 ? updateMutation.isPending
@@ -259,15 +234,7 @@ function EvidenceCardItem({
                   setIsEditing(false);
                   setEditErr(null);
                 }}
-                style={{
-                  padding: "0.25rem 0.6rem",
-                  fontSize: "0.8rem",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "0.25rem",
-                  cursor: "pointer",
-                }}
+
               >
                 取消
               </button>
@@ -278,15 +245,7 @@ function EvidenceCardItem({
           <button
             onClick={() => confirmMutation.mutate(card.id)}
             disabled={confirmMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#16a34a",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {confirmMutation.isPending ? "确认中…" : "确认"}
           </button>
@@ -295,15 +254,7 @@ function EvidenceCardItem({
           <button
             onClick={() => rejectMutation.mutate(card.id)}
             disabled={rejectMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#fee2e2",
-              color: "#b91c1c",
-              border: "1px solid #fecaca",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {rejectMutation.isPending ? "拒绝中…" : "拒绝"}
           </button>
@@ -317,6 +268,7 @@ export function EvidenceWorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = projectId!;
   const { data: project, isLoading: projLoading } = useProject(pid);
+  const { data: projection } = useWorkspaceProjection(pid);
   const { data: sources } = useSources(pid);
 
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -358,55 +310,51 @@ export function EvidenceWorkspaceView() {
     }
   }, [genJob?.status, genJob, qc, pid]);
 
-  if (projLoading) return <p style={{ padding: "2rem" }}>加载中…</p>;
-  if (!project) return <p style={{ padding: "2rem", color: "#c00" }}>项目不存在</p>;
+  if (projLoading) return <LoadingState />;
+  if (!project) return <ErrorPanel message="项目不存在" />;
 
   const parsedSources = (sources ?? []).filter((s) => s.status === "PARSED");
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "1.5rem 1rem" }}>
-      <Link to={`/projects/${pid}`} style={{ fontSize: "0.85rem", color: "#2563eb" }}>
+    <WorkspaceShell project={project} projection={projection} title="证据卡片工作区">
+      <div className="workspace-legacy-page">
+      <Link to={`/projects/${pid}`} >
         ← 项目详情
       </Link>
       <Link
         to={`/projects/${pid}/sources`}
-        style={{ marginLeft: "1rem", fontSize: "0.85rem", color: "#2563eb" }}
+
       >
         资料来源工作区
       </Link>
 
-      <h1 style={{ fontSize: "1.3rem", marginTop: "0.75rem" }}>
-        {project.name}{" "}
-        <span style={{ fontSize: "0.8rem", color: "#888" }}>[{statusLabel(project.status)}]</span>
+      <h1 >
+        工作区{" "}
+        <span >[{projection?.project.status_label ?? project.status}]</span>
       </h1>
-      <p style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "0.25rem" }}>
+      <p >
         从已解析的来源生成证据卡片候选，可编辑、确认或拒绝。
       </p>
 
       {/* 生成证据卡片 */}
       <section
-        style={{
-          marginTop: "1.5rem",
-          padding: "1rem",
-          border: "1px solid #e5e7eb",
-          borderRadius: "0.5rem",
-        }}
+
       >
-        <h3 style={{ margin: "0 0 0.5rem" }}>生成证据卡片候选</h3>
+        <h3 >生成证据卡片候选</h3>
         {parsedSources.length === 0 ? (
-          <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+          <p >
             当前没有已解析的来源。请先在
-            <Link to={`/projects/${pid}/sources`} style={{ margin: "0 0.25rem", color: "#2563eb" }}>
+            <Link to={`/projects/${pid}/sources`} >
               资料来源工作区
             </Link>
             登记来源并等待解析完成。
           </p>
         ) : (
           <>
-            <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+            <p >
               可对以下已解析来源生成证据卡片候选（本地规则提供者）：
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div >
               {parsedSources.map((s) => (
                 <GenerateEvidenceRow
                   key={s.id}
@@ -424,21 +372,21 @@ export function EvidenceWorkspaceView() {
           </>
         )}
         {genOk && (
-          <p style={{ color: "#16a34a", fontSize: "0.85rem", marginTop: "0.5rem" }}>{genOk}</p>
+          <p >{genOk}</p>
         )}
         {genErr && (
-          <p style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>{genErr}</p>
+          <p >{genErr}</p>
         )}
       </section>
 
       {/* 状态筛选 */}
-      <section style={{ marginTop: "1.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-          <h3 style={{ margin: 0 }}>证据卡片</h3>
+      <section >
+        <div >
+          <h3 >证据卡片</h3>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ padding: "0.25rem 0.4rem", fontSize: "0.85rem" }}
+
           >
             {STATUS_FILTERS.map((s) => (
               <option key={s} value={s}>
@@ -447,9 +395,9 @@ export function EvidenceWorkspaceView() {
             ))}
           </select>
         </div>
-        {cardsLoading && <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>}
+        {cardsLoading && <p >加载中…</p>}
         {!cardsLoading && (!cards || cards.length === 0) && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>没有匹配的证据卡片。</p>
+          <EmptyState title="没有匹配的证据卡片。" description="先生成或确认资料来源的证据卡片。" />
         )}
         {cards && cards.length > 0 && (
           <div>
@@ -461,41 +409,35 @@ export function EvidenceWorkspaceView() {
       </section>
 
       {/* 完成证据确认 */}
-      <section style={{ marginTop: "1.5rem" }}>
+      <section >
         <button
           onClick={() => {
             setCompleteErr(null);
-            setCompleteOk(null);
+            setCompleteOk("项目状态已推进，请返回项目总览确认最新阶段。");
             complete.mutate(undefined, {
               onSuccess: (data) => {
-                setCompleteOk(`项目状态已推进到「${statusLabel(data.status)}」`);
+                setCompleteOk("项目状态已推进，请返回项目总览确认最新阶段。");
               },
               onError: (e) => setCompleteErr(errorMessage(e, "完成失败")),
             });
           }}
           disabled={complete.isPending}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#16a34a",
-            color: "#fff",
-            border: "none",
-            borderRadius: "0.375rem",
-            cursor: "pointer",
-          }}
+
         >
           {complete.isPending ? "推进中…" : "完成证据确认"}
         </button>
-        <span style={{ marginLeft: "0.5rem", fontSize: "0.8rem", color: "#6b7280" }}>
+        <span >
           需要至少一张已确认（CONFIRMED）的证据卡片
         </span>
         {completeOk && (
-          <p style={{ color: "#16a34a", fontSize: "0.85rem", marginTop: "0.5rem" }}>{completeOk}</p>
+          <p >{completeOk}</p>
         )}
         {completeErr && (
-          <p style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>{completeErr}</p>
+          <p >{completeErr}</p>
         )}
       </section>
     </div>
+    </WorkspaceShell>
   );
 }
 
@@ -521,21 +463,16 @@ function GenerateEvidenceRow({
 
   return (
     <div
-      style={{
-        padding: "0.5rem 0.75rem",
-        background: "#f9fafb",
-        borderRadius: "0.25rem",
-        fontSize: "0.85rem",
-      }}
+
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ wordBreak: "break-all" }}>
+      <div >
+        <span >
           <strong>{source.title}</strong>
-          <span style={{ color: "#6b7280", marginLeft: "0.5rem" }}>
+          <span >
             [{sourceStatusLabel(source.status)}]
           </span>
         </span>
-        <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
+        <div >
           <button
             onClick={() => {
               setErr(null);
@@ -545,16 +482,7 @@ function GenerateEvidenceRow({
               });
             }}
             disabled={busy}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#0ea5e9",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+
           >
             {generate.isPending ? "提交中…" : "生成候选"}
           </button>
@@ -565,107 +493,62 @@ function GenerateEvidenceRow({
               stream.start();
             }}
             disabled={busy}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#6366f1",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+
           >
             {stream.streaming ? "流式生成中…" : "流式生成"}
           </button>
         </div>
       </div>
       {err && (
-        <div style={{ marginTop: "0.25rem", color: "#c00", fontSize: "0.8rem" }}>{err}</div>
+        <div >{err}</div>
       )}
 
       {/* SPEC 0020：流式生成展示区 */}
       {stream.streaming && (
         <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.75rem",
-            border: "1px solid #e5e7eb",
-            borderRadius: "0.375rem",
-            background: "#fff",
-          }}
+
         >
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "0.5rem",
-            }}
+
           >
-            <span style={{ fontSize: "0.8rem", color: "#666" }}>
+            <span >
               正在逐 chunk 生成…
             </span>
             <button
               onClick={stream.cancel}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                color: "#c00",
-                background: "transparent",
-                border: "1px solid #c00",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               取消
             </button>
           </div>
           <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontSize: "0.8rem",
-              lineHeight: 1.5,
-              margin: 0,
-              maxHeight: "240px",
-              overflow: "auto",
-              fontFamily: "monospace",
-            }}
+
           >
             {stream.chunks}
           </pre>
         </div>
       )}
       {stream.result && (
-        <p style={{ color: "#16a34a", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+        <p >
           流式生成完成 ✓ [{stream.result.candidate_source}
           {stream.result.fallback_used ? "（降级）" : ""}] · 共 {stream.result.card_count} 张卡片
         </p>
       )}
       {stream.error && (
-        <div style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
-          <p style={{ margin: 0 }}>
+        <div >
+          <p >
             流式生成失败：{stream.error.message}
             {stream.error.partial_text && (
-              <span style={{ color: "#92400e" }}>（已保留部分生成内容）</span>
+              <span >（已保留部分生成内容）</span>
             )}
           </p>
           {stream.error.partial_text && (
-            <details style={{ marginTop: "0.3rem" }}>
-              <summary style={{ cursor: "pointer", fontSize: "0.75rem" }}>
+            <details >
+              <summary >
                 查看已生成内容
               </summary>
               <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  fontSize: "0.75rem",
-                  marginTop: "0.3rem",
-                  padding: "0.4rem",
-                  background: "#fef2f2",
-                  borderRadius: "0.25rem",
-                }}
+
               >
                 {stream.error.partial_text}
               </pre>

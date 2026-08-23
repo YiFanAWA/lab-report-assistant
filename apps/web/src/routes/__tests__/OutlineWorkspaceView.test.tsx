@@ -25,6 +25,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/outlines/hooks", () => ({
@@ -49,7 +50,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import {
   useOutlines,
   useGenerateOutline,
@@ -66,9 +67,11 @@ import {
 import { useJob } from "../../features/jobs/hooks";
 import { OutlineWorkspaceView } from "../OutlineWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type { Outline } from "../../features/outlines/types";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseOutlines = vi.mocked(useOutlines);
 const mockedUseGenerateOutline = vi.mocked(useGenerateOutline);
 const mockedUseStreamGenerateOutline = vi.mocked(useStreamGenerateOutline);
@@ -142,6 +145,7 @@ function setupMocks(options: {
     error: null,
   } as any);
 
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
   mockedUseOutlines.mockReturnValue({
     data: outlines,
     isLoading: outlinesLoading,
@@ -384,7 +388,7 @@ describe("OutlineWorkspaceView - 大纲列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("分析方案")).toBeInTheDocument();
+    expect(screen.getAllByText("分析方案").length).toBeGreaterThan(0);
   });
 });
 
@@ -513,7 +517,7 @@ describe("OutlineWorkspaceView - 项目状态标签", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("[大纲已确认]")).toBeInTheDocument();
+    expect(screen.getByText("[报告大纲已确认]")).toBeInTheDocument();
   });
 
   it("未知状态显示原状态字符串", () => {

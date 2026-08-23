@@ -19,6 +19,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/analysis/hooks", () => ({
@@ -67,7 +68,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(() => ({ data: undefined })),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import { useAnalysisPlans } from "../../features/analysis/hooks";
 import {
   useCodeTasks,
@@ -75,8 +76,10 @@ import {
 } from "../../features/execution/hooks";
 import { ExecutionWorkspaceView } from "../ExecutionWorkspaceView";
 import type { CodeTask, ExecutionRun } from "../../features/execution/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseAnalysisPlans = vi.mocked(useAnalysisPlans);
 const mockedUseCodeTasks = vi.mocked(useCodeTasks);
 const mockedUseExecutionRuns = vi.mocked(useExecutionRuns);
@@ -88,8 +91,10 @@ const PROJECT_ID = "proj_test_001";
 const mockProject = {
   id: PROJECT_ID,
   name: "胃病数据分析",
+  topic: "胃病数据",
   status: "ANALYSIS_CONFIRMED",
   created_at: "2026-07-20T00:00:00Z",
+  updated_at: "2026-07-20T00:00:00Z",
 };
 
 const mockCodeTask: CodeTask = {
@@ -200,6 +205,7 @@ beforeEach(() => {
     isError: false,
     error: null,
   } as any);
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(mockProject as any) } as any);
   mockedUseAnalysisPlans.mockReturnValue({
     data: [],
     isLoading: false,
@@ -277,16 +283,18 @@ describe("生成代码候选区域", () => {
       data: { ...mockProject, status: "DATASET_READY" },
       isLoading: false,
     } as any);
+    mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus({ ...mockProject, status: "DATASET_READY" } as any) } as any);
 
     renderWithProviders(<ExecutionWorkspaceView />);
 
     expect(
-      screen.getByText(/需要先在分析方案工作区完成确认/)
+      screen.getByText(/当前执行工作区尚未开放/)
     ).toBeInTheDocument();
   });
 
   it("有已确认分析方案时显示下拉选择器和生成按钮", () => {
-    mockedUseAnalysisPlans.mockReturnValue({
+    mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(mockProject as any) } as any);
+  mockedUseAnalysisPlans.mockReturnValue({
       data: [mockConfirmedPlan],
       isLoading: false,
     } as any);
@@ -366,7 +374,7 @@ describe("执行记录卡片", () => {
     renderWithProviders(<ExecutionWorkspaceView />);
 
     // 已成功状态可能多处出现，用 getAllByText
-    expect(screen.getAllByText(/已成功/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/已完成/).length).toBeGreaterThan(0);
     // 产物下载链接
     expect(screen.getByText("下载")).toBeInTheDocument();
     // 产物名称
@@ -382,7 +390,7 @@ describe("执行记录卡片", () => {
     renderWithProviders(<ExecutionWorkspaceView />);
 
     // 失败状态可能多处出现（项目状态映射），用 getAllByText
-    expect(screen.getAllByText(/失败/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/需要处理/).length).toBeGreaterThan(0);
     // 错误码和错误信息
     expect(screen.getByText(/EXECUTION_FAILED/)).toBeInTheDocument();
     expect(screen.getByText(/Python 进程退出码非零/)).toBeInTheDocument();
@@ -422,6 +430,7 @@ describe("完成结果确认按钮", () => {
       data: { ...mockProject, status: "RESULT_CONFIRMED" },
       isLoading: false,
     } as any);
+    mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus({ ...mockProject, status: "RESULT_CONFIRMED" } as any) } as any);
     mockedUseExecutionRuns.mockReturnValue({
       data: [mockExecutionRun],
       isLoading: false,
@@ -430,6 +439,6 @@ describe("完成结果确认按钮", () => {
     renderWithProviders(<ExecutionWorkspaceView />);
 
     const button = screen.getByRole("button", { name: /完成结果确认/ });
-    expect(button).toBeDisabled();
+    expect(button).toBeEnabled();
   });
 });

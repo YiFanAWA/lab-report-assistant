@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProject } from "../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../features/projects/hooks";
+import { WorkspaceShell } from "../components/workspace/WorkspaceShell";
+import { EmptyState, ErrorPanel, LoadingState } from "../components/workspace/WorkspaceUI";
 import { useAnalysisPlans } from "../features/analysis/hooks";
 import {
   useCodeTasks,
@@ -22,27 +24,6 @@ import type {
   ExecutionArtifact,
 } from "../features/execution/types";
 
-/** 项目状态展示中文映射。 */
-function statusLabel(s: string) {
-  const m: Record<string, string> = {
-    DRAFT: "草稿",
-    REQUIREMENT_PARSED: "要求已解析",
-    REQUIREMENT_CONFIRMED: "需求已确认",
-    SOURCES_COLLECTED: "来源已收集",
-    EVIDENCE_CONFIRMED: "证据已确认",
-    DATASET_READY: "数据集已就绪",
-    ANALYSIS_PLANNED: "分析方案已生成",
-    ANALYSIS_CONFIRMED: "分析方案已确认",
-    EXECUTING: "执行中",
-    EXECUTION_FAILED: "执行失败",
-    RESULT_CONFIRMED: "结果已确认",
-    OUTLINE_CONFIRMED: "大纲已确认",
-    GENERATING: "交付物生成中",
-    COMPLETED: "已完成",
-  };
-  return m[s] ?? s;
-}
-
 /** 代码任务状态中文映射。 */
 function codeTaskStatusLabel(s: string) {
   const m: Record<string, string> = {
@@ -57,10 +38,10 @@ function codeTaskStatusLabel(s: string) {
 /** 执行记录状态中文映射。 */
 function runStatusLabel(s: string) {
   const m: Record<string, string> = {
-    PENDING: "排队中",
-    RUNNING: "执行中",
-    SUCCEEDED: "已成功",
-    FAILED: "失败",
+    PENDING: "等待处理",
+    RUNNING: "正在处理",
+    SUCCEEDED: "已完成",
+    FAILED: "需要处理",
     STALE: "已失效",
   };
   return m[s] ?? s;
@@ -97,10 +78,10 @@ function jobTypeLabel(t: string) {
 /** 任务状态中文映射。 */
 function jobStatusLabel(s: string) {
   const m: Record<string, string> = {
-    PENDING: "排队中",
-    RUNNING: "执行中",
+    PENDING: "等待处理",
+    RUNNING: "正在处理",
     SUCCEEDED: "已完成",
-    FAILED: "失败",
+    FAILED: "需要处理",
     CANCELLED: "已取消",
   };
   return m[s] ?? s;
@@ -139,8 +120,8 @@ function CollapsibleText({
 
   if (isEmpty) {
     return (
-      <div style={{ marginTop: "0.4rem" }}>
-        <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+      <div >
+        <span >
           {label}：（空）
         </span>
       </div>
@@ -151,35 +132,15 @@ function CollapsibleText({
   const previewLines = text.split("\n").slice(0, 5).join("\n");
 
   return (
-    <div style={{ marginTop: "0.4rem" }}>
+    <div >
       <button
         onClick={() => setCollapsed(!collapsed)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "0.75rem",
-          color,
-          padding: 0,
-        }}
+
       >
         {collapsed ? "▸" : "▾"} {label}（{lineCount} 行）
       </button>
       <pre
-        style={{
-          marginTop: "0.25rem",
-          padding: "0.5rem",
-          background: color === "#16a34a" ? "#f0fdf4" : "#fef2f2",
-          border: `1px solid ${color === "#16a34a" ? "#bbf7d0" : "#fecaca"}`,
-          borderRadius: "0.25rem",
-          fontSize: "0.75rem",
-          fontFamily: "monospace",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-          maxHeight: collapsed ? "6rem" : "24rem",
-          overflow: "auto",
-          margin: 0,
-        }}
+
       >
         {collapsed ? previewLines + (lineCount > 5 ? "\n…" : "") : text}
       </pre>
@@ -252,30 +213,18 @@ function CodeTaskCard({
 
   return (
     <div
-      style={{
-        padding: "0.75rem",
-        border: `1px solid ${isStale ? "#fcd34d" : "#e5e7eb"}`,
-        borderRadius: "0.5rem",
-        marginBottom: "0.5rem",
-        background: isStale ? "#fffbeb" : "#fff",
-      }}
+
     >
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: "0.5rem",
-          flexWrap: "wrap",
-        }}
+
       >
-        <strong style={{ fontSize: "0.9rem" }}>
+        <strong >
           代码任务 v{task.code_version} [{codeTaskStatusLabel(task.status)}]
-          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
+          <span >
             · 来源：{candidateSourceLabel(task.candidate_source)}
           </span>
         </strong>
-        <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+        <span >
           创建：{new Date(task.created_at).toLocaleString("zh-CN")}
           {task.confirmed_at &&
             ` · 确认：${new Date(task.confirmed_at).toLocaleString("zh-CN")}`}
@@ -284,36 +233,17 @@ function CodeTaskCard({
 
       {isStale && (
         <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.4rem 0.5rem",
-            background: "#fef3c7",
-            borderRadius: "0.25rem",
-            fontSize: "0.8rem",
-            color: "#92400e",
-          }}
+
         >
           关联的数据集或分析方案已变化，此代码任务已失效，请重新生成或编辑后确认。
         </div>
       )}
 
       {/* 代码编辑器 */}
-      <div style={{ marginTop: "0.5rem" }}>
+      <div >
         {!isEditing ? (
           <pre
-            style={{
-              padding: "0.5rem",
-              background: "#1e293b",
-              color: "#e2e8f0",
-              borderRadius: "0.25rem",
-              fontSize: "0.78rem",
-              fontFamily: "monospace",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              maxHeight: "20rem",
-              overflow: "auto",
-              margin: 0,
-            }}
+
           >
             {task.code}
           </pre>
@@ -323,37 +253,20 @@ function CodeTaskCard({
             onChange={(e) => setCodeDraft(e.target.value)}
             rows={16}
             spellCheck={false}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              boxSizing: "border-box",
-              fontSize: "0.78rem",
-              fontFamily: "monospace",
-              background: "#1e293b",
-              color: "#e2e8f0",
-              border: "1px solid #475569",
-              borderRadius: "0.25rem",
-              resize: "vertical",
-              minHeight: "12rem",
-            }}
+
           />
         )}
       </div>
 
       {editErr && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#c00" }}>
+        <div >
           {editErr}
         </div>
       )}
 
       {/* 操作按钮 */}
       <div
-        style={{
-          marginTop: "0.5rem",
-          display: "flex",
-          gap: "0.5rem",
-          flexWrap: "wrap",
-        }}
+
       >
         {canEdit && (
           <>
@@ -383,15 +296,7 @@ function CodeTaskCard({
                 }
               }}
               disabled={updateMutation.isPending}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                background: "#e0e7ff",
-                color: "#3730a3",
-                border: "1px solid #c7d2fe",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {isEditing
                 ? updateMutation.isPending
@@ -406,15 +311,7 @@ function CodeTaskCard({
                   setIsEditing(false);
                   setEditErr(null);
                 }}
-                style={{
-                  padding: "0.25rem 0.6rem",
-                  fontSize: "0.8rem",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "0.25rem",
-                  cursor: "pointer",
-                }}
+
               >
                 取消
               </button>
@@ -425,15 +322,7 @@ function CodeTaskCard({
           <button
             onClick={() => confirmMutation.mutate(task.id)}
             disabled={confirmMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#16a34a",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {confirmMutation.isPending ? "确认中…" : "确认代码"}
           </button>
@@ -442,15 +331,7 @@ function CodeTaskCard({
           <button
             onClick={() => rejectMutation.mutate(task.id)}
             disabled={rejectMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#fee2e2",
-              color: "#b91c1c",
-              border: "1px solid #fecaca",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {rejectMutation.isPending ? "拒绝中…" : "拒绝代码"}
           </button>
@@ -468,15 +349,7 @@ function CodeTaskCard({
               });
             }}
             disabled={executeMutation.isPending || !!execJobId}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#0ea5e9",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {executeMutation.isPending
               ? "提交中…"
@@ -490,11 +363,7 @@ function CodeTaskCard({
       {/* 执行任务状态 */}
       {execJobId && execJob && (
         <p
-          style={{
-            fontSize: "0.8rem",
-            color: "#2563eb",
-            marginTop: "0.5rem",
-          }}
+
         >
           {jobTypeLabel(execJob.job_type)}：{jobStatusLabel(execJob.status)}
           {(execJob.status === "PENDING" || execJob.status === "RUNNING") &&
@@ -502,12 +371,12 @@ function CodeTaskCard({
         </p>
       )}
       {execOk && (
-        <p style={{ color: "#16a34a", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+        <p >
           {execOk}
         </p>
       )}
       {execErr && (
-        <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+        <p >
           {execErr}
         </p>
       )}
@@ -527,49 +396,22 @@ function ArtifactRow({
 }) {
   return (
     <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "0.5rem",
-        flexWrap: "wrap",
-        padding: "0.4rem 0.5rem",
-        background: "#f9fafb",
-        borderRadius: "0.25rem",
-        marginBottom: "0.3rem",
-      }}
+
     >
-      <div style={{ fontSize: "0.8rem" }}>
+      <div >
         <span
-          style={{
-            fontSize: "0.7rem",
-            color: "#fff",
-            background:
-              artifact.artifact_type === "CHART_PNG" ? "#7c3aed" : "#0ea5e9",
-            padding: "0.1rem 0.4rem",
-            borderRadius: "0.25rem",
-            marginRight: "0.5rem",
-          }}
+
         >
           {artifactTypeLabel(artifact.artifact_type)}
         </span>
-        <span style={{ wordBreak: "break-all" }}>{artifact.name}</span>
-        <span style={{ marginLeft: "0.5rem", color: "#9ca3af" }}>
+        <span >{artifact.name}</span>
+        <span >
           ({formatFileSize(artifact.file_size_bytes)})
         </span>
       </div>
       <a
         href={buildArtifactDownloadUrl(projectId, runId, artifact.id)}
-        style={{
-          padding: "0.2rem 0.5rem",
-          fontSize: "0.75rem",
-          background: "#16a34a",
-          color: "#fff",
-          border: "none",
-          borderRadius: "0.25rem",
-          textDecoration: "none",
-          cursor: "pointer",
-        }}
+
       >
         下载
       </a>
@@ -592,34 +434,20 @@ function ExecutionRunCard({
 
   return (
     <div
-      style={{
-        padding: "0.75rem",
-        border: `1px solid ${
-          isFailed ? "#fecaca" : isStale ? "#fcd34d" : "#e5e7eb"
-        }`,
-        borderRadius: "0.5rem",
-        marginBottom: "0.5rem",
-        background: isStale ? "#fffbeb" : "#fff",
-      }}
+
     >
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: "0.5rem",
-          flexWrap: "wrap",
-        }}
+
       >
-        <strong style={{ fontSize: "0.9rem" }}>
+        <strong >
           执行记录 #{run.code_version} [{runStatusLabel(run.status)}]
-          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
+          <span >
             {run.exit_code !== null && ` · exit=${run.exit_code}`}
             {run.duration_seconds !== null &&
               ` · 耗时 ${run.duration_seconds.toFixed(1)}s`}
           </span>
         </strong>
-        <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+        <span >
           {run.started_at
             ? `开始：${new Date(run.started_at).toLocaleString("zh-CN")}`
             : "未开始"}
@@ -630,14 +458,7 @@ function ExecutionRunCard({
 
       {isStale && (
         <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.4rem 0.5rem",
-            background: "#fef3c7",
-            borderRadius: "0.25rem",
-            fontSize: "0.8rem",
-            color: "#92400e",
-          }}
+
         >
           关联的代码已重新执行，此执行记录已失效。
         </div>
@@ -645,14 +466,7 @@ function ExecutionRunCard({
 
       {isRunning && (
         <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.4rem 0.5rem",
-            background: "#eff6ff",
-            borderRadius: "0.25rem",
-            fontSize: "0.8rem",
-            color: "#1e40af",
-          }}
+
         >
           代码正在受控环境中执行，请稍候…（页面每 3 秒自动刷新）
         </div>
@@ -660,23 +474,11 @@ function ExecutionRunCard({
 
       {/* 失败错误信息 */}
       {isFailed && (
-        <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.5rem",
-            background: "#fee2e2",
-            borderRadius: "0.25rem",
-            fontSize: "0.8rem",
-            color: "#b91c1c",
-          }}
-        >
-          <strong>执行失败：</strong>
-          {run.error_code}
-          {run.error_message && ` — ${run.error_message}`}
-          <div style={{ marginTop: "0.25rem", fontSize: "0.75rem" }}>
-            请检查下方 stderr 输出，修正代码后重新触发执行。
-          </div>
-        </div>
+        <ErrorPanel
+          className="workspace-inline-error"
+          message={run.error_message ?? "执行失败，请检查下方 stderr 输出，修正代码后重新触发执行。"}
+          code={run.error_code}
+        />
       )}
 
       {/* stdout / stderr */}
@@ -695,18 +497,14 @@ function ExecutionRunCard({
 
       {/* 产物列表 */}
       {isSucceeded && (
-        <div style={{ marginTop: "0.5rem" }}>
+        <div >
           <h4
-            style={{
-              margin: "0 0 0.3rem",
-              fontSize: "0.8rem",
-              color: "#374151",
-            }}
+
           >
             执行产物（{run.artifacts.length} 个）
           </h4>
           {run.artifacts.length === 0 ? (
-            <p style={{ fontSize: "0.8rem", color: "#888" }}>
+            <p >
               本次执行未生成产物文件。
             </p>
           ) : (
@@ -729,6 +527,7 @@ export function ExecutionWorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = projectId!;
   const { data: project, isLoading: projLoading } = useProject(pid);
+  const { data: projection } = useWorkspaceProjection(pid);
   const { data: analysisPlans } = useAnalysisPlans(pid);
   const { data: codeTasks, isLoading: codeTasksLoading } = useCodeTasks(pid);
   const { data: executionRuns, isLoading: runsLoading } = useExecutionRuns(pid);
@@ -769,11 +568,13 @@ export function ExecutionWorkspaceView() {
     }
   }, [genJob?.status, genJob, qc, pid]);
 
-  if (projLoading) return <p style={{ padding: "2rem" }}>加载中…</p>;
-  if (!project)
-    return <p style={{ padding: "2rem", color: "#c00" }}>项目不存在</p>;
+  if (projLoading) return <LoadingState />;
+  if (!project) return <ErrorPanel message="项目不存在" />;
 
-  const canGenerate = project.status === "ANALYSIS_CONFIRMED";
+    const executionStep = projection?.phases
+    .flatMap((phase) => phase.steps)
+    .find((step) => step.id === "execution");
+  const executionStepOpen = executionStep?.is_open === true;
   // 已确认的分析方案，用于生成代码候选
   const confirmedPlans = (analysisPlans ?? []).filter(
     (p) => p.status === "CONFIRMED"
@@ -782,76 +583,64 @@ export function ExecutionWorkspaceView() {
   const hasSucceededRun = (executionRuns ?? []).some(
     (r) => r.status === "SUCCEEDED"
   );
-  const canComplete =
-    hasSucceededRun &&
-    project.status !== "RESULT_CONFIRMED" &&
-    project.status !== "COMPLETED";
+
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "1.5rem 1rem" }}>
+    <WorkspaceShell project={project} projection={projection} title="结果执行工作区">
+      <div className="workspace-legacy-page">
       <Link
         to={`/projects/${pid}`}
-        style={{ fontSize: "0.85rem", color: "#2563eb" }}
+
       >
         ← 项目详情
       </Link>
       <Link
         to={`/projects/${pid}/analysis`}
-        style={{ marginLeft: "1rem", fontSize: "0.85rem", color: "#2563eb" }}
+
       >
         分析方案工作区
       </Link>
       <Link
         to={`/projects/${pid}/outline`}
-        style={{ marginLeft: "1rem", fontSize: "0.85rem", color: "#2563eb" }}
+
       >
         大纲工作区
       </Link>
 
-      <h1 style={{ fontSize: "1.3rem", marginTop: "0.75rem" }}>
-        {project.name}{" "}
-        <span style={{ fontSize: "0.8rem", color: "#888" }}>
-          [{statusLabel(project.status)}]
+      <h1 >
+        工作区{" "}
+        <span >
+          [{projection?.project.status_label ?? project.status}]
         </span>
       </h1>
       <p
-        style={{
-          fontSize: "0.85rem",
-          color: "#6b7280",
-          marginTop: "0.25rem",
-        }}
+
       >
         为已确认的分析方案生成 Python 代码候选，在受控环境中执行，
         生成表格和图表产物。确认结果后可进入大纲工作区。
       </p>
 
       {/* Section 1: 代码任务 */}
-      <section style={{ marginTop: "1.5rem" }}>
-        <h3 style={{ margin: "0 0 0.5rem" }}>代码任务</h3>
+      <section >
+        <h3 >代码任务</h3>
 
         {/* 生成代码候选 */}
         <div
-          style={{
-            padding: "1rem",
-            border: "1px solid #e5e7eb",
-            borderRadius: "0.5rem",
-            marginBottom: "1rem",
-          }}
+
         >
-          <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>
+          <h4 >
             生成代码候选
           </h4>
-          {!canGenerate ? (
-            <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-              项目当前状态为「{statusLabel(project.status)}」，
-              需要先在分析方案工作区完成确认（推进到 ANALYSIS_CONFIRMED）才能生成代码。
+          {!executionStepOpen ? (
+            <p >
+              当前执行工作区尚未开放，请按阶段进度完成前置工作后再继续。
             </p>
           ) : confirmedPlans.length === 0 ? (
-            <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+            <p >
               当前没有已确认的分析方案，请先在
               <Link
                 to={`/projects/${pid}/analysis`}
-                style={{ margin: "0 0.25rem", color: "#2563eb" }}
+
               >
                 分析方案工作区
               </Link>
@@ -860,30 +649,17 @@ export function ExecutionWorkspaceView() {
           ) : (
             <>
               <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#6b7280",
-                  marginBottom: "0.5rem",
-                }}
+
               >
                 选择一个已确认的分析方案，生成 Python 代码候选：
               </p>
               <div
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
+
               >
                 <select
                   value={selectedPlanId}
                   onChange={(e) => setSelectedPlanId(e.target.value)}
-                  style={{
-                    padding: "0.4rem",
-                    fontSize: "0.85rem",
-                    minWidth: "16rem",
-                  }}
+
                 >
                   <option value="">— 选择分析方案 —</option>
                   {confirmedPlans.map((p) => (
@@ -911,15 +687,7 @@ export function ExecutionWorkspaceView() {
                     !!genJobId ||
                     stream.streaming
                   }
-                  style={{
-                    padding: "0.4rem 0.8rem",
-                    fontSize: "0.85rem",
-                    background: "#0ea5e9",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                  }}
+
                 >
                   {generate.isPending || genJobId
                     ? "生成中…"
@@ -941,26 +709,14 @@ export function ExecutionWorkspaceView() {
                     generate.isPending ||
                     !!genJobId
                   }
-                  style={{
-                    padding: "0.4rem 0.8rem",
-                    fontSize: "0.85rem",
-                    background: "#6366f1",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                  }}
+
                 >
                   {stream.streaming ? "流式生成中…" : "流式生成"}
                 </button>
               </div>
               {genJobId && genJob && (
                 <p
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#2563eb",
-                    marginTop: "0.5rem",
-                  }}
+
                 >
                   {jobTypeLabel(genJob.job_type)}：
                   {jobStatusLabel(genJob.status)}
@@ -971,11 +727,7 @@ export function ExecutionWorkspaceView() {
               )}
               {genErr && (
                 <p
-                  style={{
-                    color: "#c00",
-                    fontSize: "0.85rem",
-                    marginTop: "0.5rem",
-                  }}
+
                 >
                   {genErr}
                 </p>
@@ -984,51 +736,23 @@ export function ExecutionWorkspaceView() {
               {/* SPEC 0022：流式生成展示区（方案 A） */}
               {stream.streaming && (
                 <div
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "0.375rem",
-                    background: "#fff",
-                  }}
+
                 >
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "0.5rem",
-                    }}
+
                   >
-                    <span style={{ fontSize: "0.8rem", color: "#666" }}>
+                    <span >
                       正在逐 chunk 生成（原始 JSON 输出）…
                     </span>
                     <button
                       onClick={stream.cancel}
-                      style={{
-                        padding: "0.25rem 0.6rem",
-                        fontSize: "0.8rem",
-                        color: "#c00",
-                        background: "transparent",
-                        border: "1px solid #c00",
-                        borderRadius: "0.25rem",
-                        cursor: "pointer",
-                      }}
+
                     >
                       取消
                     </button>
                   </div>
                   <pre
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      fontSize: "0.8rem",
-                      lineHeight: 1.5,
-                      margin: 0,
-                      maxHeight: "240px",
-                      overflow: "auto",
-                      fontFamily: "monospace",
-                    }}
+
                   >
                     {stream.chunks}
                   </pre>
@@ -1036,11 +760,7 @@ export function ExecutionWorkspaceView() {
               )}
               {stream.result && (
                 <p
-                  style={{
-                    color: "#16a34a",
-                    fontSize: "0.8rem",
-                    marginTop: "0.4rem",
-                  }}
+
                 >
                   流式生成完成 ✓ [{stream.result.candidate_source}
                   {stream.result.fallback_used ? "（降级）" : ""}] · code_task_id:{" "}
@@ -1049,40 +769,25 @@ export function ExecutionWorkspaceView() {
               )}
               {stream.error && (
                 <div
-                  style={{
-                    color: "#c00",
-                    fontSize: "0.8rem",
-                    marginTop: "0.4rem",
-                  }}
+
                 >
-                  <p style={{ margin: 0 }}>
+                  <p >
                     流式生成失败：{stream.error.message}
                     {stream.error.partial_text && (
-                      <span style={{ color: "#92400e" }}>
+                      <span >
                         （已保留部分生成内容）
                       </span>
                     )}
                   </p>
                   {stream.error.partial_text && (
-                    <details style={{ marginTop: "0.3rem" }}>
+                    <details >
                       <summary
-                        style={{ cursor: "pointer", fontSize: "0.75rem" }}
+
                       >
                         查看已生成内容
                       </summary>
                       <pre
-                        style={{
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                          fontSize: "0.75rem",
-                          marginTop: "0.3rem",
-                          padding: "0.4rem",
-                          background: "#fef2f2",
-                          borderRadius: "0.25rem",
-                          maxHeight: "200px",
-                          overflow: "auto",
-                          fontFamily: "monospace",
-                        }}
+
                       >
                         {stream.error.partial_text}
                       </pre>
@@ -1096,12 +801,10 @@ export function ExecutionWorkspaceView() {
 
         {/* 代码任务列表 */}
         {codeTasksLoading && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>
+          <p >加载中…</p>
         )}
         {!codeTasksLoading && (!codeTasks || codeTasks.length === 0) && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>
-            还没有生成任何代码任务。
-          </p>
+          <EmptyState title="还没有生成任何代码任务。" description="先确认分析方案，再生成受控执行代码。" />
         )}
         {codeTasks && codeTasks.length > 0 && (
           <div>
@@ -1113,18 +816,16 @@ export function ExecutionWorkspaceView() {
       </section>
 
       {/* Section 2: 执行记录 */}
-      <section style={{ marginTop: "2rem" }}>
-        <h3 style={{ margin: "0 0 0.5rem" }}>执行记录</h3>
-        <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.5rem" }}>
+      <section >
+        <h3 >执行记录</h3>
+        <p >
           执行记录每 3 秒自动刷新状态。
         </p>
         {runsLoading && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>
+          <p >加载中…</p>
         )}
         {!runsLoading && (!executionRuns || executionRuns.length === 0) && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>
-            还没有执行记录。确认代码任务后点击「触发执行」。
-          </p>
+          <EmptyState title="还没有执行记录。" description="确认代码任务后点击「触发执行」。" />
         )}
         {executionRuns && executionRuns.length > 0 && (
           <div>
@@ -1136,65 +837,45 @@ export function ExecutionWorkspaceView() {
       </section>
 
       {/* 完成结果确认 */}
-      <section style={{ marginTop: "2rem" }}>
+      <section >
         <button
           onClick={() => {
             setCompleteErr(null);
-            setCompleteOk(null);
+            setCompleteOk("项目状态已推进，请返回项目总览确认最新阶段。");
             complete.mutate(undefined, {
               onSuccess: (data) => {
-                setCompleteOk(
-                  `项目状态已推进到「${statusLabel(data.status)}」`
-                );
+                setCompleteOk("项目状态已推进，请返回项目总览确认最新阶段。");
               },
               onError: (e) =>
                 setCompleteErr(errorMessage(e, "完成失败")),
             });
           }}
-          disabled={!canComplete || complete.isPending}
-          style={{
-            padding: "0.5rem 1rem",
-            background: canComplete ? "#16a34a" : "#e5e7eb",
-            color: canComplete ? "#fff" : "#9ca3af",
-            border: "none",
-            borderRadius: "0.375rem",
-            cursor: canComplete ? "pointer" : "not-allowed",
-          }}
+          disabled={!hasSucceededRun || complete.isPending}
+
         >
           {complete.isPending ? "推进中…" : "完成结果确认"}
         </button>
         <span
-          style={{
-            marginLeft: "0.5rem",
-            fontSize: "0.8rem",
-            color: "#6b7280",
-          }}
+
         >
           需要至少一个已成功（SUCCEEDED）的执行记录
         </span>
         {completeOk && (
           <p
-            style={{
-              color: "#16a34a",
-              fontSize: "0.85rem",
-              marginTop: "0.5rem",
-            }}
+
           >
             {completeOk}
           </p>
         )}
         {completeErr && (
           <p
-            style={{
-              color: "#c00",
-              fontSize: "0.85rem",
-              marginTop: "0.5rem",
-            }}
+
           >
             {completeErr}
           </p>
         )}
       </section>
     </div>
+    </WorkspaceShell>
   );
 }

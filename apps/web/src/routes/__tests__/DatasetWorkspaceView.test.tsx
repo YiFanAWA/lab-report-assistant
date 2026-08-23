@@ -22,6 +22,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/datasets/hooks", () => ({
@@ -39,7 +40,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import {
   useDatasets,
   useDatasetVersions,
@@ -52,9 +53,11 @@ import {
 import { useJob } from "../../features/jobs/hooks";
 import { DatasetWorkspaceView } from "../DatasetWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type { Dataset, DatasetVersion } from "../../features/datasets/types";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseDatasets = vi.mocked(useDatasets);
 const mockedUseDatasetVersions = vi.mocked(useDatasetVersions);
 const mockedUseUploadDataset = vi.mocked(useUploadDataset);
@@ -143,6 +146,7 @@ function setupMocks(options: {
     error: null,
   } as any);
 
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
   mockedUseDatasets.mockReturnValue({
     data: datasets,
     isLoading: datasetsLoading,
@@ -225,7 +229,7 @@ describe("DatasetWorkspaceView - 项目状态门控", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/需要先完成证据确认才能登记数据集/)).toBeInTheDocument();
+    expect(screen.getByText(/当前工作区尚未开放/)).toBeInTheDocument();
   });
 
   it("已确认证据时不显示门控提示", () => {
@@ -402,7 +406,7 @@ describe("DatasetWorkspaceView - 数据集列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/失败原因码：PARSE_ERROR/)).toBeInTheDocument();
+    expect(screen.getByText("技术详情")).toBeInTheDocument();
     expect(screen.getByText("解析失败")).toBeInTheDocument();
   });
 

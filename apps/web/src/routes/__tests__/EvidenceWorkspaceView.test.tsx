@@ -25,6 +25,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/sources/hooks", () => ({
@@ -45,7 +46,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import { useSources } from "../../features/sources/hooks";
 import {
   useEvidenceCards,
@@ -59,10 +60,12 @@ import {
 import { useJob } from "../../features/jobs/hooks";
 import { EvidenceWorkspaceView } from "../EvidenceWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type { Source } from "../../features/sources/types";
 import type { EvidenceCard } from "../../features/evidence/types";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseSources = vi.mocked(useSources);
 const mockedUseEvidenceCards = vi.mocked(useEvidenceCards);
 const mockedUseGenerateEvidence = vi.mocked(useGenerateEvidence);
@@ -153,6 +156,7 @@ function setupMocks(options: {
     error: null,
   } as any);
 
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
   mockedUseSources.mockReturnValue({
     data: sources,
     isLoading: false,
@@ -441,7 +445,7 @@ describe("EvidenceWorkspaceView - 状态筛选", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("证据卡片")).toBeInTheDocument();
+    expect(screen.getAllByText("证据卡片").length).toBeGreaterThan(0);
     expect(screen.getByText("全部状态")).toBeInTheDocument();
   });
 });
@@ -484,7 +488,7 @@ describe("EvidenceWorkspaceView - 项目状态标签", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("[证据已确认]")).toBeInTheDocument();
+    expect(screen.getByText("[证据卡片已确认]")).toBeInTheDocument();
   });
 });
 

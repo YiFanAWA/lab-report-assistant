@@ -240,3 +240,8 @@ SPEC 0046 已完成 Windows x64 portable bundle 的首版实现：根目录 one-
 - [x] 完成服务目录和根 EXE 黑盒冒烟。
 - [ ] 在没有 Python、Node.js、Docker 的独立 Windows x64 主机完成最小业务路径和 Word/PPT 下载验收。
 - [x] 已修复 one-file 外层自动关闭退出码 1：根因是 ctypes 自定义 WNDPROC/可选浏览器调用，改用系统 STATIC 窗口消息循环后正式 EXE 退出码为 0。
+## SPEC 0047 项目进度投影与统一工作台迁移复核（2026-08-23）
+
+本轮锁定并实现项目进度投影合同：项目阶段和顺序由 `server/app/modules/projects/` 负责，投影由 `server/app/modules/projects/projection.py` 负责，HTTP 仅映射现有 `GET /api/projects/{project_id}/workspace-projection`，前端只消费规范投影。`current`、`phases`、`recommended_next_action`、阶段/步骤状态、`is_open`、`open_reason`、`blocking_reasons`、`actions`、`recovery_action`、展示文案和 `command_id` 已加入同一响应；旧的 `current_stage`、`next_action`、`stages` 保留为兼容投影。`COMPLETED` 项目的 `next_action` 与 `recommended_next_action` 均为 `null`，失败/阻断事实不会被完成 rank 覆盖。
+
+前端已将 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个工作区接入统一 `WorkspaceShell`，移除目标生产页面的项目级重复状态顺序和入口门控；RequirementWorkspaceView 仅保留原有项目状态展示，不强行改造。投影合同测试、前端全量测试、lint/build 和 Alembic 迁移已验证；后端全量仍受既有科研资产 hash 漂移影响，浏览器视觉、LibreOffice runtime 和干净 Windows 验收仍未闭合。

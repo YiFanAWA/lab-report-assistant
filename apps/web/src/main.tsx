@@ -7,6 +7,7 @@ import "./styles/global.css";
 import "./styles/ProjectListView.css";
 import "./styles/ProjectDetailView.css";
 import "./styles/RequirementWorkspaceView.css";
+import "./styles/WorkspaceShell.css";
 
 const queryClient = new QueryClient();
 

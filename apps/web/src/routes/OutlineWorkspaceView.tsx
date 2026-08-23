@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProject } from "../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../features/projects/hooks";
+import { WorkspaceShell } from "../components/workspace/WorkspaceShell";
+import { EmptyState, ErrorPanel, LoadingState } from "../components/workspace/WorkspaceUI";
 import {
   useOutlines,
   useGenerateOutline,
@@ -18,28 +20,7 @@ import {
 import { buildWordTemplateDownloadUrl } from "../features/outlines/api";
 import { useJob } from "../features/jobs/hooks";
 import type { Outline, OutlineSection, PptConfig } from "../features/outlines/types";
-import { PPT_THEME_COLORS } from "../features/outlines/types";
-
-/** 项目状态展示中文映射。 */
-function statusLabel(s: string) {
-  const m: Record<string, string> = {
-    DRAFT: "草稿",
-    REQUIREMENT_PARSED: "要求已解析",
-    REQUIREMENT_CONFIRMED: "需求已确认",
-    SOURCES_COLLECTED: "来源已收集",
-    EVIDENCE_CONFIRMED: "证据已确认",
-    DATASET_READY: "数据集已就绪",
-    ANALYSIS_PLANNED: "分析方案已生成",
-    ANALYSIS_CONFIRMED: "分析方案已确认",
-    EXECUTING: "执行中",
-    EXECUTION_FAILED: "执行失败",
-    RESULT_CONFIRMED: "结果已确认",
-    OUTLINE_CONFIRMED: "大纲已确认",
-    GENERATING: "交付物生成中",
-    COMPLETED: "已完成",
-  };
-  return m[s] ?? s;
-}
+import { PPT_THEME_COLORS, PPT_WORKFLOWS } from "../features/outlines/types";
 
 /** 大纲状态中文映射。 */
 function outlineStatusLabel(s: string) {
@@ -88,10 +69,10 @@ function jobTypeLabel(t: string) {
 /** 任务状态中文映射。 */
 function jobStatusLabel(s: string) {
   const m: Record<string, string> = {
-    PENDING: "排队中",
-    RUNNING: "执行中",
+    PENDING: "等待处理",
+    RUNNING: "正在处理",
     SUCCEEDED: "已完成",
-    FAILED: "失败",
+    FAILED: "需要处理",
     CANCELLED: "已取消",
   };
   return m[s] ?? s;
@@ -133,6 +114,9 @@ function OutlineCard({
   const [pptTargetSlideCount, setPptTargetSlideCount] = useState<string>("");
   const [pptThemeColor, setPptThemeColor] = useState<string | null>(null);
   const [pptIncludeCharts, setPptIncludeCharts] = useState(true);
+  const [pptWorkflow, setPptWorkflow] = useState<PptConfig["ppt_workflow"]>(
+    "academic",
+  );
 
   // 跟踪 Word/PPT 生成任务
   const [wordJobId, setWordJobId] = useState<string | null>(null);
@@ -205,34 +189,22 @@ function OutlineCard({
   const canEdit = isCandidate || isStale;
   const canConfirm = isCandidate;
   const canReject = isCandidate;
-  const canGenerate = isConfirmed;
+  const outlineStepOpen = isConfirmed;
 
   return (
     <div
-      style={{
-        padding: "0.75rem",
-        border: `1px solid ${isStale ? "#fcd34d" : "#e5e7eb"}`,
-        borderRadius: "0.5rem",
-        marginBottom: "0.5rem",
-        background: isStale ? "#fffbeb" : "#fff",
-      }}
+
     >
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: "0.5rem",
-          flexWrap: "wrap",
-        }}
+
       >
-        <strong style={{ fontSize: "0.9rem" }}>
+        <strong >
           大纲 v{outline.version} [{outlineStatusLabel(outline.status)}]
-          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
+          <span >
             · 来源：{candidateSourceLabel(outline.candidate_source)}
           </span>
         </strong>
-        <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+        <span >
           创建：{new Date(outline.created_at).toLocaleString("zh-CN")}
           {outline.confirmed_at &&
             ` · 确认：${new Date(outline.confirmed_at).toLocaleString("zh-CN")}`}
@@ -241,35 +213,24 @@ function OutlineCard({
 
       {isStale && (
         <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.4rem 0.5rem",
-            background: "#fef3c7",
-            borderRadius: "0.25rem",
-            fontSize: "0.8rem",
-            color: "#92400e",
-          }}
+
         >
           关联执行结果已变化，此大纲已失效，请重新生成或编辑后确认。
         </div>
       )}
 
       {/* 章节列表 */}
-      <div style={{ marginTop: "0.5rem" }}>
+      <div >
         {!isEditing ? (
           outline.sections.map((sec, i) => (
             <SectionView key={sec.id ?? i} section={sec} />
           ))
         ) : (
           <div
-            style={{
-              padding: "0.5rem",
-              background: "#f9fafb",
-              borderRadius: "0.25rem",
-            }}
+
           >
             {sectionsDraft.map((sec, i) => (
-              <div key={sec.id ?? i} style={{ marginBottom: "0.75rem" }}>
+              <div key={sec.id ?? i} >
                 <input
                   value={sec.title}
                   onChange={(e) => {
@@ -278,13 +239,7 @@ function OutlineCard({
                     setSectionsDraft(next);
                   }}
                   placeholder="章节标题"
-                  style={{
-                    width: "100%",
-                    padding: "0.4rem",
-                    boxSizing: "border-box",
-                    fontSize: "0.85rem",
-                    marginBottom: "0.25rem",
-                  }}
+
                 />
                 <select
                   value={sec.source_type}
@@ -293,11 +248,7 @@ function OutlineCard({
                     next[i] = { ...sec, source_type: e.target.value };
                     setSectionsDraft(next);
                   }}
-                  style={{
-                    padding: "0.25rem 0.4rem",
-                    fontSize: "0.8rem",
-                    marginBottom: "0.25rem",
-                  }}
+
                 >
                   {[
                     "REQUIREMENT",
@@ -321,12 +272,7 @@ function OutlineCard({
                   }}
                   rows={4}
                   placeholder="章节内容"
-                  style={{
-                    width: "100%",
-                    padding: "0.4rem",
-                    boxSizing: "border-box",
-                    fontSize: "0.8rem",
-                  }}
+
                 />
                 <input
                   value={sec.source_ids.join(", ")}
@@ -342,13 +288,7 @@ function OutlineCard({
                     setSectionsDraft(next);
                   }}
                   placeholder="来源 ID 列表（逗号分隔）"
-                  style={{
-                    width: "100%",
-                    padding: "0.4rem",
-                    boxSizing: "border-box",
-                    fontSize: "0.75rem",
-                    color: "#6b7280",
-                  }}
+
                 />
               </div>
             ))}
@@ -357,18 +297,18 @@ function OutlineCard({
       </div>
 
       {editErr && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#c00" }}>
+        <div >
           {editErr}
         </div>
       )}
       {editOk && (
-        <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#16a34a" }}>
+        <div >
           {editOk}
         </div>
       )}
 
       {/* 操作按钮 */}
-      <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      <div >
         {canEdit && (
           <>
             <button
@@ -403,15 +343,7 @@ function OutlineCard({
                 }
               }}
               disabled={updateMutation.isPending}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                background: "#e0e7ff",
-                color: "#3730a3",
-                border: "1px solid #c7d2fe",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {isEditing
                 ? updateMutation.isPending
@@ -426,15 +358,7 @@ function OutlineCard({
                   setIsEditing(false);
                   setEditErr(null);
                 }}
-                style={{
-                  padding: "0.25rem 0.6rem",
-                  fontSize: "0.8rem",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "0.25rem",
-                  cursor: "pointer",
-                }}
+
               >
                 取消
               </button>
@@ -445,15 +369,7 @@ function OutlineCard({
           <button
             onClick={() => confirmMutation.mutate(outline.id)}
             disabled={confirmMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#16a34a",
-              color: "#fff",
-              border: "none",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {confirmMutation.isPending ? "确认中…" : "确认大纲"}
           </button>
@@ -462,15 +378,7 @@ function OutlineCard({
           <button
             onClick={() => rejectMutation.mutate(outline.id)}
             disabled={rejectMutation.isPending}
-            style={{
-              padding: "0.25rem 0.6rem",
-              fontSize: "0.8rem",
-              background: "#fee2e2",
-              color: "#b91c1c",
-              border: "1px solid #fecaca",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-            }}
+
           >
             {rejectMutation.isPending ? "拒绝中…" : "拒绝大纲"}
           </button>
@@ -478,18 +386,14 @@ function OutlineCard({
       </div>
 
       {/* Word/PPT 生成 */}
-      {canGenerate && (
+      {outlineStepOpen && (
         <div
-          style={{
-            marginTop: "0.75rem",
-            paddingTop: "0.75rem",
-            borderTop: "1px dashed #e5e7eb",
-          }}
+
         >
-          <h4 style={{ margin: "0 0 0.4rem", fontSize: "0.85rem", color: "#374151" }}>
+          <h4 >
             触发交付物生成
           </h4>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div >
             <button
               onClick={() => {
                 setWordErr(null);
@@ -502,15 +406,7 @@ function OutlineCard({
                 });
               }}
               disabled={wordMutation.isPending || !!wordJobId}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                background: "#0ea5e9",
-                color: "#fff",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {wordMutation.isPending
                 ? "提交中…"
@@ -528,6 +424,7 @@ function OutlineCard({
                     : null,
                   theme_color: pptThemeColor,
                   include_charts: pptIncludeCharts,
+                  ppt_workflow: pptWorkflow,
                 };
                 pptMutation.mutate(
                   { outlineId: outline.id, config },
@@ -541,15 +438,7 @@ function OutlineCard({
                 );
               }}
               disabled={pptMutation.isPending || !!pptJobId}
-              style={{
-                padding: "0.25rem 0.6rem",
-                fontSize: "0.8rem",
-                background: "#7c3aed",
-                color: "#fff",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {pptMutation.isPending
                 ? "提交中…"
@@ -561,19 +450,12 @@ function OutlineCard({
           {/* SPEC 0011：PPT 配置表单 */}
           {outline.status === "CONFIRMED" && !pptJobId && (
             <div
-              style={{
-                marginTop: "0.5rem",
-                padding: "0.5rem",
-                fontSize: "0.8rem",
-                background: "#f9fafb",
-                borderRadius: "0.25rem",
-                border: "1px solid #e5e7eb",
-              }}
+
             >
-              <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+              <div >
                 PPT 配置
               </div>
-              <label style={{ display: "block", marginBottom: "0.25rem" }}>
+              <label >
                 目标页数（5-20，留空默认）：
                 <input
                   type="number"
@@ -582,12 +464,30 @@ function OutlineCard({
                   value={pptTargetSlideCount}
                   onChange={(e) => setPptTargetSlideCount(e.target.value)}
                   placeholder="如 10"
-                  style={{ width: "4rem", marginLeft: "0.25rem" }}
+
                 />
               </label>
-              <label style={{ display: "block", marginBottom: "0.25rem" }}>
+              <label >
+                PPT 工作流：
+                <select
+                  value={pptWorkflow ?? "academic"}
+                  onChange={(e) =>
+                    setPptWorkflow(
+                      e.target.value as PptConfig["ppt_workflow"],
+                    )
+                  }
+
+                >
+                  {PPT_WORKFLOWS.map((workflow) => (
+                    <option key={workflow.id} value={workflow.id}>
+                      {workflow.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label >
                 主题色：
-                <span style={{ marginLeft: "0.5rem", verticalAlign: "middle" }}>
+                <span >
                   {PPT_THEME_COLORS.map((color) => (
                     <span
                       key={color}
@@ -596,25 +496,12 @@ function OutlineCard({
                       onClick={() =>
                         setPptThemeColor(pptThemeColor === color ? null : color)
                       }
-                      style={{
-                        display: "inline-block",
-                        width: "1.2rem",
-                        height: "1.2rem",
-                        background: color,
-                        border:
-                          pptThemeColor === color
-                            ? "2px solid #000"
-                            : "1px solid #ccc",
-                        borderRadius: "0.25rem",
-                        marginRight: "0.25rem",
-                        cursor: "pointer",
-                        verticalAlign: "middle",
-                      }}
+
                     />
                   ))}
                 </span>
               </label>
-              <label style={{ display: "block" }}>
+              <label >
                 <input
                   type="checkbox"
                   checked={pptIncludeCharts}
@@ -625,45 +512,40 @@ function OutlineCard({
             </div>
           )}
           {wordJobId && wordJob && (
-            <p style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: "0.5rem" }}>
+            <p >
               {jobTypeLabel(wordJob.job_type)}：{jobStatusLabel(wordJob.status)}
               {(wordJob.status === "PENDING" || wordJob.status === "RUNNING") && "…"}
             </p>
           )}
           {pptJobId && pptJob && (
-            <p style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: "0.5rem" }}>
+            <p >
               {jobTypeLabel(pptJob.job_type)}：{jobStatusLabel(pptJob.status)}
               {(pptJob.status === "PENDING" || pptJob.status === "RUNNING") && "…"}
             </p>
           )}
           {wordOk && (
-            <p style={{ color: "#16a34a", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <p >
               {wordOk}
             </p>
           )}
           {wordErr && (
-            <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <p >
               {wordErr}
             </p>
           )}
           {pptOk && (
-            <p style={{ color: "#16a34a", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <p >
               {pptOk}
             </p>
           )}
           {pptErr && (
-            <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <p >
               {pptErr}
             </p>
           )}
           <Link
             to={`/projects/${projectId}/deliverables`}
-            style={{
-              display: "inline-block",
-              marginTop: "0.5rem",
-              fontSize: "0.8rem",
-              color: "#2563eb",
-            }}
+
           >
             前往交付物工作区查看和下载 →
           </Link>
@@ -677,48 +559,25 @@ function OutlineCard({
 function SectionView({ section }: { section: OutlineSection }) {
   return (
     <div
-      style={{
-        padding: "0.5rem",
-        background: "#f9fafb",
-        borderRadius: "0.25rem",
-        marginBottom: "0.5rem",
-      }}
+
     >
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: "0.5rem",
-          flexWrap: "wrap",
-        }}
+
       >
-        <strong style={{ fontSize: "0.85rem" }}>{section.title}</strong>
+        <strong >{section.title}</strong>
         <span
-          style={{
-            fontSize: "0.7rem",
-            color: "#fff",
-            background: "#6b7280",
-            padding: "0.1rem 0.4rem",
-            borderRadius: "0.25rem",
-          }}
+
         >
           {sourceTypeLabel(section.source_type)}
         </span>
       </div>
       <p
-        style={{
-          margin: "0.4rem 0 0",
-          fontSize: "0.8rem",
-          color: "#374151",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-        }}
+
       >
         {section.content}
       </p>
       {section.source_ids.length > 0 && (
-        <p style={{ margin: "0.3rem 0 0", fontSize: "0.7rem", color: "#9ca3af" }}>
+        <p >
           来源 ID：{section.source_ids.join(", ")}
         </p>
       )}
@@ -730,6 +589,7 @@ export function OutlineWorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = projectId!;
   const { data: project, isLoading: projLoading } = useProject(pid);
+  const { data: projection } = useWorkspaceProjection(pid);
   const { data: outlines, isLoading: outlinesLoading } = useOutlines(pid);
 
   const generate = useGenerateOutline(pid);
@@ -764,64 +624,63 @@ export function OutlineWorkspaceView() {
     }
   }, [genJob?.status, genJob, qc, pid]);
 
-  if (projLoading) return <p style={{ padding: "2rem" }}>加载中…</p>;
-  if (!project) return <p style={{ padding: "2rem", color: "#c00" }}>项目不存在</p>;
+  if (projLoading) return <LoadingState />;
+  if (!project) return <ErrorPanel message="项目不存在" />;
 
-  const canGenerate = project.status === "RESULT_CONFIRMED";
+    const outlineStep = projection?.phases
+    .flatMap((phase) => phase.steps)
+    .find((step) => step.id === "outline");
+  const outlineStepOpen = outlineStep?.is_open === true;
   const hasCandidate = (outlines ?? []).some(
     (o) => o.status === "CANDIDATE" || o.status === "CONFIRMED" || o.status === "STALE"
   );
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "1.5rem 1rem" }}>
-      <Link to={`/projects/${pid}`} style={{ fontSize: "0.85rem", color: "#2563eb" }}>
+    <WorkspaceShell project={project} projection={projection} title="报告大纲工作区">
+      <div className="workspace-legacy-page">
+      <Link to={`/projects/${pid}`} >
         ← 项目详情
       </Link>
       <Link
         to={`/projects/${pid}/deliverables`}
-        style={{ marginLeft: "1rem", fontSize: "0.85rem", color: "#2563eb" }}
+
       >
         交付物工作区
       </Link>
 
-      <h1 style={{ fontSize: "1.3rem", marginTop: "0.75rem" }}>
-        {project.name}{" "}
-        <span style={{ fontSize: "0.8rem", color: "#888" }}>
-          [{statusLabel(project.status)}]
+      <h1 >
+        工作区{" "}
+        <span >
+          [{projection?.project.status_label ?? project.status}]
         </span>
       </h1>
-      <p style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "0.25rem" }}>
+      <p >
         基于已确认的实验要求、证据卡片、数据概览、分析方案和执行结果生成统一大纲。
         Word 和 PPT 必须从同一份已确认大纲生成。
       </p>
 
       {/* 生成大纲候选 */}
       <section
-        style={{
-          marginTop: "1.5rem",
-          padding: "1rem",
-          border: "1px solid #e5e7eb",
-          borderRadius: "0.5rem",
-        }}
+
       >
-        <h3 style={{ margin: "0 0 0.5rem" }}>生成大纲候选</h3>
-        {!canGenerate ? (
-          <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-            项目当前状态为「{statusLabel(project.status)}」，
+        <h3 >生成大纲候选</h3>
+        {!outlineStepOpen ? (
+          <p >
+            项目当前状态为「{projection?.project.status_label ?? project.status}」，
             需要先推进到「结果已确认（RESULT_CONFIRMED）」才能生成大纲。
             请先在分析方案工作区完成确认并执行代码任务。
           </p>
         ) : hasCandidate ? (
-          <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+          <p >
             当前已有候选或已确认大纲，可在下方编辑或确认。如需重新生成，请先拒绝现有候选。
           </p>
         ) : (
           <>
-            <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+            <p >
               点击下方按钮生成大纲候选（本地规则提供者拼装 6 个章节）。
               流式按钮可实时看到 LLM 输出过程。
             </p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <div >
               <button
                 onClick={() => {
                   setGenErr(null);
@@ -831,15 +690,7 @@ export function OutlineWorkspaceView() {
                   });
                 }}
                 disabled={generate.isPending || !!activeJobId || streamOutline.streaming}
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "0.9rem",
-                  background: "#0ea5e9",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "0.375rem",
-                  cursor: "pointer",
-                }}
+
               >
                 {generate.isPending || activeJobId
                   ? "生成中…"
@@ -852,27 +703,19 @@ export function OutlineWorkspaceView() {
                   streamOutline.start();
                 }}
                 disabled={generate.isPending || !!activeJobId || streamOutline.streaming}
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "0.9rem",
-                  background: "#6366f1",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "0.375rem",
-                  cursor: "pointer",
-                }}
+
               >
                 {streamOutline.streaming ? "流式生成中…" : "流式生成大纲"}
               </button>
             </div>
             {activeJobId && genJob && (
-              <p style={{ fontSize: "0.8rem", color: "#2563eb", marginTop: "0.5rem" }}>
+              <p >
                 {jobTypeLabel(genJob.job_type)}：{jobStatusLabel(genJob.status)}
                 {(genJob.status === "PENDING" || genJob.status === "RUNNING") && "…"}
               </p>
             )}
             {genErr && (
-              <p style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+              <p >
                 {genErr}
               </p>
             )}
@@ -880,85 +723,49 @@ export function OutlineWorkspaceView() {
             {/* SPEC 0019：流式生成展示区 */}
             {streamOutline.streaming && (
               <div
-                style={{
-                  marginTop: "0.5rem",
-                  padding: "1rem",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "0.375rem",
-                  background: "#f9fafb",
-                }}
+
               >
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "0.5rem",
-                  }}
+
                 >
-                  <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                  <span >
                     正在逐 chunk 生成…
                   </span>
                   <button
                     onClick={streamOutline.cancel}
-                    style={{
-                      padding: "0.3rem 0.8rem",
-                      fontSize: "0.85rem",
-                      color: "#c00",
-                      background: "transparent",
-                      border: "1px solid #c00",
-                      borderRadius: "0.25rem",
-                      cursor: "pointer",
-                    }}
+
                   >
                     取消
                   </button>
                 </div>
                 <pre
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontSize: "0.85rem",
-                    lineHeight: 1.5,
-                    margin: 0,
-                    maxHeight: "300px",
-                    overflow: "auto",
-                    fontFamily: "monospace",
-                  }}
+
                 >
                   {streamOutline.chunks}
                 </pre>
               </div>
             )}
             {streamOutline.result && (
-              <p style={{ color: "#16a34a", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+              <p >
                 流式生成完成 ✓ [{streamOutline.result.candidate_source}
                 {streamOutline.result.fallback_used ? "（降级）" : ""}]
               </p>
             )}
             {streamOutline.error && (
-              <div style={{ color: "#c00", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-                <p style={{ margin: 0 }}>
+              <div >
+                <p >
                   流式生成失败：{streamOutline.error.message}
                   {streamOutline.error.partial_text && (
-                    <span style={{ color: "#92400e" }}>（已保留部分生成内容）</span>
+                    <span >（已保留部分生成内容）</span>
                   )}
                 </p>
                 {streamOutline.error.partial_text && (
-                  <details style={{ marginTop: "0.3rem" }}>
-                    <summary style={{ cursor: "pointer", fontSize: "0.8rem" }}>
+                  <details >
+                    <summary >
                       查看已生成内容
                     </summary>
                     <pre
-                      style={{
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        fontSize: "0.8rem",
-                        marginTop: "0.3rem",
-                        padding: "0.5rem",
-                        background: "#fef2f2",
-                        borderRadius: "0.25rem",
-                      }}
+
                     >
                       {streamOutline.error.partial_text}
                     </pre>
@@ -971,15 +778,13 @@ export function OutlineWorkspaceView() {
       </section>
 
       {/* 大纲列表 */}
-      <section style={{ marginTop: "1.5rem" }}>
-        <h3 style={{ margin: "0 0 0.5rem" }}>大纲列表</h3>
+      <section >
+        <h3 >大纲列表</h3>
         {outlinesLoading && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>
+          <p >加载中…</p>
         )}
         {!outlinesLoading && (!outlines || outlines.length === 0) && (
-          <p style={{ fontSize: "0.85rem", color: "#888" }}>
-            还没有生成任何大纲。
-          </p>
+          <EmptyState title="还没有生成任何大纲。" description="确认结果后生成报告大纲候选。" />
         )}
         {outlines && outlines.length > 0 && (
           <div>
@@ -993,6 +798,7 @@ export function OutlineWorkspaceView() {
       {/* SPEC 0010 Word 模板管理 */}
       <WordTemplateSection projectId={pid} />
     </div>
+    </WorkspaceShell>
   );
 }
 
@@ -1006,15 +812,10 @@ function WordTemplateSection({ projectId }: { projectId: string }) {
 
   return (
     <section
-      style={{
-        marginTop: "1.5rem",
-        padding: "1rem",
-        border: "1px solid #e5e7eb",
-        borderRadius: "0.5rem",
-      }}
+
     >
-      <h3 style={{ margin: "0 0 0.5rem" }}>Word 模板</h3>
-      <p style={{ fontSize: "0.8rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+      <h3 >Word 模板</h3>
+      <p >
         上传 .docx 模板后，生成 Word 时会使用该模板替代默认格式。
         模板支持占位符：{`{{project_name}}`}、{`{{project_topic}}`}、
         {`{{generated_date}}`}、{`{{#sections}}...{{/sections}}`} 章节循环。
@@ -1022,37 +823,26 @@ function WordTemplateSection({ projectId }: { projectId: string }) {
       </p>
 
       {isLoading && (
-        <p style={{ fontSize: "0.85rem", color: "#888" }}>加载中…</p>
+        <p >加载中…</p>
       )}
 
       {template && (
         <div
-          style={{
-            padding: "0.5rem 0.75rem",
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "0.375rem",
-            marginBottom: "0.75rem",
-          }}
+
         >
-          <div style={{ fontSize: "0.85rem" }}>
+          <div >
             <strong>{template.original_filename}</strong>
-            <span style={{ color: "#6b7280", marginLeft: "0.5rem" }}>
+            <span >
               ({(template.file_size_bytes / 1024).toFixed(1)} KB)
             </span>
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+          <div >
             上传时间：{new Date(template.created_at).toLocaleString("zh-CN")}
           </div>
-          <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+          <div >
             <a
               href={buildWordTemplateDownloadUrl(projectId)}
-              style={{
-                fontSize: "0.8rem",
-                color: "#2563eb",
-                textDecoration: "underline",
-                cursor: "pointer",
-              }}
+
             >
               下载模板
             </a>
@@ -1065,21 +855,13 @@ function WordTemplateSection({ projectId }: { projectId: string }) {
                 });
               }}
               disabled={deleteMutation.isPending}
-              style={{
-                padding: "0.15rem 0.5rem",
-                fontSize: "0.8rem",
-                background: "#fee2e2",
-                color: "#b91c1c",
-                border: "1px solid #fecaca",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-              }}
+
             >
               {deleteMutation.isPending ? "删除中…" : "删除模板"}
             </button>
           </div>
           {deleteErr && (
-            <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+            <p >
               {deleteErr}
             </p>
           )}
@@ -1087,13 +869,13 @@ function WordTemplateSection({ projectId }: { projectId: string }) {
       )}
 
       {!template && !isLoading && (
-        <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+        <p >
           当前未上传 Word 模板，生成 Word 时使用默认格式。
         </p>
       )}
 
       {/* 上传表单 */}
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+      <div >
         <input
           type="file"
           accept=".docx"
@@ -1110,17 +892,17 @@ function WordTemplateSection({ projectId }: { projectId: string }) {
             });
           }}
           disabled={uploadMutation.isPending}
-          style={{ fontSize: "0.85rem" }}
+
         />
         {uploadMutation.isPending && (
-          <span style={{ fontSize: "0.8rem", color: "#2563eb" }}>上传中…</span>
+          <span >上传中…</span>
         )}
         {uploadMutation.isSuccess && (
-          <span style={{ fontSize: "0.8rem", color: "#16a34a" }}>已上传 ✓</span>
+          <span >已上传 ✓</span>
         )}
       </div>
       {uploadErr && (
-        <p style={{ color: "#c00", fontSize: "0.8rem", marginTop: "0.4rem" }}>
+        <p >
           {uploadErr}
         </p>
       )}

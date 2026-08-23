@@ -1,4 +1,4 @@
-import type { Project, ProjectCreateRequest, ProjectListResponse, ApiError } from "../../shared/types";
+import type { Project, ProjectCreateRequest, ProjectListResponse, ApiError, WorkspaceProjection } from "../../shared/types";
 
 const BASE = "/api";
 
@@ -33,4 +33,9 @@ export async function createProject(req: ProjectCreateRequest): Promise<Project>
     body: JSON.stringify(req),
   });
   return handleResponse<Project>(resp);
+}
+
+export async function fetchWorkspaceProjection(id: string): Promise<WorkspaceProjection> {
+  const resp = await fetch(`${BASE}/projects/${encodeURIComponent(id)}/workspace-projection`);
+  return handleResponse<WorkspaceProjection>(resp);
 }

@@ -840,3 +840,40 @@
 | 2026-08-21 | 资源与密钥 | 发布 manifest 记录文件哈希；构建脚本未读取真实密钥，运行包不放 DeepSeek Key；构建输出留在 server/.tmp/windows-package/ | ✅ |
 
 当前结论：Windows 便携包构建、服务黑盒、根 EXE 启动/页面/真实窗口/关闭清理链路和退出码均通过；仅缺少独立无 Python、Node.js、Docker 的全新 Windows x64 主机验收。
+
+## SPEC 0047 统一工作台与交付审阅阶段（2026-08-23 实施记录）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| PDF 合同 | DeliverableType.PDF、JobType.GENERATE_PDF、PDF 下载 media type 和版本变更类型已加入现有 outlines owner；不新增并行文件表 | ✅ |
+| PDF 完成门禁 | 未完成项目要求 Word/PDF/PPT 三类成功版本；已完成历史项目保持 COMPLETED，不回退 | ✅ |
+| PDF Worker | 只消费同一项目、同一确认大纲下的成功 DOCX；PDF 失败独立记录，Word 不被回写失败；输出目录受控 | ✅ |
+| PDF 转换适配器 | 支持显式 PDF_CONVERTER_PATH/LibreOffice headless、临时 profile、超时、PDF 魔数和输出大小校验；开发环境保留显式 Word fallback | ✅ 代码合同 |
+| PDF/Worker/API 定向测试 | server/.venv/Scripts/python.exe -m pytest server/tests/test_pdf_deliverable_contract.py server/tests/test_spec0043_docx_pdf_exporter.py server/tests/test_outline_worker_handlers.py server/tests/test_outlines_service.py server/tests/test_outlines_api.py -q：90 passed | ✅ |
+| 项目工作台投影 | GET /api/projects/{project_id}/workspace-projection；阶段、下一步、阻断原因由 projects owner 生成 | ✅ |
+| 交付审阅投影 | GET /api/projects/{project_id}/delivery-review；交付物、追溯链、质量门禁和可用动作由 delivery_review query owner 生成 | ✅ |
+| 投影合同测试 | test_projects_projection.py：7 passed；test_delivery_review.py：3 passed | ✅ |
+| 阶段子步骤合同 | phase_id/phase_label/is_substep 由 projects projection 生成；Sources 与 Evidence 归入“资料与证据”复合阶段，前端只按投影分组 | ✅ 8 passed |
+| 前端状态与错误文案 | PENDING/RUNNING/SUCCEEDED/FAILED/STALE 使用统一用户文案；错误码和任务 ID 放入技术详情折叠区；加载、空态、错误和 disabled 状态保留 | ✅ |
+| 后端全量 | root 运行：1254 passed、1 failed；server 工作目录复核同样 1254 passed、1 failed，失败为既有 SPEC 0042 科研 SVG manifest SHA-256 不匹配 | ⚠️ 阻断/非本切片，需单独处理 |
+| Windows portable runtime | 构建脚本要求 LIBREOFFICE_ROOT、program/soffice.exe 和 runtime-metadata.json，并写入版本/来源/许可证 manifest；当前本地没有 runtime 目录，未执行真实包构建 | ⚠️ 未完成 |
+| 浏览器视觉验收 | 浏览器技能初始化因 trusted Node process exited unexpectedly/受控 Node helper 退出失败；未取得 1280px 截图，不宣称视觉通过 | ⚠️ 工具限制 |
+| Git | 保留 codex/before-workspace-shell-20260822 和 stash@{0}；当前未 stage、commit、push | ⏸️ 待子阶段确认 |
+
+当前结论：SPEC 0047 的项目投影合同、统一工作台壳层和七个目标工作区已形成可复核增量；代码门禁和合同链路通过，但正式交付仍被 LibreOffice runtime、既有科研资产 hash、真实 Windows/浏览器验收阻断，不能标记为完整收口。
+## SPEC 0047 项目进度投影重复定义修复复核（2026-08-23）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 投影合同与唯一接口 | 保留 `GET /api/projects/{project_id}/workspace-projection`；同一响应加入 `current`、`phases`、`recommended_next_action`，保留 `current_stage`、`next_action`、`stages` 兼容字段；未新增第二个项目进度接口 | ✅ |
+| 后端 owner 与状态优先级 | `server/app/modules/projects/projection.py` 生成阶段、子步骤、开放性、锁定原因、阻断原因、动作和恢复动作；失败/阻断事实优先于完成 rank；完成项目不返回下一步动作 | ✅ |
+| API 合同断言 | `server/tests/test_projects_projection.py`：7 passed；覆盖 `topic`、`status_label`、`current`、阶段子步骤、锁定 `open_reason`、`recommended_next_action.command_id` 和兼容字段 | ✅ |
+| 前端状态机迁移 | 七个目标工作区复用 `WorkspaceShell`，生产页面不再定义 `ORDERED_STATUSES`、`orderedStatuses`、`isAtOrAfter`、`getWorkspaceVisibility`、`getNextWorkspace`、`canRegister` 或项目级 `canComplete`；RequirementWorkspaceView 仅保留既有状态展示 | ✅ |
+| 前端回归 | `apps/web` 执行 `npm.cmd run test`：35 个测试文件、548 passed；ProjectDetailView 定向测试 8 passed | ✅ |
+| 前端静态门禁 | `apps/web` 执行 `npm.cmd run lint`、`npm.cmd run build`：均通过 | ✅ |
+| 数据库门禁 | `server` 执行 `.venv/Scripts/python.exe -m alembic upgrade head`：通过 | ✅ |
+| 后端全量回归 | `server` 执行 `.venv/Scripts/python.exe -m pytest`：1254 passed、1 failed；失败为既有 SPEC 0042 的 `bioicons-cc0-cryo-vial` SVG manifest SHA-256 漂移，不在本轮投影调用链 | ⚠️ 既有阻断，未纳入本轮修复 |
+| 浏览器视觉验收 | 当前浏览器 Node helper 仍因 `trusted Node process exited unexpectedly` 退出，未取得 1280px/窄屏截图 | ⚠️ 未完成 |
+| Git 边界 | 本轮仅精确 stage 投影合同、统一壳层、目标页面接线、测试和文档；其他用户改动保持 unstaged | ✅ |
+
+当前结论：项目进度投影合同和前端重复状态门控迁移已通过代码与合同门禁；由于既有科研资产 hash、LibreOffice runtime、浏览器视觉和干净 Windows 验收未闭合，本轮提交为实现 checkpoint，不是完整发布收口。

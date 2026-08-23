@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Project, ProjectCreateRequest } from "../../shared/types";
-import { fetchProjects, fetchProject, createProject } from "./api";
+import { fetchProjects, fetchProject, createProject, fetchWorkspaceProjection } from "./api";
 
 export function useProjects() {
   return useQuery({
@@ -25,5 +25,14 @@ export function useCreateProject() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
     },
+  });
+}
+
+export function useWorkspaceProjection(id: string) {
+  return useQuery({
+    queryKey: ["workspace-projection", id],
+    queryFn: () => fetchWorkspaceProjection(id),
+    enabled: !!id,
+    refetchInterval: 3_000,
   });
 }

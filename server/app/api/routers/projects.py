@@ -9,10 +9,12 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database.engine import SessionLocal
 from app.core.errors import AppError, ErrorResponse
 from app.modules.projects import service as project_service
+from app.modules.projects import projection as project_projection
 from app.modules.projects.contracts import (
     ProjectCreateRequest,
     ProjectResponse,
     ProjectListResponse,
+    WorkspaceProjectionResponse,
 )
 
 router = APIRouter(prefix="/api/projects")
@@ -47,6 +49,13 @@ def create_project(req: ProjectCreateRequest, db: Session = Depends(_db)):
 def list_projects(db: Session = Depends(_db)):
     projects = project_service.list_projects(db)
     return ProjectListResponse(items=[_project_to_response(p) for p in projects])
+
+
+@router.get("/{project_id}/workspace-projection",
+            response_model=WorkspaceProjectionResponse)
+def get_workspace_projection(project_id: str, db: Session = Depends(_db)):
+    """返回统一工作台只读投影。"""
+    return project_projection.build_workspace_projection(db, project_id)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, responses={404: {"model": ErrorResponse}})

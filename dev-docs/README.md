@@ -203,3 +203,11 @@
 - [../packaging/windows/README.md](../packaging/windows/README.md)：用户运行和开发机构建说明。
 
 当前状态：服务包与根 EXE 已构建并完成本机黑盒启动、页面、真实窗口、关闭和退出码验收；仅剩独立干净 Windows x64 主机验收缺口。
+
+## SPEC 0047 统一工作台与交付审阅
+
+- [specs/0047-unified-workspace-shell-delivery-review.md](specs/0047-unified-workspace-shell-delivery-review.md)：PDF 正式交付物、项目进度投影、交付审阅台、质量门禁和统一 WorkspaceShell 的合同与边界。
+- [decisions/0056-start-spec-0047-unified-workspace-delivery-review.md](decisions/0056-start-spec-0047-unified-workspace-delivery-review.md)：本切片授权、PDF/LibreOffice 包体决策和 owner 约束。
+- [stages/unified-workspace-delivery-review.md](stages/unified-workspace-delivery-review.md)：当前阶段执行计划、子阶段状态、验证证据和停止条件。
+
+当前状态：PDF/投影/交付审阅代码合同已实现；统一 WorkspaceShell 已迁移 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个工作区，并补充 `phase_id/phase_label/is_substep` 子步骤投影；前端 548 个测试、lint/build 通过。LibreOffice runtime、真实 portable 包、浏览器截图和既有科研资产 hash 仍未闭合。

@@ -23,6 +23,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/sources/hooks", () => ({
@@ -38,7 +39,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import {
   useSources,
   useCreateUrlSource,
@@ -49,9 +50,11 @@ import {
 import { useJob } from "../../features/jobs/hooks";
 import { SourcesWorkspaceView } from "../SourcesWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type { Source } from "../../features/sources/types";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseSources = vi.mocked(useSources);
 const mockedUseCreateUrlSource = vi.mocked(useCreateUrlSource);
 const mockedUseCreatePdfSource = vi.mocked(useCreatePdfSource);
@@ -117,6 +120,7 @@ function setupMocks(options: {
     error: null,
   } as any);
 
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
   mockedUseSources.mockReturnValue({
     data: sources,
     isLoading: sourcesLoading,
@@ -193,8 +197,7 @@ describe("SourcesWorkspaceView - 项目状态门控", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/需要先完成实验要求确认才能登记资料来源/)).toBeInTheDocument();
-    expect(screen.getByText("前往实验要求工作区")).toBeInTheDocument();
+    expect(screen.getByText(/当前工作区尚未开放/)).toBeInTheDocument();
   });
 
   it("已确认需求时不显示门控提示", () => {
@@ -355,7 +358,7 @@ describe("SourcesWorkspaceView - 来源列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/失败原因码：FETCH_TIMEOUT/)).toBeInTheDocument();
+    expect(screen.getByText("技术详情")).toBeInTheDocument();
     expect(screen.getByText("采集超时")).toBeInTheDocument();
   });
 });
@@ -444,7 +447,7 @@ describe("SourcesWorkspaceView - 项目状态标签", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("[来源已收集]")).toBeInTheDocument();
+    expect(screen.getByText("[资料来源已收集]")).toBeInTheDocument();
   });
 
   it("未知状态显示原状态字符串", () => {

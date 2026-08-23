@@ -26,22 +26,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/outlines/hooks", () => ({
   useDeliverables: vi.fn(),
   useDeliverableVersions: vi.fn(),
   useCompleteProject: vi.fn(),
+  useDeliveryReview: vi.fn(),
+  useGeneratePdf: vi.fn(),
 }));
 
 import { useProject } from "../../features/projects/hooks";
+import { useWorkspaceProjection } from "../../features/projects/hooks";
 import {
   useDeliverables,
+  useDeliveryReview,
+  useGeneratePdf,
   useDeliverableVersions,
   useCompleteProject,
 } from "../../features/outlines/hooks";
 import { DeliverableWorkspaceView } from "../DeliverableWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type {
   Deliverable,
   DeliverableVersion,
@@ -51,6 +58,9 @@ const mockedUseProject = vi.mocked(useProject);
 const mockedUseDeliverables = vi.mocked(useDeliverables);
 const mockedUseDeliverableVersions = vi.mocked(useDeliverableVersions);
 const mockedUseCompleteProject = vi.mocked(useCompleteProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
+const mockedUseDeliveryReview = vi.mocked(useDeliveryReview);
+const mockedUseGeneratePdf = vi.mocked(useGeneratePdf);
 
 // --- 测试辅助 ---
 
@@ -108,6 +118,7 @@ function setupMocks(options: {
   projectLoading?: boolean;
   deliverablesLoading?: boolean;
   versionsLoading?: boolean;
+  deliveryReviewCanComplete?: boolean;
 }) {
   const {
     project = makeProject(),
@@ -116,6 +127,7 @@ function setupMocks(options: {
     projectLoading = false,
     deliverablesLoading = false,
     versionsLoading = false,
+    deliveryReviewCanComplete = false,
   } = options;
 
   mockedUseProject.mockReturnValue({
@@ -143,6 +155,20 @@ function setupMocks(options: {
     isError: false,
     isSuccess: false,
     data: null,
+  } as any);
+
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
+  mockedUseDeliveryReview.mockReturnValue({
+    data: {
+      available_actions: { can_complete: deliveryReviewCanComplete },
+      traceability: { outline_id: null },
+      quality_gates: [],
+      deliverables: [],
+    },
+  } as any);
+  mockedUseGeneratePdf.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
   } as any);
 }
 
@@ -231,7 +257,7 @@ describe("DeliverableWorkspaceView - 交付物列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getAllByText("[已生成]").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("[已完成]").length).toBeGreaterThanOrEqual(1);
   });
 
   it("显示交付物状态标签（生成中）", () => {
@@ -242,7 +268,7 @@ describe("DeliverableWorkspaceView - 交付物列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("[生成中]")).toBeInTheDocument();
+    expect(screen.getByText("[正在处理]")).toBeInTheDocument();
   });
 
   it("STALE 交付物显示失效提示", () => {
@@ -311,7 +337,7 @@ describe("DeliverableWorkspaceView - 版本列表展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/失败：GEN_ERROR/)).toBeInTheDocument();
+    expect(screen.getByText("技术详情")).toBeInTheDocument();
     expect(screen.getByText(/生成失败原因/)).toBeInTheDocument();
   });
 
@@ -374,13 +400,15 @@ describe("DeliverableWorkspaceView - 完成项目按钮门控", () => {
     expect(completeBtn).toBeDisabled();
   });
 
-  it("Word 和 PPT 都成功时完成按钮可用", () => {
+  it("Word、PDF 和 PPT 都成功时完成按钮可用", () => {
     setupMocks({
       deliverables: [
         makeDeliverable({ id: "del_001", deliverable_type: "WORD", status: "SUCCEEDED" }),
         makeDeliverable({ id: "del_002", deliverable_type: "PPT", status: "SUCCEEDED" }),
+        makeDeliverable({ id: "del_003", deliverable_type: "PDF", status: "SUCCEEDED" }),
       ],
       versions: [makeVersion()],
+      deliveryReviewCanComplete: true,
     });
 
     renderWithRoute();
@@ -438,6 +466,6 @@ describe("DeliverableWorkspaceView - 项目状态标签", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText("[交付物生成中]")).toBeInTheDocument();
+    expect(screen.getByText("[交付物正在生成]")).toBeInTheDocument();
   });
 });

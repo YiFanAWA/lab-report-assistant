@@ -1,108 +1,13 @@
 import { Link, useParams } from "react-router";
+import { StatusBadge } from "../components/workspace/WorkspaceUI";
 import {
-  getProjectStagePresentation,
-  ProjectStatusBadge,
-} from "../components/projects/ProjectStatusBadge";
-import { useProject } from "../features/projects/hooks";
-
-const ORDERED_STATUSES = [
-  "DRAFT",
-  "REQUIREMENT_PARSED",
-  "REQUIREMENT_CONFIRMED",
-  "SOURCES_COLLECTED",
-  "EVIDENCE_CONFIRMED",
-  "DATASET_READY",
-  "ANALYSIS_PLANNED",
-  "ANALYSIS_CONFIRMED",
-  "EXECUTING",
-  "EXECUTION_FAILED",
-  "RESULT_CONFIRMED",
-  "OUTLINE_CONFIRMED",
-  "GENERATING",
-  "COMPLETED",
-];
-
-function isAtOrAfter(status: string, target: string) {
-  const a = ORDERED_STATUSES.indexOf(status);
-  const b = ORDERED_STATUSES.indexOf(target);
-  if (a < 0 || b < 0) return false;
-  return a >= b;
-}
-
-const STAGES = [
-  { key: "requirements", label: "实验要求", completeAt: "REQUIREMENT_CONFIRMED" },
-  { key: "sources", label: "资料整理", completeAt: "EVIDENCE_CONFIRMED" },
-  { key: "datasets", label: "数据上传", completeAt: "DATASET_READY" },
-  { key: "analysis", label: "分析方案", completeAt: "RESULT_CONFIRMED" },
-  { key: "results", label: "结果确认", completeAt: "OUTLINE_CONFIRMED" },
-  { key: "deliverables", label: "交付物", completeAt: "COMPLETED" },
-] as const;
-
-type StageState = "completed" | "current" | "failed" | "upcoming";
-
-function getStageState(status: string, stageIndex: number): StageState {
-  const currentIndex = STAGES.findIndex(
-    (stage) => !isAtOrAfter(status, stage.completeAt),
-  );
-
-  if (currentIndex < 0) return "completed";
-  if (stageIndex < currentIndex) return "completed";
-  if (stageIndex === currentIndex) {
-    return status === "EXECUTION_FAILED" ? "failed" : "current";
-  }
-  return "upcoming";
-}
-
-const WORKSPACE_DEFINITIONS = [
-  {
-    key: "requirements",
-    label: "进入实验要求工作区",
-    description: "确认实验目的、变量和交付要求",
-    route: "requirements",
-  },
-  {
-    key: "sources",
-    label: "进入资料来源工作区",
-    description: "整理公开资料和参考来源",
-    route: "sources",
-  },
-  {
-    key: "evidence",
-    label: "进入证据卡片工作区",
-    description: "确认资料中的可追溯证据",
-    route: "evidence",
-  },
-  {
-    key: "datasets",
-    label: "进入数据集工作区",
-    description: "上传数据并检查字段质量",
-    route: "datasets",
-  },
-  {
-    key: "analysis",
-    label: "进入分析方案工作区",
-    description: "明确变量、方法和分析路径",
-    route: "analysis",
-  },
-  {
-    key: "execution",
-    label: "进入执行工作区",
-    description: "运行代码并查看执行记录",
-    route: "execution",
-  },
-  {
-    key: "outline",
-    label: "进入大纲工作区",
-    description: "确认报告和演示文稿结构",
-    route: "outline",
-  },
-  {
-    key: "deliverables",
-    label: "进入交付物工作区",
-    description: "导出 Word / PPT 并回看版本",
-    route: "deliverables",
-  },
-] as const;
+  useProject,
+  useWorkspaceProjection,
+} from "../features/projects/hooks";
+import type {
+  WorkspaceProgressPhase,
+  WorkspaceProgressStatus,
+} from "../shared/types";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("zh-CN", {
@@ -114,37 +19,35 @@ function formatDate(value: string) {
   });
 }
 
-function getWorkspaceVisibility(status: string) {
-  return {
-    requirements: true,
-    sources: isAtOrAfter(status, "REQUIREMENT_CONFIRMED"),
-    evidence: isAtOrAfter(status, "REQUIREMENT_CONFIRMED"),
-    datasets: isAtOrAfter(status, "EVIDENCE_CONFIRMED"),
-    analysis: isAtOrAfter(status, "DATASET_READY"),
-    execution: isAtOrAfter(status, "ANALYSIS_CONFIRMED"),
-    outline: isAtOrAfter(status, "RESULT_CONFIRMED"),
-    deliverables: isAtOrAfter(status, "OUTLINE_CONFIRMED"),
-  };
+function phaseVisualState(status: WorkspaceProgressStatus) {
+  if (status === "COMPLETED") return "completed";
+  if (status === "FAILED" || status === "BLOCKED") return "failed";
+  if (status === "LOCKED") return "upcoming";
+  return "current";
 }
 
-function getNextWorkspace(status: string) {
-  if (status === "DRAFT" || status === "REQUIREMENT_PARSED") return WORKSPACE_DEFINITIONS[0];
-  if (status === "REQUIREMENT_CONFIRMED") return WORKSPACE_DEFINITIONS[1];
-  if (status === "SOURCES_COLLECTED") return WORKSPACE_DEFINITIONS[2];
-  if (status === "EVIDENCE_CONFIRMED") return WORKSPACE_DEFINITIONS[3];
-  if (status === "DATASET_READY" || status === "ANALYSIS_PLANNED") return WORKSPACE_DEFINITIONS[4];
-  if (status === "ANALYSIS_CONFIRMED" || status === "EXECUTING" || status === "EXECUTION_FAILED") {
-    return WORKSPACE_DEFINITIONS[5];
-  }
-  if (status === "RESULT_CONFIRMED") return WORKSPACE_DEFINITIONS[6];
-  return WORKSPACE_DEFINITIONS[7];
+function phaseRoute(phase: WorkspaceProgressPhase) {
+  return (
+    phase.actions.find((action) => action.enabled && action.route)?.route ??
+    phase.steps.find((step) => step.is_open)?.route
+  );
 }
 
 export function ProjectDetailView() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { data: project, isLoading, isError, error } = useProject(projectId ?? "");
+  const {
+    data: project,
+    isLoading: projectLoading,
+    isError: projectError,
+    error,
+  } = useProject(projectId ?? "");
+  const {
+    data: projection,
+    isLoading: projectionLoading,
+    isError: projectionError,
+  } = useWorkspaceProjection(projectId ?? "");
 
-  if (isLoading) {
+  if (projectLoading || projectionLoading) {
     return (
       <div className="project-detail-loading">
         <p className="sr-only">加载中…</p>
@@ -153,7 +56,7 @@ export function ProjectDetailView() {
     );
   }
 
-  if (isError) {
+  if (projectError || projectionError) {
     return (
       <div className="project-detail-state">
         <div className="project-detail-state__panel project-detail-state__panel--error">
@@ -168,14 +71,14 @@ export function ProjectDetailView() {
     );
   }
 
-  if (!project) return null;
+  if (!project || !projection) return null;
 
-  const visibility = getWorkspaceVisibility(project.status);
-  const presentation = getProjectStagePresentation(project.status);
-  const nextWorkspace = getNextWorkspace(project.status);
-  const visibleWorkspaces = WORKSPACE_DEFINITIONS.filter(
-    (workspace) => visibility[workspace.key as keyof typeof visibility],
-  );
+  const phases = projection.phases;
+  const steps = phases.flatMap((phase) => phase.steps);
+  const current = projection.current;
+  const nextAction = projection.recommended_next_action;
+  const projectStatusLabel = projection.project.status_label;
+  const openSteps = steps.filter((step) => step.is_open);
 
   return (
     <div className="project-detail-page">
@@ -194,11 +97,11 @@ export function ProjectDetailView() {
             <h1 className="project-detail-title">{project.name}</h1>
             <p className="project-detail-topic">
               <strong>课题</strong>
-              {project.topic}
+              {projection.project.topic}
             </p>
           </div>
           <div className="project-detail-header__status">
-            <ProjectStatusBadge status={project.status} />
+            <StatusBadge status={project.status} label={projectStatusLabel} />
             <span className="project-detail-header__status-label">当前项目阶段</span>
           </div>
         </header>
@@ -214,42 +117,88 @@ export function ProjectDetailView() {
           </div>
           <div className="project-detail-meta__item">
             <span className="project-detail-meta__label">建议下一步</span>
-            <span className="project-detail-meta__value">{presentation.nextAction}</span>
+            <span className="project-detail-meta__value">
+              {nextAction?.label ?? "项目已完成"}
+            </span>
           </div>
         </div>
 
-        {project.status === "EXECUTION_FAILED" && (
+        {current.status === "FAILED" && (
           <div className="project-detail-failure" role="alert">
             <span aria-hidden="true">!</span>
             <div>
-              <strong>执行任务需要处理</strong>
-              进入执行工作区查看具体失败原因，并在确认后重试。
+              <strong>{current.label}需要处理</strong>
+              请进入当前工作区查看失败原因，并使用现有页面操作恢复。
             </div>
           </div>
         )}
 
         <main className="project-detail-content-grid">
-          <section className="project-detail-card project-detail-roadmap" aria-labelledby="project-roadmap-title">
-            <h2 className="project-detail-card__title" id="project-roadmap-title">实验流程</h2>
+          <section
+            className="project-detail-card project-detail-roadmap"
+            aria-labelledby="project-roadmap-title"
+          >
+            <h2 className="project-detail-card__title" id="project-roadmap-title">
+              实验流程
+            </h2>
             <p className="project-detail-card__description">
-              按顺序完成每个阶段，已确认的内容会保留在项目工作区中。
+              阶段状态和入口均来自项目进度投影，已确认的内容会保留在项目工作区中。
             </p>
             <ol className="project-detail-stage-list">
-              {STAGES.map((stage, index) => {
-                const state = getStageState(project.status, index);
-                const stateLabel =
-                  state === "completed" ? "完成" :
-                  state === "current" ? "进行中" :
-                  state === "failed" ? "需处理" : "待开始";
+              {phases.map((phase, index) => {
+                const route = phaseRoute(phase);
+                const isOpen = phase.is_open && Boolean(route);
+                const visualState = phaseVisualState(phase.status);
+                const stageClassName =
+                  "project-detail-stage project-detail-stage--" + visualState;
+                const stageContent = (
+                  <>
+                    <span className="project-detail-stage__number">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="project-detail-stage__copy">
+                      <span className="project-detail-stage__name">{phase.label}</span>
+                      <span className="project-detail-stage__description">
+                        {phase.description}
+                      </span>
+                      {phase.steps.length > 1 && (
+                        <span className="project-detail-stage__description">
+                          子步骤：{phase.steps.map((step) => step.label).join("、")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="project-detail-stage__state">
+                      {phase.display.status_label}
+                    </span>
+                    <span className="project-detail-stage__arrow" aria-hidden="true">
+                      →
+                    </span>
+                  </>
+                );
 
                 return (
-                  <li
-                    className={"project-detail-stage project-detail-stage--" + state}
-                    key={stage.key}
-                  >
-                    <span className="project-detail-stage__number">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="project-detail-stage__name">{stage.label}</span>
-                    <span className="project-detail-stage__state">{stateLabel}</span>
+                  <li className="project-detail-stage__item" key={phase.id}>
+                    {isOpen ? (
+                      <Link
+                        className={stageClassName}
+                        to={route as string}
+                        aria-label={"进入" + phase.label + "阶段"}
+                      >
+                        {stageContent}
+                      </Link>
+                    ) : (
+                      <div
+                        className={stageClassName}
+                        aria-disabled="true"
+                        title={
+                          phase.open_reason?.display_message ??
+                          phase.open_reason?.message ??
+                          phase.display.next_step_text
+                        }
+                      >
+                        {stageContent}
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -257,17 +206,31 @@ export function ProjectDetailView() {
           </section>
 
           <aside className="project-detail-side">
-            <Link
-              className="project-detail-next-card"
-              to={"/projects/" + project.id + "/" + nextWorkspace.route}
-            >
-              <span className="project-detail-next-card__eyebrow">下一步</span>
-              <span className="project-detail-next-card__title">{presentation.nextAction}</span>
-              <span className="project-detail-next-card__description">
-                打开对应工作区，继续完成当前项目的关键任务。
-              </span>
-              <span className="project-detail-next-card__action">打开工作区 →</span>
-            </Link>
+            {nextAction?.route ? (
+              <Link
+                className="project-detail-next-card"
+                to={nextAction.route}
+              >
+                <span className="project-detail-next-card__eyebrow">下一步</span>
+                <span className="project-detail-next-card__title">
+                  {nextAction.label}
+                </span>
+                <span className="project-detail-next-card__description">
+                  {nextAction.description}
+                </span>
+                <span className="project-detail-next-card__action">
+                  打开工作区 →
+                </span>
+              </Link>
+            ) : (
+              <div className="project-detail-next-card">
+                <span className="project-detail-next-card__eyebrow">项目状态</span>
+                <span className="project-detail-next-card__title">项目已完成</span>
+                <span className="project-detail-next-card__description">
+                  当前没有需要继续推进的项目级动作。
+                </span>
+              </div>
+            )}
 
             <section className="project-detail-card project-detail-data-card">
               <h2 className="project-detail-card__title">数据分析准备</h2>
@@ -277,15 +240,27 @@ export function ProjectDetailView() {
               <div className="project-detail-data-list">
                 <div className="project-detail-data-row">
                   <span className="project-detail-data-row__number">01</span>
-                  <span>上传数据文件</span>
+                  <span className="project-detail-data-row__copy">
+                    <strong>上传数据文件</strong>
+                    <small>支持 CSV、Excel、JSON 等格式</small>
+                  </span>
+                  <span className="project-detail-data-row__arrow" aria-hidden="true">→</span>
                 </div>
                 <div className="project-detail-data-row">
                   <span className="project-detail-data-row__number">02</span>
-                  <span>检查字段质量</span>
+                  <span className="project-detail-data-row__copy">
+                    <strong>检查字段质量</strong>
+                    <small>识别缺失值、异常值与数据类型</small>
+                  </span>
+                  <span className="project-detail-data-row__arrow" aria-hidden="true">→</span>
                 </div>
                 <div className="project-detail-data-row">
                   <span className="project-detail-data-row__number">03</span>
-                  <span>准备分析方案</span>
+                  <span className="project-detail-data-row__copy">
+                    <strong>准备分析方案</strong>
+                    <small>选择分析方法与设定评估指标</small>
+                  </span>
+                  <span className="project-detail-data-row__arrow" aria-hidden="true">→</span>
                 </div>
               </div>
             </section>
@@ -295,22 +270,37 @@ export function ProjectDetailView() {
         <section className="project-detail-workspaces" aria-labelledby="project-workspaces-title">
           <div className="project-detail-section-heading">
             <div>
-              <h2 className="project-detail-card__title" id="project-workspaces-title">项目工作区</h2>
-              <p className="project-detail-card__description">已开放的入口会根据项目状态逐步出现。</p>
+              <h2 className="project-detail-card__title" id="project-workspaces-title">
+                项目工作区
+              </h2>
+              <p className="project-detail-card__description">
+                可访问入口由后端进度投影提供，锁定步骤不会伪装成可点击入口。
+              </p>
             </div>
           </div>
           <div className="project-detail-workspace-grid">
-            {visibleWorkspaces.map((workspace) => (
+            {openSteps.map((step, index) => (
               <Link
                 className="project-detail-workspace-link"
-                key={workspace.key}
-                to={"/projects/" + project.id + "/" + workspace.route}
+                key={step.id}
+                to={step.route}
+                aria-label={step.actions[0]?.label ?? "进入" + step.label + "工作区"}
               >
-                <span className="project-detail-workspace-link__copy">
-                  <span className="project-detail-workspace-link__label">{workspace.label}</span>
-                  <span className="project-detail-workspace-link__description">{workspace.description}</span>
+                <span className="project-detail-workspace-link__marker" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
                 </span>
-                <span className="project-detail-workspace-link__arrow" aria-hidden="true">→</span>
+                <span className="project-detail-workspace-link__copy">
+                  <span className="project-detail-workspace-link__label">
+                    {step.label}
+                  </span>
+                  <span className="project-detail-workspace-link__description">
+                    {step.description}
+                  </span>
+                  <span className="sr-only">{step.display.next_step_text}</span>
+                </span>
+                <span className="project-detail-workspace-link__arrow" aria-hidden="true">
+                  →
+                </span>
               </Link>
             ))}
           </div>
@@ -318,4 +308,4 @@ export function ProjectDetailView() {
       </div>
     </div>
   );
-}
+}

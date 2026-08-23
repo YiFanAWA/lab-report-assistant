@@ -25,6 +25,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("../../features/projects/hooks", () => ({
   useProject: vi.fn(),
+  useWorkspaceProjection: vi.fn(),
 }));
 
 vi.mock("../../features/datasets/hooks", () => ({
@@ -46,7 +47,7 @@ vi.mock("../../features/jobs/hooks", () => ({
   useJob: vi.fn(),
 }));
 
-import { useProject } from "../../features/projects/hooks";
+import { useProject, useWorkspaceProjection } from "../../features/projects/hooks";
 import { useDatasets } from "../../features/datasets/hooks";
 import {
   useAnalysisPlans,
@@ -60,10 +61,12 @@ import {
 import { useJob } from "../../features/jobs/hooks";
 import { AnalysisWorkspaceView } from "../AnalysisWorkspaceView";
 import type { Project } from "../../shared/types";
+import { makeWorkspaceProjectionForStatus } from "./workspaceProjectionFixture";
 import type { Dataset } from "../../features/datasets/types";
 import type { AnalysisPlan } from "../../features/analysis/types";
 
 const mockedUseProject = vi.mocked(useProject);
+const mockedUseWorkspaceProjection = vi.mocked(useWorkspaceProjection);
 const mockedUseDatasets = vi.mocked(useDatasets);
 const mockedUseAnalysisPlans = vi.mocked(useAnalysisPlans);
 const mockedUseGenerateAnalysisPlan = vi.mocked(useGenerateAnalysisPlan);
@@ -149,6 +152,7 @@ function setupMocks(options: {
     error: null,
   } as any);
 
+  mockedUseWorkspaceProjection.mockReturnValue({ data: makeWorkspaceProjectionForStatus(project ?? makeProject()) } as any);
   mockedUseDatasets.mockReturnValue({
     data: datasets,
     isLoading: false,
