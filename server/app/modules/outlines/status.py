@@ -30,6 +30,7 @@ class DeliverableType(str, Enum):
     """交付物类型。"""
 
     WORD = "WORD"
+    PDF = "PDF"
     PPT = "PPT"
 
 
@@ -55,6 +56,7 @@ class DeliverableChangeType(str, Enum):
     """交付物变更类型（用于 ChangeRecord）。"""
 
     WORD_GENERATED = "WORD_GENERATED"
+    PDF_GENERATED = "PDF_GENERATED"
     PPT_GENERATED = "PPT_GENERATED"
     DELIVERABLE_SUCCEEDED = "DELIVERABLE_SUCCEEDED"
     DELIVERABLE_FAILED = "DELIVERABLE_FAILED"

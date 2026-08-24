@@ -107,3 +107,9 @@ npm.cmd run build
 - remaining_risk: 未验证 LibreOffice runtime、portable 包、真实 PDF 产物、干净 Windows x64、1280px 浏览器截图；浏览器 Node helper 失败的宿主原因仍未修复；既有科研资产 manifest hash 漂移未纳入本切片；SPEC 0047 不能标记为完整收口。
 - next_substage: 先完成浏览器/1280px/窄屏视觉验收；随后补齐 LibreOffice runtime 与许可证元数据并完成 portable 黑盒；最后在项目负责人确认本子阶段收口后精确 stage、commit、push。
 - git_checkpoint: 保留 `codex/before-workspace-shell-20260822` 和 `stash@{0}`；当前不 stage、不 commit、不 push，待项目负责人确认本子阶段收口范围后精确收口。
+
+## 2026-08-23 交付物审阅台最新复核
+
+交付物审阅台实现 checkpoint 已完成：后端投影/API/版本一致性 9 passed，交付物相关回归 97 passed；前端全量 35 个测试文件、550 passed，lint/build 和 Alembic upgrade head 通过。质量与 provenance 仍由后端投影 owner 计算，旧 service 仅保留兼容导出；无真实预览时返回 `NOT_AVAILABLE`，视觉检查未执行时返回 `NOT_CHECKED`。
+
+未闭合项：根目录后端全量 1260 passed、1 failed，失败为既有 `bioicons-cc0-cryo-vial` SVG manifest SHA-256 漂移；浏览器 Node helper 初始化退出，尚无 1280px/窄屏截图；LibreOffice runtime、portable 黑盒和真实 Word/PDF/PPT 逐页视觉一致性仍未验收。本次按项目负责人最新指令完成代码实现 checkpoint 的版本收口，但不将其宣称为完整发布收口。

@@ -13,6 +13,7 @@ import type {
   PptConfig,
   CompleteProjectResponse,
   WordTemplate,
+  DeliveryReviewProjection,
 } from "./types";
 import { streamSSE, type SSEEvent } from "../../shared/stream-sse";
 import { STREAMING_BASE } from "../../shared/api-base";
@@ -155,6 +156,19 @@ export async function generatePpt(
       body: JSON.stringify({ config: config ?? {} }),
     }
   );
+
+  return handle<GenerateDeliverableResponse>(r);
+}
+
+/** 从成功 Word 版本派生 PDF；失败时可重新触发。 */
+export async function generatePdf(
+  projectId: string,
+  outlineId: string
+): Promise<GenerateDeliverableResponse> {
+  const r = await fetch(
+    `${BASE}/projects/${encodeURIComponent(projectId)}/outline/${encodeURIComponent(outlineId)}/pdf/generate`,
+    { method: "POST" }
+  );
   return handle<GenerateDeliverableResponse>(r);
 }
 
@@ -257,4 +271,12 @@ export async function deleteWordTemplate(
 /** 构造 Word 模板下载 URL。 */
 export function buildWordTemplateDownloadUrl(projectId: string): string {
   return `${BASE}/projects/${encodeURIComponent(projectId)}/word-template/download`;
+}
+
+/** 获取交付物审阅和质量门禁投影。 */
+export async function fetchDeliveryReview(
+  projectId: string
+): Promise<DeliveryReviewProjection> {
+  const r = await fetch(`${BASE}/projects/${encodeURIComponent(projectId)}/delivery-review`);
+  return handle<DeliveryReviewProjection>(r);
 }

@@ -248,6 +248,22 @@ def generate_word(project_id: str, outline_id: str,
     )
 
 
+# --- 触发 PDF 生成 ---
+
+@router.post("/outline/{outline_id}/pdf/generate",
+             response_model=GenerateDeliverableResponse,
+             status_code=201)
+def generate_pdf(project_id: str, outline_id: str,
+                 db: Session = Depends(_db)):
+    """从已成功 Word 版本触发 PDF 生成。"""
+    job_id, deliverable_id = outline_service.generate_pdf(
+        db, project_id, outline_id
+    )
+    return GenerateDeliverableResponse(
+        job_id=job_id, deliverable_id=deliverable_id, template_used=False
+    )
+
+
 # --- 触发 PPT 生成 ---
 
 

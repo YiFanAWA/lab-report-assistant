@@ -587,8 +587,8 @@ class TestCompleteProject:
             outline_service.complete_project(db, project_id)
         assert exc_info.value.code == "PROJECT_NO_SUCCESSFUL_DELIVERABLE"
 
-    def test_completes_with_word_and_ppt_succeeded(self, db):
-        """Word 和 PPT 均成功时可完成。"""
+    def test_completes_with_word_pdf_and_ppt_succeeded(self, db):
+        """Word、PDF 和 PPT 均成功时可完成。"""
         project_id = _create_project(
             db, status=ProjectStatus.GENERATING.value)
         outline = _seed_candidate_outline(
@@ -615,6 +615,19 @@ class TestCompleteProject:
             project_id=project_id, version=1,
             status=DeliverableVersionStatus.SUCCEEDED.value,
             file_path="ppt_v1.pptx", file_size_bytes=200,
+            created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        ))
+        # PDF 成功
+        del_pdf = _seed_deliverable(
+            db, project_id, outline.id, "del_pdf_cp2",
+            deliverable_type=DeliverableType.PDF.value,
+            status=DeliverableStatus.SUCCEEDED.value,
+        )
+        db.add(DeliverableVersion(
+            id="ver_pdf_cp2", deliverable_id=del_pdf.id,
+            project_id=project_id, version=1,
+            status=DeliverableVersionStatus.SUCCEEDED.value,
+            file_path="report_v1.pdf", file_size_bytes=180,
             created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         ))
         db.commit()

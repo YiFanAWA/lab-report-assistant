@@ -469,3 +469,33 @@ describe("DeliverableWorkspaceView - 项目状态标签", () => {
     expect(screen.getByText("[交付物正在生成]")).toBeInTheDocument();
   });
 });
+
+describe("DeliverableWorkspaceView - 审阅和版本错误态", () => {
+  it("交付审阅投影失败时显示结构化错误", () => {
+    setupMocks({ deliverables: [] });
+    mockedUseDeliveryReview.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { message: "审阅服务不可用" },
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText("审阅服务不可用")).toBeInTheDocument();
+  });
+
+  it("版本记录失败时显示结构化错误", () => {
+    setupMocks({ deliverables: [makeDeliverable()] });
+    mockedUseDeliverableVersions.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { message: "版本服务不可用" },
+    } as any);
+
+    renderWithRoute();
+
+    expect(screen.getByText("版本服务不可用")).toBeInTheDocument();
+  });
+});

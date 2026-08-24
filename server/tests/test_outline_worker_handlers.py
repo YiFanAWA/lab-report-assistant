@@ -828,14 +828,92 @@ class TestHandleGeneratePpt:
         assert version.status == DeliverableVersionStatus.SUCCEEDED.value
 
 
+class TestHandleGeneratePdf:
+    """PDF 派生处理器测试。"""
+
+    def test_success_path_from_word_version(self, db, monkeypatch):
+        project_id = _create_project(
+            db, status=ProjectStatus.OUTLINE_CONFIRMED.value
+        )
+        outline_id = _seed_confirmed_outline(db, project_id, "ol_pdf_001")
+        word_id = _seed_pending_deliverable(
+            db,
+            project_id,
+            outline_id,
+            "del_pdf_word_001",
+            deliverable_type=DeliverableType.WORD.value,
+        )
+        word = db.query(Deliverable).filter(Deliverable.id == word_id).one()
+        word.status = DeliverableStatus.SUCCEEDED.value
+        word_version = DeliverableVersion(
+            id="ver_pdf_word_001",
+            deliverable_id=word_id,
+            project_id=project_id,
+            version=1,
+            status=DeliverableVersionStatus.SUCCEEDED.value,
+            file_path="word_v1.docx",
+            file_size_bytes=128,
+            created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        db.add(word_version)
+        pdf_id = _seed_pending_deliverable(
+            db,
+            project_id,
+            outline_id,
+            "del_pdf_001",
+            deliverable_type=DeliverableType.PDF.value,
+        )
+        db.commit()
+
+        from app.core.config import settings
+        source_path = (
+            settings.project_data_root
+            / project_id
+            / "deliverables"
+            / word_id
+            / "word_v1.docx"
+        )
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_bytes(b"PK\\x03\\x04fixture")
+
+        def fake_export(self, source, target):
+            assert source == source_path.resolve()
+            target.write_bytes(b"%PDF-1.7\\n%%EOF")
+
+        from app.infrastructure.documents.docx_pdf_exporter import DocxPdfExporter
+        monkeypatch.setattr(DocxPdfExporter, "export", fake_export)
+
+        job = job_service.create_job(
+            db,
+            project_id,
+            JobType.GENERATE_PDF.value,
+            {
+                "outline_id": outline_id,
+                "deliverable_id": pdf_id,
+                "source_word_deliverable_id": word_id,
+                "source_word_version_id": word_version.id,
+            },
+        )
+        db.commit()
+
+        result = worker_handlers.handle_generate_pdf(db, job)
+
+        assert result["source_word_version_id"] == word_version.id
+        version = db.query(DeliverableVersion).filter(
+            DeliverableVersion.id == result["version_id"]
+        ).one()
+        assert version.status == DeliverableVersionStatus.SUCCEEDED.value
+        assert version.file_path == "report_v1.pdf"
+
+
 # --- HANDLERS 注册表扩展 ---
 
 
 class TestHandlersRegistryOutline:
-    """HANDLERS 注册表扩展测试：覆盖新增的 3 个大纲相关 handler。"""
+    """HANDLERS 注册表扩展测试：覆盖新增的 4 个大纲相关 handler。"""
 
     def test_handlers_registry_includes_outline_handlers(self):
-        """HANDLERS 包含 GENERATE_OUTLINE、GENERATE_WORD、GENERATE_PPT 映射。"""
+        """HANDLERS 包含 GENERATE_OUTLINE、GENERATE_WORD、GENERATE_PDF、GENERATE_PPT 映射。"""
         assert (
             worker_handlers.HANDLERS[JobType.GENERATE_OUTLINE.value]
             is worker_handlers.handle_generate_outline
@@ -847,4 +925,8 @@ class TestHandlersRegistryOutline:
         assert (
             worker_handlers.HANDLERS[JobType.GENERATE_PPT.value]
             is worker_handlers.handle_generate_ppt
+        )
+        assert (
+            worker_handlers.HANDLERS[JobType.GENERATE_PDF.value]
+            is worker_handlers.handle_generate_pdf
         )

@@ -877,3 +877,21 @@
 | Git 边界 | 本轮仅精确 stage 投影合同、统一壳层、目标页面接线、测试和文档；其他用户改动保持 unstaged | ✅ |
 
 当前结论：项目进度投影合同和前端重复状态门控迁移已通过代码与合同门禁；由于既有科研资产 hash、LibreOffice runtime、浏览器视觉和干净 Windows 验收未闭合，本轮提交为实现 checkpoint，不是完整发布收口。
+## SPEC 0047 交付物审阅台实现复核（2026-08-23）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 交付审阅合同 | `server/app/modules/delivery_review/contracts.py` 与 `projection.py` 覆盖 Word/PDF/PPT 身份、版本 provenance、内容质量、统计边界、推荐版本、失败恢复、预览和视觉检查状态 | ✅ |
+| provenance 写入链 | `DeliverableVersion` 新增可空来源字段；Alembic 0008；Word/PPT 写入实际执行记录，PDF 继承实际 Word 版本；旧版本缺失时返回 N/A 原因 | ✅ |
+| 质量判断 owner | 质量门禁、内容检查、观察性/因果、L3 和医学教学边界均由后端投影计算；前端只消费 projection；`delivery_review/service.py` 仅保留兼容导出 | ✅ |
+| 真实预览与视觉检查 | 无真实缩略图返回 `NOT_AVAILABLE`；未进行真实逐页检查返回 `NOT_CHECKED`，界面不显示“通过” | ✅ 合同；真实视觉待验收 |
+| API 与状态测试 | `test_delivery_review.py`、`test_delivery_review_api.py`：9 passed；覆盖空态、失败、历史版本 N/A、负向边界、显式边界正向、Word/PDF/PPT 同源 provenance 和 HTTP 合同 | ✅ |
+| 生成链回归 | outlines service/API、Word/PPT/PDF worker、PDF 合同及交付审阅相关测试：97 passed；期间修复 PPT provenance 调用括号回归 | ✅ |
+| 前端状态与错误态 | `DeliverableWorkspaceView` 定向 22 passed；前端全量 35 个测试文件、550 passed；覆盖 loading、empty、error、failed、STALE、disabled、success 和版本读取失败 | ✅ |
+| 前端静态门禁 | `npm.cmd run lint`、`npm.cmd run build` | ✅ |
+| 数据库迁移 | `server` 目录执行 `.venv/Scripts/python.exe -m alembic upgrade head` | ✅ |
+| 后端全量 | 根目录执行 `server/.venv/Scripts/python.exe -m pytest`：1260 passed、1 failed；失败为既有科研资产 `bioicons-cc0-cryo-vial` SVG manifest SHA-256 漂移，不在本切片调用链 | ⚠️ 既有风险 |
+| 浏览器视觉验收 | 浏览器 Node helper 在初始化阶段退出（`node_repl kernel exited unexpectedly`），未取得 1280px/窄屏截图；不能宣称 UI 视觉通过 | ⚠️ 未完成 |
+| LibreOffice/portable/真实文件 | 当前未完成 LibreOffice runtime 注入、portable 黑盒、真实 DOCX→PDF 和 Word/PDF/PPT 逐页一致性验收 | ⚠️ 未完成 |
+
+当前结论：交付物审阅台已经通过代码合同和自动化测试门禁，形成实现 checkpoint；受既有科研资产 hash、真实浏览器、LibreOffice runtime、portable 和真实文件视觉验收影响，SPEC 0047 仍不能标记为完整发布收口。

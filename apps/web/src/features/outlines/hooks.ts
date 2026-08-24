@@ -12,6 +12,8 @@ import {
   rejectOutline,
   generateWord,
   generatePpt,
+  generatePdf,
+  fetchDeliveryReview,
   listDeliverables,
   listDeliverableVersions,
   completeProject,
@@ -252,6 +254,7 @@ export function useGenerateWord(projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
       qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["delivery-review", projectId] });
     },
   });
 }
@@ -265,7 +268,31 @@ export function useGeneratePpt(projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
       qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["delivery-review", projectId] });
+
     },
+  });
+}
+
+/** 触发 PDF 生成或失败重试。 */
+export function useGeneratePdf(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (outlineId: string) => generatePdf(projectId, outlineId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
+      qc.invalidateQueries({ queryKey: ["delivery-review", projectId] });
+    },
+  });
+}
+
+/** 交付物审阅投影，随 Worker 状态轮询。 */
+export function useDeliveryReview(projectId: string) {
+  return useQuery({
+    queryKey: ["delivery-review", projectId],
+    queryFn: () => fetchDeliveryReview(projectId),
+    enabled: !!projectId,
+    refetchInterval: 3_000,
   });
 }
 
@@ -303,6 +330,7 @@ export function useCompleteProject(projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["project", projectId] });
       qc.invalidateQueries({ queryKey: [...deliverablesKey(projectId), "list"] });
+      qc.invalidateQueries({ queryKey: ["delivery-review", projectId] });
     },
   });
 }

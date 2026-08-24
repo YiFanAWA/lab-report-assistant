@@ -26,7 +26,7 @@ export type OutlineStatus =
   | "STALE";
 
 /** 交付物类型。 */
-export type DeliverableType = "WORD" | "PPT";
+export type DeliverableType = "WORD" | "PDF" | "PPT";
 
 /** 交付物状态。 */
 export type DeliverableStatus =
@@ -157,4 +157,111 @@ export interface WordTemplate {
 /** 完成项目响应。 */
 export interface CompleteProjectResponse {
   status: string;
+}
+
+export interface DeliveryReviewDeliverable {
+  id: string;
+  type: DeliverableType;
+  status: DeliverableStatus;
+  current_version_id: string | null;
+  version_number: number | null;
+  outline_id: string;
+  source_execution_id: string | null;
+  is_stale: boolean;
+  failure: { code: string | null; message: string | null; recovery_action?: string | null } | null;
+  recommended_version_id: string | null;
+  versions: DeliveryVersionReview[];
+  provenance: DeliveryVersionProvenance;
+}
+
+export interface DeliveryReviewProjection {
+  project_id: string;
+  review_status: "READY" | "NEEDS_REVIEW" | "BLOCKED" | "STALE";
+  deliverables: DeliveryReviewDeliverable[];
+  traceability: {
+    outline_id: string | null;
+    outline_version?: number | null;
+    dataset_version_id: string | null;
+    dataset_version_ids?: string[];
+    analysis_version_id: string | null;
+    analysis_plan_id?: string | null;
+    analysis_plan_ids?: string[];
+    execution_run_id: string | null;
+    execution_run_ids?: string[];
+    evidence_ids: string[];
+    artifact_ids?: string[];
+    unavailable_reason?: string | null;
+  };
+  quality_gates: Array<{
+    code: string;
+    label: string;
+    status: "PASS" | "WARN" | "BLOCKED" | "NOT_RUN";
+    severity: "INFO" | "WARNING" | "BLOCKING";
+    reason: string | null;
+    recovery_action?: string | null;
+    source: string;
+    checked_at: string;
+  }>;
+  available_actions: {
+    can_download: boolean;
+    can_regenerate: boolean;
+    can_complete: boolean;
+    blocked_reasons: string[];
+    can_preview?: boolean;
+    can_view_traceability?: boolean;
+    can_retry_failed?: boolean;
+  };
+  content_quality?: ReviewCheck[];
+  boundary_checks?: ReviewCheck[];
+  recommended_downloads?: RecommendedDownload[];
+}
+
+export interface DeliveryVersionProvenance {
+  outline_id: string | null;
+  outline_version: number | null;
+  dataset_version_id: string | null;
+  dataset_version_ids: string[];
+  analysis_plan_id: string | null;
+  analysis_plan_ids: string[];
+  execution_run_id: string | null;
+  execution_run_ids: string[];
+  source_word_version_id: string | null;
+  file_sha256: string | null;
+  unavailable_reason: string | null;
+}
+
+export interface DeliveryVersionReview {
+  id: string;
+  version: number;
+  status: DeliverableVersionStatus;
+  file_size_bytes: number | null;
+  created_at: string;
+  finished_at: string | null;
+  is_recommended: boolean;
+  is_stale: boolean;
+  invalidation_reason: string | null;
+  diff_summary: string | null;
+  provenance: DeliveryVersionProvenance;
+  preview: { status: string; label: string; reason: string | null; asset_path: string | null };
+  visual_inspection: { status: string; label: string; reason: string | null; checked_at: string | null };
+  failure: { code: string | null; message: string | null; recovery_action?: string | null } | null;
+  recovery_action: string | null;
+}
+
+export interface ReviewCheck {
+  code: string;
+  label: string;
+  status: "PASS" | "WARN" | "BLOCKED" | "NOT_RUN";
+  reason: string | null;
+  recovery_action: string | null;
+  source: string;
+  checked_at: string;
+}
+
+export interface RecommendedDownload {
+  deliverable_id: string;
+  deliverable_type: DeliverableType;
+  version_id: string;
+  version_number: number;
+  reason: string;
 }

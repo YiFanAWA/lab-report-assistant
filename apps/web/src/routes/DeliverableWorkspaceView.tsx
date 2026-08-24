@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DeliverableReviewPanel } from "./DeliverableReviewPanel";
 import { useParams, Link } from "react-router";
 import { useProject, useWorkspaceProjection } from "../features/projects/hooks";
 import {
@@ -199,7 +200,7 @@ function VersionRow({
   );
 }
 
-export function DeliverableWorkspaceView() {
+function LegacyDeliverableWorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = projectId!;
   const { data: project, isLoading: projLoading } = useProject(pid);
@@ -353,4 +354,10 @@ export function DeliverableWorkspaceView() {
     </div>
     </WorkspaceShell>
   );
+}
+
+export { DeliverableReviewPanel };
+
+export function DeliverableWorkspaceView() {
+  return <DeliverableReviewPanel />;
 }

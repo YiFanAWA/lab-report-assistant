@@ -286,3 +286,16 @@ GET /api/projects/{project_id}/workspace-projection
 唯一 owner 维持为：项目阶段与顺序在 `server/app/modules/projects/`，投影在 `server/app/modules/projects/projection.py`，领域真实状态由各自模块负责，HTTP 映射在 `server/app/api/routers/projects.py`，展示和动作接线在 `apps/web/src/`。目标生产页面不得重新定义状态顺序、项目级入口门控或业务语义。
 
 本轮复核证据：后端投影合同测试 7 passed；前端全量 548 passed，lint/build 通过；Alembic 从 `server/` 目录执行通过。后端全量尚有既有科研资产 `bioicons-cc0-cryo-vial` manifest SHA-256 漂移，浏览器视觉、LibreOffice runtime 和干净 Windows 验收未完成，因此本 SPEC 仍不得标记为完整收口。
+## 15. 2026-08-23 交付物审阅台实现回写
+
+本轮完成“交付物审阅台”代码切片。交付审阅业务判断唯一位于 `server/app/modules/delivery_review/projection.py`；`service.py` 仅保留旧导入路径兼容导出，HTTP 仍复用 `GET /api/projects/{project_id}/delivery-review`，前端只消费结构化审阅投影。
+
+交付物版本新增可空 provenance 字段并由 Alembic `0008_add_deliverable_version_provenance.py` 管理：大纲版本、数据集版本、分析方案、执行记录、PDF 源 Word 版本和文件 SHA-256。Word/PPT Worker 记录实际参与渲染的成功执行记录；PDF 从实际 Word 版本继承绑定，不从当前项目状态回推历史事实。没有历史绑定时，投影返回 `N/A` 和具体不可用原因。
+
+审阅投影现在覆盖：Word/PDF/PPT 身份和版本历史、推荐下载版本、大纲变化导致的失效、结构化版本差异说明、失败错误码与恢复动作、内容质量检查、观察性/因果边界、L3 复现边界、医学教学边界、真实图表/表格和引用覆盖。预览在当前生成链没有真实缩略图时返回 `NOT_AVAILABLE`；视觉检查返回 `NOT_CHECKED`，不得显示为通过。质量结论由后端真实事实计算，前端不承担门禁 owner。
+
+前端新增 `DeliverableReviewPanel` 和 `DeliverableReviewPanel.css`，保留现有下载、PDF 重试、完成项目 mutation/API；补充项目、交付物列表、版本列表和审阅投影的 loading、empty、error、STALE、失败恢复、disabled 和成功状态。没有真实预览时只显示不可用说明，不生成假缩略图。
+
+本轮代码验证：交付审阅服务/API/版本一致性 9 passed；交付物与生成链相关回归 97 passed；前端全量 35 个测试文件、550 passed；`npm.cmd run lint`、`npm.cmd run build`、`server` 目录 `alembic upgrade head` 通过。根目录后端全量为 1260 passed、1 failed，唯一失败为既有科研资产 `bioicons-cc0-cryo-vial` 的 SVG manifest SHA-256 漂移；该测试不经过本切片调用链。浏览器 Node helper 仍在初始化阶段退出，未取得 1280px/窄屏截图；LibreOffice runtime、portable 黑盒和真实 DOCX/PDF/PPT 视觉验收仍未完成。
+
+因此，本节状态为“实现 checkpoint”，不是完整发布收口。停止条件仍包括真实浏览器视觉验收、LibreOffice portable runtime、干净 Windows x64 验收和既有科研资产 hash 风险单独处理。

@@ -106,6 +106,15 @@ class DeliverableVersionResponse(BaseModel):
     finished_at: str | None = None
     duration_seconds: float | None = None
     created_at: str
+    outline_version: int | None = None
+    dataset_version_id: str | None = None
+    dataset_version_ids: list[str] = Field(default_factory=list)
+    analysis_plan_id: str | None = None
+    analysis_plan_ids: list[str] = Field(default_factory=list)
+    execution_run_id: str | None = None
+    execution_run_ids: list[str] = Field(default_factory=list)
+    source_word_version_id: str | None = None
+    file_sha256: str | None = None
 
 
 class DeliverableVersionListResponse(BaseModel):

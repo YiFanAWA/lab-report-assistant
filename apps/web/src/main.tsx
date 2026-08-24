@@ -8,6 +8,7 @@ import "./styles/ProjectListView.css";
 import "./styles/ProjectDetailView.css";
 import "./styles/RequirementWorkspaceView.css";
 import "./styles/WorkspaceShell.css";
+import "./styles/DeliverableReviewPanel.css";
 
 const queryClient = new QueryClient();
 

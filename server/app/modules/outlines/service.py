@@ -25,6 +25,7 @@ STALE 传播链：
 """
 
 import json
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -182,6 +183,17 @@ def _deliverable_list_to_response(
     return DeliverableListResponse(
         items=[_deliverable_to_response(d) for d in deliverables])
 
+def _json_ids(value: str | None) -> list[str]:
+    """解析可空的版本追溯 ID 列表；旧版本损坏时返回空集合。"""
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [str(item) for item in parsed if str(item).strip()]
 
 def _version_to_response(v: DeliverableVersion) -> DeliverableVersionResponse:
     return DeliverableVersionResponse(
@@ -196,6 +208,15 @@ def _version_to_response(v: DeliverableVersion) -> DeliverableVersionResponse:
         started_at=v.started_at.isoformat() if v.started_at else None,
         finished_at=v.finished_at.isoformat() if v.finished_at else None,
         duration_seconds=v.duration_seconds,
+        outline_version=v.outline_version,
+        dataset_version_id=v.dataset_version_id,
+        dataset_version_ids=_json_ids(v.dataset_version_ids_json),
+        analysis_plan_id=v.analysis_plan_id,
+        analysis_plan_ids=_json_ids(v.analysis_plan_ids_json),
+        execution_run_id=v.execution_run_id,
+        execution_run_ids=_json_ids(v.execution_run_ids_json),
+        source_word_version_id=v.source_word_version_id,
+        file_sha256=v.file_sha256,
         created_at=v.created_at.isoformat(),
     )
 
@@ -964,6 +985,9 @@ def get_deliverable_file_path(
         media_type = ("application/vnd.openxmlformats-officedocument"
                       ".wordprocessingml.document")
         filename = f"word_v{version.version}.docx"
+    elif deliverable.deliverable_type == DeliverableType.PDF.value:
+        media_type = "application/pdf"
+        filename = f"report_v{version.version}.pdf"
     else:
         media_type = ("application/vnd.openxmlformats-officedocument"
                       ".presentationml.presentation")
@@ -980,6 +1004,8 @@ def complete_project(db: Session, project_id: str):
     前置条件：至少一个 Word DeliverableVersion 和一个 PPT DeliverableVersion 为 SUCCEEDED。
     """
     project = _ensure_project(db, project_id)
+    if project.status == ProjectStatus.COMPLETED.value:
+        return project
 
     # 查询所有非 STALE 的交付物
     deliverables = (
@@ -992,6 +1018,7 @@ def complete_project(db: Session, project_id: str):
     )
 
     word_succeeded = False
+    pdf_succeeded = False
     ppt_succeeded = False
     for d in deliverables:
         if d.deliverable_type == DeliverableType.WORD.value:
@@ -1006,6 +1033,18 @@ def complete_project(db: Session, project_id: str):
             )
             if versions > 0:
                 word_succeeded = True
+        elif d.deliverable_type == DeliverableType.PDF.value:
+            versions = (
+                db.query(DeliverableVersion)
+                .filter(
+                    DeliverableVersion.deliverable_id == d.id,
+                    DeliverableVersion.status
+                    == DeliverableVersionStatus.SUCCEEDED.value,
+                )
+                .count()
+            )
+            if versions > 0:
+                pdf_succeeded = True
         elif d.deliverable_type == DeliverableType.PPT.value:
             versions = (
                 db.query(DeliverableVersion)
@@ -1019,16 +1058,16 @@ def complete_project(db: Session, project_id: str):
             if versions > 0:
                 ppt_succeeded = True
 
-    if not (word_succeeded and ppt_succeeded):
+    if not (word_succeeded and pdf_succeeded and ppt_succeeded):
         raise AppError(
             code="PROJECT_NO_SUCCESSFUL_DELIVERABLE",
-            message="没有成功的 Word 和 PPT 交付物，无法完成项目",
+            message="没有成功的 Word、PDF 和 PPT 交付物，无法完成项目",
         )
 
     project.status = ProjectStatus.COMPLETED.value
     _add_change(db, project_id,
                 DeliverableChangeType.PROJECT_COMPLETED.value,
-                "完成项目（Word 和 PPT 均已生成）")
+                "完成项目（Word、PDF 和 PPT 均已生成）")
     db.commit()
     db.refresh(project)
     return project
@@ -1138,7 +1177,10 @@ def create_deliverable_version(
     """
     deliverable = (
         db.query(Deliverable)
-        .filter(Deliverable.id == deliverable_id)
+        .filter(
+            Deliverable.id == deliverable_id,
+            Deliverable.project_id == project_id,
+        )
         .first()
     )
     if not deliverable:
@@ -1154,12 +1196,21 @@ def create_deliverable_version(
     new_version = max_version + 1
 
     now = _now()
+    outline = (
+        db.query(Outline)
+        .filter(
+            Outline.id == deliverable.outline_id,
+            Outline.project_id == project_id,
+        )
+        .first()
+    )
     version = DeliverableVersion(
         id=_uid(),
         deliverable_id=deliverable_id,
         project_id=project_id,
         version=new_version,
         status=DeliverableVersionStatus.PENDING.value,
+        outline_version=outline.code_version if outline else None,
         created_at=now,
     )
     db.add(version)
@@ -1172,9 +1223,12 @@ def create_deliverable_version(
     if project.status == ProjectStatus.OUTLINE_CONFIRMED.value:
         project.status = ProjectStatus.GENERATING.value
 
-    change_type = (DeliverableChangeType.WORD_GENERATED.value
-                   if deliverable.deliverable_type == DeliverableType.WORD.value
-                   else DeliverableChangeType.PPT_GENERATED.value)
+    if deliverable.deliverable_type == DeliverableType.WORD.value:
+        change_type = DeliverableChangeType.WORD_GENERATED.value
+    elif deliverable.deliverable_type == DeliverableType.PDF.value:
+        change_type = DeliverableChangeType.PDF_GENERATED.value
+    else:
+        change_type = DeliverableChangeType.PPT_GENERATED.value
     _add_change(db, project_id,
                 change_type,
                 f"开始生成交付物：{deliverable_id} 版本 {new_version}")
@@ -1182,6 +1236,79 @@ def create_deliverable_version(
     return deliverable, version
 
 
+def record_deliverable_version_provenance(
+    db: Session,
+    version_id: str,
+    execution_run_ids: list[str] | tuple[str, ...] = (),
+    *,
+    source_word_version_id: str | None = None,
+    inherit_from_version_id: str | None = None,
+) -> DeliverableVersion:
+    """保存生成器真实使用的来源绑定，不从最新状态回推历史事实。"""
+    version = (
+        db.query(DeliverableVersion)
+        .filter(DeliverableVersion.id == version_id)
+        .first()
+    )
+    if not version:
+        raise AppError(
+            code="DELIVERABLE_VERSION_NOT_FOUND",
+            message=f"未找到交付物版本 {version_id}",
+        )
+    if inherit_from_version_id:
+        source = (
+            db.query(DeliverableVersion)
+            .filter(
+                DeliverableVersion.id == inherit_from_version_id,
+                DeliverableVersion.project_id == version.project_id,
+            )
+            .first()
+        )
+        if source:
+            version.outline_version = source.outline_version
+            version.dataset_version_id = source.dataset_version_id
+            version.dataset_version_ids_json = source.dataset_version_ids_json
+            version.analysis_plan_id = source.analysis_plan_id
+            version.analysis_plan_ids_json = source.analysis_plan_ids_json
+            version.execution_run_id = source.execution_run_id
+            version.execution_run_ids_json = source.execution_run_ids_json
+            version.source_word_version_id = source.id
+    normalized_run_ids = list(dict.fromkeys(str(item) for item in execution_run_ids if str(item).strip()))
+    if normalized_run_ids:
+        from app.modules.execution.models import CodeTask, ExecutionRun
+        runs = (
+            db.query(ExecutionRun)
+            .filter(
+                ExecutionRun.project_id == version.project_id,
+                ExecutionRun.id.in_(normalized_run_ids),
+            )
+            .all()
+        )
+        run_by_id = {run.id: run for run in runs}
+        ordered_runs = [run_by_id[item] for item in normalized_run_ids if item in run_by_id]
+        dataset_ids = list(dict.fromkeys(run.dataset_version_id for run in ordered_runs if run.dataset_version_id))
+        task_ids = list(dict.fromkeys(run.code_task_id for run in ordered_runs if run.code_task_id))
+        tasks = (
+            db.query(CodeTask)
+            .filter(
+                CodeTask.project_id == version.project_id,
+                CodeTask.id.in_(task_ids),
+            )
+            .all()
+            if task_ids
+            else []
+        )
+        analysis_ids = list(dict.fromkeys(task.analysis_plan_id for task in tasks if task.analysis_plan_id))
+        version.execution_run_ids_json = json.dumps(normalized_run_ids, ensure_ascii=False)
+        version.execution_run_id = normalized_run_ids[0] if len(normalized_run_ids) == 1 else None
+        version.dataset_version_ids_json = json.dumps(dataset_ids, ensure_ascii=False)
+        version.dataset_version_id = dataset_ids[0] if len(dataset_ids) == 1 else None
+        version.analysis_plan_ids_json = json.dumps(analysis_ids, ensure_ascii=False)
+        version.analysis_plan_id = analysis_ids[0] if len(analysis_ids) == 1 else None
+    if source_word_version_id:
+        version.source_word_version_id = source_word_version_id
+    db.flush()
+    return version
 def mark_deliverable_version_running(
     db: Session, version_id: str,
 ) -> DeliverableVersion:
@@ -1224,6 +1351,22 @@ def mark_deliverable_version_succeeded(
     v.duration_seconds = duration_seconds
     v.error_code = None
     v.error_message = None
+    absolute_file = (
+        settings.project_data_root
+        / v.project_id
+        / "deliverables"
+        / v.deliverable_id
+        / file_path
+    ).resolve()
+    if absolute_file.is_file():
+        try:
+            digest = hashlib.sha256()
+            with absolute_file.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            v.file_sha256 = digest.hexdigest()
+        except OSError:
+            v.file_sha256 = None
 
     # 推进 Deliverable 到 SUCCEEDED
     deliverable = (
@@ -1473,3 +1616,146 @@ def get_word_template_file_path(
             message="模板路径无效",
         )
     return abs_path, template.original_filename
+def _resolve_successful_word_source(
+    db: Session,
+    project_id: str,
+    outline_id: str,
+    source_word_deliverable_id: str | None,
+    source_word_version_id: str | None,
+) -> tuple[Deliverable, DeliverableVersion]:
+    """解析 PDF 的唯一输入：同一大纲下成功的最终 Word 版本。"""
+    if source_word_deliverable_id:
+        word = get_deliverable_by_project(db, project_id, source_word_deliverable_id)
+    else:
+        word = (
+            db.query(Deliverable)
+            .filter(
+                Deliverable.project_id == project_id,
+                Deliverable.outline_id == outline_id,
+                Deliverable.deliverable_type == DeliverableType.WORD.value,
+                Deliverable.status != DeliverableStatus.STALE.value,
+            )
+            .order_by(Deliverable.created_at.desc())
+            .first()
+        )
+        if not word:
+            raise AppError(
+                code="PDF_NOT_GENERATABLE",
+                message="没有可用的 Word 交付物，无法生成 PDF",
+            )
+
+    if word.deliverable_type != DeliverableType.WORD.value or word.outline_id != outline_id:
+        raise AppError(
+            code="PDF_NOT_GENERATABLE",
+            message="PDF 必须从当前大纲的 Word 交付物生成",
+        )
+
+    if source_word_version_id:
+        version = get_version_by_project(
+            db, project_id, word.id, source_word_version_id
+        )
+    else:
+        version = (
+            db.query(DeliverableVersion)
+            .filter(
+                DeliverableVersion.deliverable_id == word.id,
+                DeliverableVersion.status == DeliverableVersionStatus.SUCCEEDED.value,
+            )
+            .order_by(DeliverableVersion.version.desc())
+            .first()
+        )
+    if not version or version.status != DeliverableVersionStatus.SUCCEEDED.value or not version.file_path:
+        raise AppError(
+            code="PDF_NOT_GENERATABLE",
+            message="没有成功的 Word 版本，无法生成 PDF",
+        )
+    return word, version
+
+def resolve_successful_word_source(
+    db: Session,
+    project_id: str,
+    outline_id: str,
+    source_word_deliverable_id: str | None,
+    source_word_version_id: str | None,
+) -> tuple[Deliverable, DeliverableVersion]:
+    """公开 PDF Worker 使用的最终 Word 源解析接口。"""
+    return _resolve_successful_word_source(
+        db,
+        project_id,
+        outline_id,
+        source_word_deliverable_id,
+        source_word_version_id,
+    )
+
+
+def _create_pdf_job(
+    db: Session,
+    project_id: str,
+    outline_id: str,
+    source_word_deliverable_id: str | None,
+    source_word_version_id: str | None,
+) -> tuple[object, Deliverable]:
+    _resolve_successful_word_source(
+        db, project_id, outline_id,
+        source_word_deliverable_id, source_word_version_id,
+    )
+    deliverable = _create_or_get_deliverable(
+        db, project_id, outline_id, DeliverableType.PDF.value
+    )
+    job = job_service.create_job(
+        db,
+        project_id=project_id,
+        job_type=JobType.GENERATE_PDF.value,
+        input_data={
+            "outline_id": outline_id,
+            "deliverable_id": deliverable.id,
+            "source_word_deliverable_id": source_word_deliverable_id,
+            "source_word_version_id": source_word_version_id,
+        },
+    )
+    _add_change(
+        db,
+        project_id,
+        DeliverableChangeType.PDF_GENERATED.value,
+        f"触发 PDF 生成：大纲 {outline_id}",
+    )
+    return job, deliverable
+
+
+def generate_pdf(
+    db: Session,
+    project_id: str,
+    outline_id: str,
+    source_word_deliverable_id: str | None = None,
+    source_word_version_id: str | None = None,
+) -> tuple[str, str]:
+    """从已成功的 Word 版本触发 PDF 生成，返回 (job_id, deliverable_id)。"""
+    project = _ensure_project(db, project_id)
+    _ensure_project_ready_for_deliverable(project)
+    outline = get_outline_by_project(db, project_id, outline_id)
+    if outline.status != OutlineStatus.CONFIRMED.value:
+        raise AppError(
+            code="PDF_NOT_GENERATABLE",
+            message="大纲未确认，无法生成 PDF",
+        )
+    job, deliverable = _create_pdf_job(
+        db, project_id, outline_id,
+        source_word_deliverable_id, source_word_version_id,
+    )
+    db.commit()
+    return job.id, deliverable.id
+
+
+def enqueue_pdf_for_word(
+    db: Session,
+    project_id: str,
+    outline_id: str,
+    source_word_deliverable_id: str,
+    source_word_version_id: str,
+) -> str:
+    """在 Word 成功事务中追加 PDF job，不自行提交事务。"""
+    job, _ = _create_pdf_job(
+        db, project_id, outline_id,
+        source_word_deliverable_id, source_word_version_id,
+    )
+    return job.id

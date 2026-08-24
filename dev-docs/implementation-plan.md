@@ -245,3 +245,10 @@ SPEC 0046 已完成 Windows x64 portable bundle 的首版实现：根目录 one-
 本轮锁定并实现项目进度投影合同：项目阶段和顺序由 `server/app/modules/projects/` 负责，投影由 `server/app/modules/projects/projection.py` 负责，HTTP 仅映射现有 `GET /api/projects/{project_id}/workspace-projection`，前端只消费规范投影。`current`、`phases`、`recommended_next_action`、阶段/步骤状态、`is_open`、`open_reason`、`blocking_reasons`、`actions`、`recovery_action`、展示文案和 `command_id` 已加入同一响应；旧的 `current_stage`、`next_action`、`stages` 保留为兼容投影。`COMPLETED` 项目的 `next_action` 与 `recommended_next_action` 均为 `null`，失败/阻断事实不会被完成 rank 覆盖。
 
 前端已将 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个工作区接入统一 `WorkspaceShell`，移除目标生产页面的项目级重复状态顺序和入口门控；RequirementWorkspaceView 仅保留原有项目状态展示，不强行改造。投影合同测试、前端全量测试、lint/build 和 Alembic 迁移已验证；后端全量仍受既有科研资产 hash 漂移影响，浏览器视觉、LibreOffice runtime 和干净 Windows 验收仍未闭合。
+## SPEC 0047 交付物审阅台实现回写（2026-08-23）
+
+本轮完成交付物审阅台的核心实现并保持现有 API、路由和写入 mutation 不变。`delivery_review/projection.py` 是质量与追溯投影唯一 owner；旧 `service` 路径仅作兼容导出。`DeliverableVersion` 通过迁移 0008 保存大纲版本、数据集/分析/执行绑定、PDF 源 Word 版本和 SHA-256。Word/PPT/PDF 生成链已接入真实 provenance，前端 `DeliverableReviewPanel` 展示版本历史、质量检查、边界声明、失败恢复、下载与项目完成动作。
+
+本轮 fresh evidence：交付审阅/API/版本一致性 9 passed；交付物相关后端回归 97 passed；前端 35 个测试文件、550 passed；lint/build 通过；Alembic upgrade head 通过。根目录后端全量为 1260 passed、1 failed，失败来自既有科研资产 `bioicons-cc0-cryo-vial` 的 manifest SHA-256 漂移；浏览器 Node helper 初始化失败，未取得真实截图；LibreOffice runtime、portable 黑盒和真实 DOCX/PDF/PPT 视觉一致性仍未验证。
+
+本阶段停止条件尚未全部满足：科研资产 hash 风险、可用浏览器的 1280px/窄屏视觉验收、真实办公软件逐页检查、LibreOffice portable runtime 和干净 Windows x64 黑盒仍待后续发布验收。本次按项目负责人最新指令先完成代码实现 checkpoint 的精确 stage 与 commit；不将该 checkpoint 宣称为完整发布收口。

@@ -360,6 +360,56 @@ class TestGenerateWordApi:
         assert response.json()["error"]["code"] == "DELIVERABLE_NOT_GENERATABLE"
 
 
+# --- POST /outline/{outline_id}/pdf/generate ---
+
+
+class TestGeneratePdfApi:
+    """触发 PDF 生成 API 测试。"""
+
+    def test_generate_returns_201_from_successful_word(self, client):
+        from app.api.routers import outlines as outlines_router
+        SessionLocal = outlines_router.SessionLocal
+        project_id = _create_project(
+            client, status=ProjectStatus.OUTLINE_CONFIRMED.value
+        )
+        outline_id = _seed_outline(
+            SessionLocal, project_id, "ol_pdf_api_1",
+            status=OutlineStatus.CONFIRMED.value,
+        )
+        db = SessionLocal()
+        try:
+            db.add(Deliverable(
+                id="del_pdf_api_word",
+                project_id=project_id,
+                outline_id=outline_id,
+                deliverable_type=DeliverableType.WORD.value,
+                status=DeliverableStatus.SUCCEEDED.value,
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                updated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ))
+            db.add(DeliverableVersion(
+                id="ver_pdf_api_word",
+                deliverable_id="del_pdf_api_word",
+                project_id=project_id,
+                version=1,
+                status=DeliverableVersionStatus.SUCCEEDED.value,
+                file_path="word_v1.docx",
+                file_size_bytes=128,
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        response = client.post(
+            f"/api/projects/{project_id}/outline/{outline_id}/pdf/generate"
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["job_id"]
+        assert data["deliverable_id"]
+
+
 # --- POST /outline/{outline_id}/ppt/generate ---
 
 
@@ -563,7 +613,7 @@ class TestCompleteProjectApi:
     """完成项目 API 测试。"""
 
     def test_complete_returns_completed_status(self, client):
-        """Word+PPT 均成功时完成项目。"""
+        """Word、PDF、PPT 均成功时完成项目。"""
         from app.api.routers import deliverables as deliverables_router
         SessionLocal = deliverables_router.SessionLocal
         project_id = _create_project(
@@ -601,6 +651,21 @@ class TestCompleteProjectApi:
                 project_id=project_id, version=1,
                 status=DeliverableVersionStatus.SUCCEEDED.value,
                 file_path="ppt_v1.pptx", file_size_bytes=200,
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ))
+            # PDF 成功
+            db.add(Deliverable(
+                id="del_cm_pdf", project_id=project_id, outline_id=outline_id,
+                deliverable_type=DeliverableType.PDF.value,
+                status=DeliverableStatus.SUCCEEDED.value,
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                updated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ))
+            db.add(DeliverableVersion(
+                id="ver_cm_pdf", deliverable_id="del_cm_pdf",
+                project_id=project_id, version=1,
+                status=DeliverableVersionStatus.SUCCEEDED.value,
+                file_path="report_v1.pdf", file_size_bytes=180,
                 created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
             ))
             db.commit()

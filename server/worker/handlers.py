@@ -665,8 +665,13 @@ def handle_generate_word(db: Session, job) -> dict:
         sections = _json.loads(outline.sections_json)
         project = project_service.get_project(db, job.project_id)
         artifacts = _gather_execution_artifacts_for_render(db, job.project_id)
+        outline_service.record_deliverable_version_provenance(
+            db,
+            version.id,
+            [item["execution_run_id"] for item in artifacts if item.get("execution_run_id")],
 
         # 输出路径：project_data_root / project_id / deliverables / deliverable_id / word_v{version}.docx
+        )
         output_dir = (settings.project_data_root / job.project_id
                       / "deliverables" / deliverable_id)
         output_path = output_dir / f"word_v{version.version}.docx"
@@ -726,6 +731,19 @@ def handle_generate_word(db: Session, job) -> dict:
             duration_seconds=duration,
         )
         db.commit()
+        pdf_job_id = None
+        pdf_enqueue_error = None
+        try:
+            pdf_job_id = outline_service.enqueue_pdf_for_word(
+                db, job.project_id, outline_id, deliverable_id, version.id
+            )
+            db.commit()
+        except AppError as err:
+            db.rollback()
+            pdf_enqueue_error = {
+                "code": err.code,
+                "message": err.message,
+            }
         return {
             "deliverable_id": deliverable_id,
             "version_id": version.id,
@@ -733,6 +751,8 @@ def handle_generate_word(db: Session, job) -> dict:
             "file_size_bytes": file_size,
             "duration_seconds": duration,
             "template_used": template is not None,
+            "pdf_job_id": pdf_job_id,
+            "pdf_enqueue_error": pdf_enqueue_error,
         }
     except AppError as err:
         finished_at = _now()
@@ -799,9 +819,15 @@ def handle_generate_ppt(db: Session, job) -> dict:
         sections = _json.loads(outline.sections_json)
         project = project_service.get_project(db, job.project_id)
         artifacts = _gather_execution_artifacts_for_render(db, job.project_id)
-
-        output_dir = (settings.project_data_root / job.project_id
-                      / "deliverables" / deliverable_id)
+        outline_service.record_deliverable_version_provenance(
+            db,
+            version.id,
+            [item["execution_run_id"] for item in artifacts if item.get("execution_run_id")],
+        )
+        output_dir = (
+            settings.project_data_root / job.project_id
+            / "deliverables" / deliverable_id
+        )
         output_path = output_dir / f"ppt_v{version.version}.pptx"
 
         # SPEC 0011：读取 PPT 配置
@@ -893,6 +919,119 @@ def handle_generate_ppt(db: Session, job) -> dict:
                        message=f"PPT 生成失败：{exc}") from exc
 
 
+def handle_generate_pdf(db: Session, job) -> dict:
+    """从最终成功的 Word 版本派生 PDF，不重新生成正文。"""
+    data = _parse_input(job)
+    outline_id = data.get("outline_id")
+    deliverable_id = data.get("deliverable_id")
+    source_word_deliverable_id = data.get("source_word_deliverable_id")
+    source_word_version_id = data.get("source_word_version_id")
+    if not outline_id or not deliverable_id:
+        raise AppError(
+            code="JOB_INPUT_INVALID",
+            message="任务缺少 outline_id 或 deliverable_id",
+        )
+
+    from app.modules.outlines import service as outline_service
+    from app.infrastructure.documents.docx_pdf_exporter import DocxPdfExporter
+
+    outline = outline_service.get_outline_by_project(
+        db, job.project_id, outline_id
+    )
+    if outline.status != "CONFIRMED":
+        raise AppError(
+            code="DELIVERABLE_NOT_GENERATABLE",
+            message="大纲未确认，无法生成 PDF",
+        )
+
+    word, word_version = outline_service.resolve_successful_word_source(
+        db,
+        job.project_id,
+        outline_id,
+        source_word_deliverable_id,
+        source_word_version_id,
+    )
+    _, version = outline_service.create_deliverable_version(
+        db, job.project_id, deliverable_id
+    )
+    outline_service.mark_deliverable_version_running(db, version.id)
+    outline_service.record_deliverable_version_provenance(
+        db,
+        version.id,
+        inherit_from_version_id=word_version.id,
+    )
+    db.flush()
+
+    started_at = _now()
+    try:
+        source_path, _, _ = outline_service.get_deliverable_file_path(
+            db, job.project_id, word.id, word_version.id
+        )
+        output_dir = (
+            settings.project_data_root
+            / job.project_id
+            / "deliverables"
+            / deliverable_id
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"report_v{version.version}.pdf"
+        DocxPdfExporter().export(source_path, output_path)
+
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        file_size = output_path.stat().st_size
+        outline_service.mark_deliverable_version_succeeded(
+            db,
+            version_id=version.id,
+            file_path=f"report_v{version.version}.pdf",
+            file_size_bytes=file_size,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        return {
+            "deliverable_id": deliverable_id,
+            "version_id": version.id,
+            "version": version.version,
+            "source_word_deliverable_id": word.id,
+            "source_word_version_id": word_version.id,
+            "file_size_bytes": file_size,
+            "duration_seconds": duration,
+        }
+    except AppError as err:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code=err.code,
+            error_message=err.message,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise
+    except Exception as exc:
+        finished_at = _now()
+        duration = (finished_at - started_at).total_seconds()
+        outline_service.mark_deliverable_version_failed(
+            db,
+            version_id=version.id,
+            error_code="PDF_RENDER_FAILED",
+            error_message="PDF 生成失败",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_seconds=duration,
+        )
+        db.commit()
+        raise AppError(
+            code="PDF_RENDER_FAILED",
+            message="PDF 生成失败",
+        ) from exc
+
+
 HANDLERS: dict[str, Callable] = {
     JobType.FETCH_URL.value: handle_fetch_url,
     JobType.PARSE_DOCUMENT.value: handle_parse_document,
@@ -903,5 +1042,6 @@ HANDLERS: dict[str, Callable] = {
     JobType.EXECUTE_CODE_TASK.value: handle_execute_code_task,
     JobType.GENERATE_OUTLINE.value: handle_generate_outline,
     JobType.GENERATE_WORD.value: handle_generate_word,
+    JobType.GENERATE_PDF.value: handle_generate_pdf,
     JobType.GENERATE_PPT.value: handle_generate_ppt,
 }

@@ -93,6 +93,15 @@ class DeliverableVersion(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
+    outline_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    dataset_version_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analysis_plan_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    analysis_plan_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    execution_run_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    execution_run_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_word_version_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    file_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class WordTemplate(Base):

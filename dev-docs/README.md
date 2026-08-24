@@ -210,4 +210,4 @@
 - [decisions/0056-start-spec-0047-unified-workspace-delivery-review.md](decisions/0056-start-spec-0047-unified-workspace-delivery-review.md)：本切片授权、PDF/LibreOffice 包体决策和 owner 约束。
 - [stages/unified-workspace-delivery-review.md](stages/unified-workspace-delivery-review.md)：当前阶段执行计划、子阶段状态、验证证据和停止条件。
 
-当前状态：PDF/投影/交付审阅代码合同已实现；统一 WorkspaceShell 已迁移 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个工作区，并补充 `phase_id/phase_label/is_substep` 子步骤投影；前端 548 个测试、lint/build 通过。LibreOffice runtime、真实 portable 包、浏览器截图和既有科研资产 hash 仍未闭合。
+当前状态：PDF/投影/交付审阅代码合同已实现；统一 WorkspaceShell 已迁移 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个工作区，并补充 `phase_id/phase_label/is_substep` 子步骤投影；交付物审阅台已接入版本 provenance、质量/边界检查和真实预览状态；前端 550 个测试、lint/build 通过，交付物相关后端回归 97 passed。后端全量仍有既有科研资产 hash 漂移 1 项，LibreOffice runtime、真实 portable 包和浏览器截图仍未闭合。

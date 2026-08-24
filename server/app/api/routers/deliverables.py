@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database.engine import SessionLocal
 from app.modules.outlines import service as outline_service
+from app.modules.delivery_review import service as delivery_review_service
+from app.modules.delivery_review.contracts import DeliveryReviewResponse
 from app.modules.outlines.contracts import (
     DeliverableListResponse,
     DeliverableVersionListResponse,
@@ -31,6 +33,12 @@ def _db():
         yield db
     finally:
         db.close()
+
+
+@router.get("/delivery-review", response_model=DeliveryReviewResponse)
+def get_delivery_review(project_id: str, db: Session = Depends(_db)):
+    """返回交付物审阅和质量门禁只读投影。"""
+    return delivery_review_service.build_delivery_review(db, project_id)
 
 
 # --- 交付物列表 ---
