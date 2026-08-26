@@ -62,12 +62,12 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
 6. matplotlib 必须配置中文字体，否则中文标题和坐标轴会显示为方框：
    import matplotlib
    matplotlib.use("Agg")
-   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
+   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Noto Sans CJK SC', 'Arial', 'DejaVu Sans']
    matplotlib.rcParams['axes.unicode_minus'] = False
    import matplotlib.pyplot as plt
    # Nature 期刊风格 rcParams（nature-figure 设计规则，SPEC 0028）
    matplotlib.rcParams['font.family'] = 'sans-serif'
-   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'Arial', 'DejaVu Sans']
+   matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Noto Sans CJK SC', 'Arial', 'DejaVu Sans']
    matplotlib.rcParams['axes.unicode_minus'] = False
    matplotlib.rcParams['font.size'] = 16
    matplotlib.rcParams['axes.spines.right'] = False
@@ -78,6 +78,9 @@ _SYSTEM_PROMPT = """你是一个 Python 数据分析代码生成助手。你的�
    matplotlib.rcParams['savefig.bbox'] = 'tight'
    import seaborn as sns
    sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
+
+   # 中文长标题优先保持可读；保存前使用 constrained layout 或 tight_layout，
+   # 显式指定 dpi=300，不把标题压缩成不可读的小字。
 
 7. 图表生成优先使用 seaborn API（SPEC 0027，统计图表更美观）：
    - 直方图：sns.histplot(data=df, x=field, kde=True, bins=30)

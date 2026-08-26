@@ -478,8 +478,8 @@ export function RequirementWorkspaceView() {
             )}
             {streamGenerate.result && (
               <p className="requirement-feedback requirement-feedback--success requirement-result-message">
-                流式生成完成 ✓ [{streamGenerate.result.candidate_source}
-                {streamGenerate.result.fallback_used ? "（降级）" : ""}]
+                任务单整理完成 ✓
+                {streamGenerate.result.fallback_used ? "（已使用备用规则）" : ""}
               </p>
             )}
             {streamGenerate.error && (
@@ -510,9 +510,11 @@ export function RequirementWorkspaceView() {
                   <h2>任务单</h2>
                   <div className="requirement-plan-card__tags">
                     <span className="requirement-plan-status">
-                      [{plan.status === "CANDIDATE" ? "待确认" : "已确认"}]
+                        {plan.status === "CANDIDATE" ? "待确认" : "已确认"}
                     </span>
-                    <span className="requirement-plan-source">[{plan.candidate_source}]</span>
+                      <span className="requirement-plan-source">
+                        生成依据：实验要求与已整理资料
+                      </span>
                   </div>
                 </div>
                 {plan.status === "CANDIDATE" && (
@@ -629,10 +631,12 @@ export function RequirementWorkspaceView() {
                   }
                 >
                   <div>
-                    <strong>论文复刻层级</strong>
+                    <strong>实验范围</strong>
                     <span>
-                      {shownPayload.replication_level.level} —{" "}
-                      {shownPayload.replication_level.label}
+                      {shownPayload.replication_level.level === "L0" ||
+                      shownPayload.replication_level.label === "不复刻"
+                        ? "教学性数据分析（不进行原论文完整复现）"
+                        : shownPayload.replication_level.label}
                     </span>
                   </div>
                   {!shownPayload.replication_level.supported_in_v1 && (

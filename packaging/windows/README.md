@@ -11,6 +11,15 @@
 
 当前版本默认使用本地规则提供者；如果要使用 DeepSeek 等外部模型，需要在后续设置功能中配置自己的凭证，发布包不会内置密钥。
 
+## PDF 转换运行时（构建前准备）
+
+portable 包会随包携带 LibreOffice headless，用于把最终 DOCX 派生为 PDF；用户不需要安装 Word 或 LibreOffice。构建前请将已解压的官方 Windows x64 LibreOffice 目录放到 \`packaging\\\\windows\\\\runtime\\\\libreoffice\`，或通过 \`LIBREOFFICE_ROOT\` 指向该目录。目录必须同时包含：
+
+- \`program\\\\soffice.exe\`
+- \`runtime-metadata.json\`，至少包含 \`version\`、\`source\`、\`source_sha256\`、\`license_files\` 字段，并随 runtime 保留许可证/归属文件。
+
+构建脚本不会自动下载或静默替换转换器；缺少 runtime 或元数据时会直接停止。当前先接受较大的解压体积，后续再单独优化压缩。
+
 ## 开发机构建
 
 在已配置项目开发环境的 Windows 机器上执行：

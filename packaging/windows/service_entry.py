@@ -30,6 +30,8 @@ def _set_packaged_defaults() -> None:
     os.environ.setdefault("CODE_TASK_PROVIDER", "local_rule")
     os.environ.setdefault("OUTLINE_PROVIDER", "local_rule")
     os.environ.setdefault("LLM_CACHE_ENABLED", "false")
+    converter = _service_dir().parent / "libreoffice" / "program" / "soffice.exe"
+    os.environ.setdefault("PDF_CONVERTER_PATH", str(converter))
 
 
 def _set_packaged_sandbox_executable() -> None:

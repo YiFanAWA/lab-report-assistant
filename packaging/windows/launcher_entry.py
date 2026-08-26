@@ -61,6 +61,7 @@ def build_environment(root: Path, data_root: Path, port: int) -> dict[str, str]:
             "DATABASE_URL": sqlite_url(database_path),
             "PROJECT_DATA_ROOT": str((data_root / "projects").resolve()),
             "PACKAGED_FRONTEND_ROOT": str((root / WEB_RELATIVE_PATH).resolve()),
+            "PDF_CONVERTER_PATH": str((root / "libreoffice" / "program" / "soffice.exe").resolve()),
             "LAB_REPORT_PACKAGED": "1",
             "LAB_REPORT_PORT": str(port),
             "LAB_REPORT_BIND_HOST": "127.0.0.1",

@@ -91,7 +91,7 @@ npm.cmd run build
 - LibreOffice 无法在 portable bundle 内稳定执行 DOCX→PDF 时停止 PDF 子阶段，不静默依赖 Microsoft Word。
 - PDF 改变 Word 排版或 Word/PPT 同源关系时停止并重新审查 owner。
 - 某个门禁没有真实来源时返回 NOT_RUN/BLOCKED，不允许前端猜测。
-- 当前代码、数据库迁移、PDF 实际生成、浏览器视觉验收和干净 Windows 验收均未完成。
+- 当前代码、数据库迁移、PDF 实际生成和浏览器视觉验收已完成；独立干净 Windows x64 黑盒，以及当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性仍未完成。
 - 根 `AGENTS.md` 仍保留早期 SPEC 0002 阶段文字；本阶段不改写项目宪法，作为治理漂移记录。
 
 ## Git checkpoint rule
@@ -102,10 +102,10 @@ npm.cmd run build
 
 - actual_result: PDF 正式交付物合同、PDF Worker、LibreOffice headless 适配器、portable runtime 显式注入、项目工作台 projection、交付审阅 projection、质量门禁和统一 WorkspaceShell 已实现；本轮已将壳层迁移至 Sources、Evidence、Dataset、Analysis、Execution、Outline、Deliverable 七个目标工作区。
 - changed_owners: server/app/modules/outlines/、server/app/infrastructure/documents/、server/worker/、packaging/windows/、server/app/modules/projects/、server/app/modules/delivery_review/、apps/web/src/components/workspace/、apps/web/src/routes/、apps/web/src/shared/types.ts。
-- plan_deviation: 本轮按用户明确目标只迁移七个工作区；ProjectDetailView、RequirementWorkspaceView 不属于本轮目标页面，未扩大迁移。LibreOffice 官方 runtime 尚未进入本地构建目录，因此未执行真实 portable 包构建和 DOCX→PDF Windows 黑盒；浏览器工具初始化因 trusted Node process 退出未完成截图验收。
-- fresh_evidence: 后端项目投影定向测试 7 passed；后端从 server/ 目录全量测试 1254 passed、1 failed，唯一失败为既有 SPEC 0042 科研 SVG 资产 bioicons-cc0-cryo-vial 的 manifest SHA-256 与文件不一致；前端全量 35 个测试文件、548 个测试通过，ProjectDetailView 定向测试 8 passed，npm.cmd run lint 和 npm.cmd run build 通过；Alembic 从 server/ 目录执行 upgrade head 通过；目标生产页面扫描未发现 ORDERED_STATUSES、orderedStatuses、isAtOrAfter、getWorkspaceVisibility、getNextWorkspace、canRegister 或项目级 canComplete。
-- remaining_risk: 未验证 LibreOffice runtime、portable 包、真实 PDF 产物、干净 Windows x64、1280px 浏览器截图；浏览器 Node helper 失败的宿主原因仍未修复；既有科研资产 manifest hash 漂移未纳入本切片；SPEC 0047 不能标记为完整收口。
-- next_substage: 先完成浏览器/1280px/窄屏视觉验收；随后补齐 LibreOffice runtime 与许可证元数据并完成 portable 黑盒；最后在项目负责人确认本子阶段收口后精确 stage、commit、push。
+- plan_deviation: 本轮按用户明确目标只迁移七个工作区；ProjectDetailView、RequirementWorkspaceView 不属于本轮目标页面，未扩大迁移。LibreOffice runtime 已在临时目录完成独立 portable 构建和真实 DOCX→PDF；浏览器插件仍因 Windows ACL helper 退出，但已用系统 Chrome + Playwright 完成等价截图验收。2026-08-25 已补充修复两份科研 SVG 的上游换行漂移并完成全量后端回归。
+- fresh_evidence: 后端项目投影定向测试 7 passed；科研资产 registry/renderer 定向回归 29 passed；后端从 server/ 目录全量测试 1266 passed；PDF 交付相关回归 92 passed；Windows portable 源合同 4 passed；前端全量 35 个测试文件、550 个测试通过，ProjectDetailView 定向测试 8 passed，npm.cmd run lint 和 npm.cmd run build 通过；Alembic 从 server/ 目录执行 upgrade head 通过；目标生产页面扫描未发现 ORDERED_STATUSES、orderedStatuses、isAtOrAfter、getWorkspaceVisibility、getNextWorkspace、canRegister 或项目级 canComplete。
+- remaining_risk: 独立无 Python/Node.js/Docker 的 Windows x64 黑盒，以及当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性仍未完成；浏览器插件连接仍受 Windows ACL helper 影响，但已有系统 Chrome 替代证据。SPEC 0047 不能标记为完整收口。
+- next_substage: 先由项目负责人查看并确认保留的 1280px/390px 浏览器截图和当前 PDF 视觉结果；随后再决定是否进入独立 Windows 黑盒及当前项目同源 Word/PDF/PPT 补验，最后才讨论精确 stage、commit、push。
 - git_checkpoint: 保留 `codex/before-workspace-shell-20260822` 和 `stash@{0}`；当前不 stage、不 commit、不 push，待项目负责人确认本子阶段收口范围后精确收口。
 
 ## 2026-08-23 交付物审阅台最新复核
@@ -113,3 +113,29 @@ npm.cmd run build
 交付物审阅台实现 checkpoint 已完成：后端投影/API/版本一致性 9 passed，交付物相关回归 97 passed；前端全量 35 个测试文件、550 passed，lint/build 和 Alembic upgrade head 通过。质量与 provenance 仍由后端投影 owner 计算，旧 service 仅保留兼容导出；无真实预览时返回 `NOT_AVAILABLE`，视觉检查未执行时返回 `NOT_CHECKED`。
 
 未闭合项：根目录后端全量 1260 passed、1 failed，失败为既有 `bioicons-cc0-cryo-vial` SVG manifest SHA-256 漂移；浏览器 Node helper 初始化退出，尚无 1280px/窄屏截图；LibreOffice runtime、portable 黑盒和真实 Word/PDF/PPT 逐页视觉一致性仍未验收。本次按项目负责人最新指令完成代码实现 checkpoint 的版本收口，但不将其宣称为完整发布收口。
+
+## 2026-08-25 资产阻断修复后复核
+
+科研资产 registry/renderer 定向回归 29 passed；`cryo_vial.svg` 与 `sequencer.svg` 已按固定 Bioicons commit `d29e766ea7580b8063c4f47b29e872db40a4d979` 恢复为批准上游 raw 字节，manifest hash 漂移已关闭。
+
+后端全量 1266 passed；PDF 交付相关回归 92 passed；Windows portable 源合同 4 passed；前端 550 passed、lint/build 和 Alembic 通过。
+
+浏览器视觉验收仍被两次 Windows ACL helper 初始化退出阻断；本机和 portable 目录均没有 `soffice.exe`，因此 LibreOffice portable 黑盒、干净 Windows x64 和真实 DOCX/PDF/PPT 逐页一致性仍未验收。SPEC 0047 继续保持实现 checkpoint，不宣称完整发布收口。
+## 2026-08-25 LibreOffice portable runtime 复核
+
+- actual_result: 从官方 LibreOffice 26.2.5 Windows x86-64 MSI 解压临时 runtime，补齐 source_sha256/许可证文件校验和发布 manifest 字段；独立临时输出生成 portable bundle。
+- fresh_evidence: Windows packaging 合同测试 `test_spec0046_windows_packaging.py` 与 `test_spec0047_portable_runtime.py` 共 6 passed；PyInstaller service/launcher、前端 127 modules build 和 release manifest 均生成。
+- runtime_evidence: 包内 `soffice.com --headless --version` 返回 26.2.5.2；生产 `DocxPdfExporter` 使用包内 `soffice.exe` 将真实 DOCX 转为 456,765 bytes PDF；Poppler 识别 10 页并生成 10 张 PNG。
+- visual_boundary: 10 张 PDF PNG 已由 Poppler 生成并完成逐页检查；未发现空白页、裁切、重叠或异常黑块，当前 PDF 栅格化视觉通过。
+- remaining_risk: 浏览器和当前 PDF 视觉已通过；无开发依赖的干净 Windows x64 黑盒，以及当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性仍未闭合。
+- next_substage: 由项目负责人查看保留的浏览器截图和当前 PDF 视觉结论；随后再决定是否进入独立 Windows 黑盒及同源交付物补验。
+- git_checkpoint: 当前不 stage、不 commit、不 push；LibreOffice MSI、解压 runtime、portable bundle、PDF/PNG 和 `.tmp` runner 均留在临时/忽略边界。
+## 2026-08-25 真实浏览器与 PDF 视觉复核
+
+- actual_result: 系统 Chrome + Playwright 已完成首页、项目详情、交付审阅台 1280px 截图，以及交付审阅台 390px 窄屏截图；修复页面级横向溢出和 favicon 404 后，截图结果 events 为空。
+- visual_evidence: 1280px 下项目卡片、阶段导航、交付质量门禁和修复动作可读；390px 下内容单列且无页面级横向滚动。证据保存在 dev-docs/e2e-screenshots/spec0047_browser_qa/。
+- pdf_evidence: portable LibreOffice 26.2.5.2 完成真实 DOCX→PDF；Poppler 识别 10 页并生成 10 张 PNG，逐页检查未发现裁切、重叠、空白或黑块。临时 PDF 栅格目录已在记录后清理。
+- product_boundary: 当前演示项目的 PDF 缺失、交付物不同源、证据覆盖不足和视觉检查未运行均由后端审阅投影正确阻断；本轮不伪造成功状态。
+- remaining_risk: 浏览器插件连接仍受 trusted Node process exited unexpectedly 影响，但已有系统 Chrome 替代证据；尚未完成无 Python/Node.js/Docker 的独立 Windows x64 黑盒，也尚未以当前项目大纲重新生成并逐页检查同源 Word/PDF/PPT。
+- next_substage: 由项目负责人查看保留的浏览器截图并确认产品视觉；随后再决定是否进入独立 Windows 黑盒和同源交付物补验。
+- git_checkpoint: 当前不 stage、不 commit、不 push；本轮只保留浏览器视觉证据和文档记录。

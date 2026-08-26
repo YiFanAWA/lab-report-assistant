@@ -896,6 +896,96 @@
 
 当前结论：交付物审阅台已经通过代码合同和自动化测试门禁，形成实现 checkpoint；受既有科研资产 hash、真实浏览器、LibreOffice runtime、portable 和真实文件视觉验收影响，SPEC 0047 仍不能标记为完整发布收口。
 
+## SPEC 0043 PPT 诊断分层缺图修复复核（2026-08-25）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 缺图根因 | `PptRenderer._build_defense_layout()` 的带图角色集合遗漏 `diagnosis_stratified`；planner 已正确绑定图表 | ✅ 已修复 |
+| 角色回归测试 | `server/tests/test_renderers.py` 新增 academic `diagnosis_stratified` 页面主视觉测试 | ✅ |
+| 定向测试 | Word/PPT 交付相关测试集：42 passed | ✅ |
+| 真实 PPT 重生成 | academic 与 sjtu_academic 两套样例均为 18 页、16:9；第 13 页各含 1 张图片，第 16 页矩阵图保留 | ✅ |
+| PowerPoint 原生导出 | 两套 PPT 各导出 18 张 PNG；导出过程未写入项目目录 | ✅ |
+
+当前结论：第 13 页缺图这一项 P1 交付阻断已关闭；manifest 验证脚本合同漂移、最新 PDF 全页人工视觉复核和其他既有验收限制仍未纳入本次修复收口。
+
+## SPEC 0043 发布链 validator 合同修复复核（2026-08-25）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| manifest 合同 | validator 支持当前 `deliverables`，并保留旧 `artifacts` object/list 解析 | ✅ |
+| manifest 失败边界 | 显式提供 manifest 且合同非法时，不再回退扫描 `root` 或 `.tmp` 旧产物 | ✅ |
+| PPT 字号合同 | 标题/正文/图注分别按 35/18/12pt 验证；不再以全局最小字号误判图注 | ✅ |
+| 弃用告警 | DOCX 结构检查改为显式判断 `settings/header/footer` 是否存在 | ✅ |
+| 回归测试 | `server/tests/test_verify_spec0043_publication_chain.py`：4 passed；manifest/论文样例回归：14 passed；Word/PDF/PPT 相关回归：42 passed | ✅ |
+| 真实发布链 | `verify_spec0043_publication_chain.py --manifest .../publication_manifest.json --minimum-slides 18`；academic 与 sjtu PPT 均 PASS，DOCX/PDF/PPTX 均可解析 | ✅ |
+
+当前结论：validator 合同漂移与 `.tmp` 旧产物误回退已修复；本记录不代表全项目发布收口，最新 PDF 全页人工视觉复核、浏览器/LibreOffice/portable 等既有未验证项仍保持原边界。
+
+## SPEC 0043 真实产物视觉复核（2026-08-25）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| PDF 全页渲染 | 使用 Poppler `pdftoppm` 渲染 `spec0043_publication.pdf`，得到 21 张 PNG；Poppler 仅有 `nameToUnicode` 字体映射警告，渲染退出码为 0 | ✅ |
+| PDF 视觉检查 | 检查 21 页 contact sheet，并抽查封面、正文图表页、样本流程/分布页、比较矩阵页和参考文献尾页；未发现明显截断、重叠、空白页、黑块或图表越界 | ✅ 视觉证据覆盖 |
+| academic PPT 视觉检查 | 当前 18 页 PNG contact sheet及第 13、16、17、18 页关键页检查；第 13 页诊断分层图存在，矩阵图保留，未发现明显裁切或越界 | ✅ 视觉证据覆盖 |
+| sjtu PPT 视觉检查 | 当前 18 页 PNG contact sheet 检查；统一配色、页数和关键图形保持，未发现明显裁切或越界 | ✅ 视觉证据覆盖 |
+| PPT 形状边界 | 两套 PPT：13.33×7.5 英寸、18 页、各 11 张图片，形状越界 0 | ✅ |
+| 自动 helper 限制 | `render_slides.py` 与 `slides_test.py` 已生成 PNG，但末端因 Windows 路径反斜杠导致 JSON `Invalid \\escape` 退出；未将 helper 命令宣称自动通过，改用生成 PNG 与形状边界统计作为替代证据 | ⚠️ 环境限制 |
+
+当前结论：SPEC 0043 的 PDF/PPT 真实渲染视觉证据已补齐到当前样例；自动 PPT helper 的 Windows JSON 路径问题仍记录为环境限制。本项目仍不宣称完整发布收口，浏览器、LibreOffice runtime、portable 黑盒和全量后端既有失败项保持原边界。
+
+## 全局门禁复核（2026-08-25）
+
+| 门禁 | 实际命令/证据 | 结果 |
+|---|---|---|
+| 后端全量测试 | `server/.venv/Scripts/python.exe -m pytest -q`（server 工作目录） | ✅ 1266 passed in 81.26s |
+| SVG 来源核验 | 固定 Bioicons commit `d29e766ea7580b8063c4f47b29e872db40a4d979`；`cryo_vial.svg` 与 `sequencer.svg` 的上游 raw SHA-256 均分别与 manifest `source_sha256` 一致；本地原差异仅为 CRLF 换行，逐行文本一致 | ✅ |
+| SVG 恢复 | 恢复 `server/app/assets/scientific/svg/apparatus/cryo_vial.svg` 与 `server/app/assets/scientific/svg/instruments/sequencer.svg` 为固定上游 raw 字节；两者本地 SHA-256 与 manifest 一致，manifest 未修改；其余 5 个 SVG 未触碰且哈希已匹配 | ✅ |
+| 科研资产定向回归 | `tests/test_scientific_asset_registry.py tests/test_scientific_schematic_renderer.py -q` | ✅ 29 passed |
+| 前端全量测试 | `apps/web` 执行 `npm.cmd run test -- --run` | ✅ 35 个测试文件、550 passed |
+| PDF/交付定向回归 | `tests/test_pdf_deliverable_contract.py tests/test_spec0043_docx_pdf_exporter.py tests/test_outline_worker_handlers.py tests/test_outlines_service.py tests/test_outlines_api.py -q` | ✅ 92 passed |
+| Windows portable 源合同 | `tests/test_spec0046_windows_packaging.py -q` | ✅ 4 passed |
+| 浏览器视觉验收 | 系统 Chrome + Playwright 已取得 1280px/390px 真实截图；浏览器插件自身仍受 trusted Node process exited unexpectedly 影响 | ✅ 替代验收 |
+| LibreOffice runtime | portable LibreOffice 26.2.5.2 已完成 headless 启动和真实 DOCX→PDF；当前 PDF 已栅格化并逐页检查 | ✅ |
+| 工程漂移脚本 | `check_project_guardrails.py D:\\java_project\\lab-report-assistant`：通用 bootstrap 模板要求英文章节/片段，与本项目中文真源结构不匹配；未改写项目宪法或真源文档 | ⚠️ 工具不适用 |
+| Alembic | 临时 SQLite `server/.tmp/codex_full_gate_20260825.db` 执行 `.venv/Scripts/python.exe -m alembic upgrade head`，升级至 0008 | ✅ |
+| 前端 lint | `apps/web` 工作目录执行 `npm.cmd run lint` | ✅ |
+| 前端 build | `apps/web` 工作目录执行 `npm.cmd run build` | ✅ |
+| 临时状态 | 本轮临时 Alembic 数据库已删除，未触碰 `server/data/app.db` | ✅ |
+
+当前结论：交付链定向门禁、科研资产定向回归、后端全量、真实产物结构/视觉检查、Alembic、前端门禁、portable runtime、当前 PDF 视觉和浏览器替代验收均通过；两份科研 SVG 的 manifest 哈希漂移已关闭。剩余边界仅为独立干净 Windows x64 黑盒和当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性，不因本次验收宣称完整发布收口。
+## SPEC 0047 LibreOffice portable runtime 复核（2026-08-25）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 官方 runtime 来源 | LibreOffice 26.2.5 Windows x86-64 官方 MSI，372,948,992 bytes；SHA-256 `F15BA07BFCB0186986CF3171063506F5D207C11F8CC051BA0D135209E9E915F9` | ✅ |
+| runtime 元数据与许可证 | 临时 runtime 含 `version`、`source`、`source_sha256`、`license_files`；`LICENSE.html`、`license.txt`、`NOTICE` 和 `readmes/readme_en-US.txt` 均存在 | ✅ |
+| 独立 portable 构建 | 使用 `LIBREOFFICE_ROOT` 指向临时解压 runtime，独立输出目录生成 service、launcher、web、LibreOffice 和 `release-manifest.json`；包内约 1.88 GB、22,502 个文件 | ✅ |
+| 发布 manifest | `pdf_converter` 写入 provider、executable、version、source、source_sha256 和 license_files；manifest SHA 与 runtime metadata 一致 | ✅ |
+| portable headless 启动 | 包内 `soffice.com --headless --version` 返回 LibreOffice 26.2.5.2、退出码 0；`soffice.exe`、service.exe 和根启动器均存在 | ✅ |
+| 生产 PDF 适配器 | `DocxPdfExporter(converter_path=<portable>/libreoffice/program/soffice.exe)` 将 `spec0042_scientific_schematic.docx` 转为 456,765 bytes 的有效 PDF，退出成功 | ✅ |
+| PDF 结构与栅格化 | bundled `pdfinfo` 识别 A4、10 页、无加密；`pdftoppm -png` 退出码 0，生成 `page-01.png` 至 `page-10.png` | ✅ |
+| PDF 逐页视觉检查 | 使用 Poppler 生成 10 张 PNG 并逐页检查；未发现空白页、裁切、重叠或异常黑块 | ✅ |
+| 浏览器/干净 Windows | 系统 Chrome + Playwright 已完成 1280px/390px 截图；独立无 Python/Node.js/Docker Windows x64 仍未完成 | ⚠️ 部分未完成 |
+
+当前结论：LibreOffice runtime、portable 构建、真实 DOCX→PDF、当前 PDF PNG 视觉和浏览器视觉验收已完成；独立干净 Windows 黑盒和当前项目同源 Word/PDF/PPT 重新生成视觉一致性仍未完成，SPEC 0047 继续保持实现 checkpoint。
+
+## SPEC 0047 真实浏览器与交付视觉复核（2026-08-25）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 浏览器页面与路由 | 使用系统 Chrome + Playwright 访问首页、项目详情、交付审阅台；截图和 result.json 保存在 dev-docs/e2e-screenshots/spec0047_browser_qa/ | ✅ |
+| 桌面视觉 | 1280×900 下首页项目卡片、项目阶段路线和交付审阅台均正常渲染；后端投影状态、阻断原因和修复动作可读 | ✅ |
+| 窄屏视觉 | 390×844 下交付审阅台变为单列；页面级 documentScrollWidth 与 viewportWidth 均为 390，未出现横向溢出 | ✅ |
+| 资源与控制台 | favicon.svg 已由 index.html 显式引用；浏览器结果 events 为空，前后端运行日志中的页面/API 请求均成功 | ✅ |
+| PDF 真实派生 | LibreOffice 26.2.5.2 portable headless 从真实 DOCX 生成有效 PDF；pdfinfo 识别 A4、10 页，pdftoppm 成功生成 10 张 PNG | ✅ |
+| PDF 逐页视觉 | 本轮检查 page-01.png 至 page-10.png，未发现空白页、裁切、重叠或异常黑块；临时栅格目录验收后清理 | ✅ |
+| 产品状态投影 | 演示项目仍显示“需处理”：当前大纲没有对应 PDF 成功版本，Word/PDF/PPT 尚未形成同源集合；该阻断与后端事实一致，不是 UI 误报 | ✅ 正确阻断 |
+
+本轮保留的产品视觉证据：home-1280.png、project-detail-1280.png、deliverables-1280.png、deliverables-narrow.png 及 result.json。浏览器插件自身仍因 trusted Node process exited unexpectedly 无法连接，已使用系统 Chrome + Playwright 完成等价真实视觉验收。
+
+当前结论：SPEC 0047 的浏览器视觉、窄屏布局、favicon 资源和当前 PDF 栅格化视觉已通过；仅剩无 Python/Node.js/Docker 的独立 Windows x64 黑盒验收，以及以同一份当前项目大纲重新生成并检查 Word/PDF/PPT 同源交付物。
+
 ## SPEC 0044 字号统一与正式报告视觉复核（2026-08-26）
 
 | 验收项 | 证据/边界 | 结果 |
@@ -910,3 +1000,22 @@
 | PDF 视觉检查 | 抽查封面、摘要/目录、正文图表与表格、森林图/趋势图、比较矩阵、关系图、参考文献末页；未发现封面表格孤页、图注脱离、裁切、重叠或图表丢失 | ✅ |
 
 当前结论：字号统一与正式 `spec0043_publication` DOCX/PDF 重生成已通过本轮定向测试、manifest、14 张图完整性和真实 PDF 栅格化视觉检查；不因此宣称项目整体发布收口，既有独立 Windows x64 黑盒和同源交付物全链路边界保持不变。
+
+## SPEC 0047 当前源码 portable EXE 重建与黑盒复核（2026-08-26）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| 旧包原因 | 原 `server/.tmp/windows-package/release` EXE 为 2026-08-21 产物；其内置前端仍为旧 bundle，不会读取当前源码 | ✅ 根因确认 |
+| 当前前端构建 | `tsc -b && vite build`；127 modules；当前 bundle 为 `index-39Lpbw5h.js` / `index-CwnzC8Jm.css` | ✅ |
+| 当前源码 portable 构建 | `LIBREOFFICE_ROOT` 指向官方 LibreOffice 26.2.5 临时 runtime；重新生成 service、launcher、web、LibreOffice 和 `release-manifest.json` | ✅ |
+| 包内前端一致性 | 包内 `web/index.html` SHA-256 与当前 `apps/web/dist/index.html` 均为 `629D8A9541832B72340BD2A9830FB866EC8676731068C54A78B9FA8BCD294B26`；页面实际加载 `/assets/index-39Lpbw5h.js` | ✅ |
+| 发布 manifest | `server/.tmp/windows-package/release/实验报告助手-win-x64/release-manifest.json`；22,503 个文件；记录 LibreOffice 版本、来源 SHA-256 和许可证清单 | ✅ |
+| portable PDF runtime | 包内 `soffice.com --headless --version` 返回 LibreOffice 26.2.5.2，退出码 0 | ✅ |
+| 最新 EXE 启动 | 根启动器、内层启动器、service backend、Worker 均启动；`/health`、首页、`/api/projects` 均返回 200；页面加载当前 bundle | ✅ |
+| 生命周期关闭 | 动态枚举真实窗口“实验报告助手 - 运行中”，`PostMessage(WM_CLOSE)` 返回成功；外层/内层/后端/Worker 和 8787 端口均回收 | ✅ |
+| 重启保留 | 重新启动当前源码 EXE 后再次通过 `/health`、首页和 `/api/projects`；当前实例留在本地工作台供视觉查看 | ✅ |
+| 定向合同测试 | `server/tests/test_spec0046_windows_packaging.py server/tests/test_spec0047_portable_runtime.py` | ✅ 6 passed |
+| 独立干净 Windows | 当前仍在开发机验证，未完成无 Python/Node.js/Docker 的独立 Windows x64 主机黑盒 | ⚠️ 未完成 |
+| 最新包全链路视觉 | 当前已验证页面资源、路由和运行状态；未在独立干净主机重新执行完整业务路径与逐屏截图 | ⚠️ 部分未完成 |
+
+当前结论：当前源码已经重新打进 portable EXE，旧项目界面残留问题已关闭；启动、当前前端 bundle、LibreOffice runtime、正常关闭和重启链路均通过。独立干净 Windows x64 主机及完整业务路径视觉验收仍保持未完成边界。

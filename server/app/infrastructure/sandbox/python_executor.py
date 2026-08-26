@@ -370,6 +370,13 @@ def execute_code(
     script_path.write_text(script_content, encoding="utf-8")
 
     python = python_executable or sys.executable
+    # Windows 下 matplotlib/fontconfig 等库会读取 WINDIR；受控环境不能
+    # 直接继承宿主机环境，但必须传递这个只读系统路径变量。
+    windows_dir = (
+        os.environ.get("WINDIR")
+        or os.environ.get("SYSTEMROOT")
+        or str(Path(sys.executable).anchor / "Windows")
+    )
 
     # 4. 启动子进程
     start_time = time.time()
@@ -384,6 +391,7 @@ def execute_code(
             "PYTHONPATH": "",
             "PATH": os.environ.get("PATH", ""),
             "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+            "WINDIR": windows_dir,
             "PYTHONIOENCODING": "utf-8",
             "MPLBACKEND": "Agg",
         },

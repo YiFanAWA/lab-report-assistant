@@ -1,5 +1,6 @@
 .workspace-shell {
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--color-background);
   color: var(--color-text);
 }

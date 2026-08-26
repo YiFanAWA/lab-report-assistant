@@ -3,7 +3,9 @@
 请求与响应 schema 定义。API 层只做协议映射，业务语义在 service 层。
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.modules.outlines.ppt_workflows import PPT_WORKFLOW_IDS
 
 
 # --- SPEC 0011 PPT 配置常量 ---
@@ -16,6 +18,24 @@ PPT_THEME_COLORS: set[str] = {
     "#dc2626",  # 红色
     "#ea580c",  # 橙色
     "#475569",  # 灰色
+}
+
+
+# --- SPEC 0030 pptxforge 主题预设常量 ---
+
+#: pptxforge 合法主题名枚举（SPEC 0030 方案 B）。
+#: 优先级：theme_preset > theme_color 映射 > 默认 SLATE_MINIMALIST。
+PPT_THEME_PRESETS: set[str] = {
+    "MIDNIGHT_EXECUTIVE",   # 严肃/执行/商务（蓝色系）
+    "PACIFIC_DEEP",         # 科学/医学/解剖（青色系）
+    "FOREST_MOSS",          # 可持续/生物/农业（绿色系）
+    "ROYAL_PLUM",           # 奢华/品牌（紫色系）
+    "BERRY_BOLD",           # 奢华/品牌（紫色系，明亮）
+    "MONOCHROME_INK",       # 编辑/工程（灰色系）
+    "SLATE_MINIMALIST",     # 编辑/工程（灰色系，默认中性）
+    "AMBER_EDITORIAL",      # 编辑/消费（暖色系）
+    "CORAL_ENERGY",         # 编辑/消费（暖色系，珊瑚）
+    "SUNRISE_CITRUS",       # 明亮/营销（黄色系）
 }
 
 
@@ -142,10 +162,13 @@ class GenerateDeliverableResponse(BaseModel):
 
 
 class PptConfig(BaseModel):
-    """PPT 生成配置（SPEC 0011）。
+    """PPT 生成配置（SPEC 0011 + SPEC 0030 扩展）。
 
     所有字段可选，未提供时使用默认值。
     配置不持久化，每次生成时传入。
+
+    SPEC 0030 方案 B：新增 theme_preset 字段（pptxforge 主题名）。
+    主题优先级：theme_preset > theme_color 映射 > 默认 SLATE_MINIMALIST。
     """
 
     target_slide_count: int | None = Field(
@@ -162,6 +185,38 @@ class PptConfig(BaseModel):
         default=True,
         description="是否包含图表页",
     )
+    theme_preset: str | None = Field(
+        default=None,
+        description="pptxforge 主题名（SPEC 0030），None 时由 theme_color 映射",
+    )
+    ppt_workflow: str | None = Field(
+        default=None,
+        description="PPT 工作流模式（SPEC 0032），None 等同于 native_editable",
+    )
+
+    @field_validator("theme_preset")
+    @classmethod
+    def validate_theme_preset(cls, v: str | None) -> str | None:
+        """校验 theme_preset 必须为 pptxforge 合法主题名（SPEC 0030 方案 B）。"""
+        if v is None:
+            return v
+        if v not in PPT_THEME_PRESETS:
+            raise ValueError(
+                f"theme_preset 必须为 pptxforge 合法主题名之一：{sorted(PPT_THEME_PRESETS)}"
+            )
+        return v
+
+    @field_validator("ppt_workflow")
+    @classmethod
+    def validate_ppt_workflow(cls, v: str | None) -> str | None:
+        """校验 SPEC 0032 PPT 工作流模式。"""
+        if v is None:
+            return v
+        if v not in PPT_WORKFLOW_IDS:
+            raise ValueError(
+                f"ppt_workflow 必须为合法模式之一：{sorted(PPT_WORKFLOW_IDS)}"
+            )
+        return v
 
 
 class GeneratePptRequest(BaseModel):

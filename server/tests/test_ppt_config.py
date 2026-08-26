@@ -66,7 +66,7 @@ SAMPLE_SECTIONS = [
 
 def _render_ppt(tmp_path, config=None, sections=None, artifacts=None,
                 filename="output.pptx"):
-    """渲染 PPT 并返回路径。"""
+    """渲染 PPT 并返回路径（SPEC 0030：主路径 pptxforge，降级 python-pptx）。"""
     renderer = PptRenderer()
     output_path = tmp_path / filename
     renderer.render(
@@ -76,6 +76,30 @@ def _render_ppt(tmp_path, config=None, sections=None, artifacts=None,
         execution_artifacts=artifacts or [],
         output_path=str(output_path),
         config=config,
+    )
+    return output_path
+
+
+def _render_ppt_fallback(tmp_path, config=None, sections=None, artifacts=None,
+                         filename="output.pptx"):
+    """渲染 PPT 使用 python-pptx 降级路径（SPEC 0025/0026 视觉效果测试用）。
+
+    SPEC 0030：pptxforge 主路径不使用 SPEC 0025/0026 的渐变/圆角/阴影原语，
+    这些视觉效果只在 python-pptx 降级路径中保留。
+    SPEC 0025/0026 测试需直接调用降级路径验证视觉效果。
+    """
+    renderer = PptRenderer()
+    output_path = tmp_path / filename
+    cfg = config or {}
+    renderer._render_with_python_pptx(
+        project_name="测试项目",
+        project_topic="测试课题",
+        outline_sections=sections or SAMPLE_SECTIONS,
+        execution_artifacts=artifacts or [],
+        output_path=str(output_path),
+        target_slide_count=cfg.get("target_slide_count"),
+        theme_color=cfg.get("theme_color"),
+        include_charts=cfg.get("include_charts", True),
     )
     return output_path
 
@@ -182,8 +206,12 @@ def _slide_has_color(slide, target_color: RGBColor) -> bool:
 
 
 def test_render_theme_color_purple_applied(tmp_path):
-    """R-COLOR-02：theme_color=#7c3aed 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。"""
-    output_path = _render_ppt(
+    """R-COLOR-02：theme_color=#7c3aed 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。
+
+    SPEC 0030：pptxforge 主路径通过 _map_theme 映射到 ROYAL_PLUM 主题，
+    不直接应用 hex 色值。此测试验证 python-pptx 降级路径的 theme_color 直接应用。
+    """
+    output_path = _render_ppt_fallback(
         tmp_path, config={"theme_color": "#7c3aed"}
     )
     prs = Presentation(str(output_path))
@@ -197,8 +225,12 @@ def test_render_theme_color_purple_applied(tmp_path):
 
 
 def test_render_theme_color_blue_applied(tmp_path):
-    """R-COLOR-03：theme_color=#2563eb 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。"""
-    output_path = _render_ppt(
+    """R-COLOR-03：theme_color=#2563eb 时主题色应用到 PPT（SPEC 0024：色块/标题/分隔线/圆点）。
+
+    SPEC 0030：pptxforge 主路径通过 _map_theme 映射到 MIDNIGHT_EXECUTIVE 主题，
+    不直接应用 hex 色值。此测试验证 python-pptx 降级路径的 theme_color 直接应用。
+    """
+    output_path = _render_ppt_fallback(
         tmp_path, config={"theme_color": "#2563eb"}
     )
     prs = Presentation(str(output_path))
@@ -210,8 +242,12 @@ def test_render_theme_color_blue_applied(tmp_path):
 
 
 def test_render_theme_color_green_all_slides(tmp_path):
-    """R-COLOR-04：主题色应用到多个页面（SPEC 0024：封面色块+内容页标题+总结页等）。"""
-    output_path = _render_ppt(
+    """R-COLOR-04：主题色应用到多个页面（SPEC 0024：封面色块+内容页标题+总结页等）。
+
+    SPEC 0030：pptxforge 主路径通过 _map_theme 映射到 FOREST_MOSS 主题，
+    不直接应用 hex 色值。此测试验证 python-pptx 降级路径的 theme_color 直接应用。
+    """
+    output_path = _render_ppt_fallback(
         tmp_path, config={"theme_color": "#16a34a"}
     )
     prs = Presentation(str(output_path))
@@ -491,7 +527,7 @@ class TestSpec0025SandwichStructure:
 
     def test_sandwich_content_title_bar_exists(self, tmp_path):
         """S1：内容页存在主色标题栏背景（shape fill）。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -504,7 +540,7 @@ class TestSpec0025SandwichStructure:
 
     def test_sandwich_content_footer_bar_exists(self, tmp_path):
         """S3：内容页存在主色页脚栏背景（shape fill）。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -516,7 +552,7 @@ class TestSpec0025SandwichStructure:
 
     def test_sandwich_cover_bottom_bar_exists(self, tmp_path):
         """S5：封面页底部存在主色窄条（三明治下层面包）。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -528,7 +564,7 @@ class TestSpec0025SandwichStructure:
 
     def test_sandwich_summary_title_bar_exists(self, tmp_path):
         """S7：总结页存在主色标题栏背景。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -541,7 +577,7 @@ class TestSpec0025SandwichStructure:
 
     def test_auxiliary_background_left_column(self, tmp_path):
         """A1：左栏存在辅助色浅色背景。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -555,7 +591,7 @@ class TestSpec0025SandwichStructure:
 
     def test_accent_color_used_in_bullets(self, tmp_path):
         """A2：左栏圆点标记使用强调色（非主色）。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -587,7 +623,7 @@ class TestSpec0025SandwichStructure:
              "file_path": str(chart_path)}
             for i in range(5)
         ]
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
             artifacts=multi_artifacts,
         )
@@ -832,14 +868,18 @@ def _make_chart_png(path, width=100, height=75):
 
 
 def _render_ppt_with_chart(tmp_path, theme_color="#2563eb"):
-    """渲染带图表的 PPT（用于阴影/边框测试），返回路径。"""
+    """渲染带图表的 PPT（用于阴影/边框测试），返回路径。
+
+    SPEC 0030：使用 python-pptx 降级路径（阴影/边框是 SPEC 0026 视觉效果，
+    只在降级路径中保留）。
+    """
     chart_path = tmp_path / "chart.png"
     _make_chart_png(chart_path)
     artifacts = [
         {"name": "chart1.png", "artifact_type": "CHART_PNG",
          "file_path": str(chart_path)},
     ]
-    return _render_ppt(
+    return _render_ppt_fallback(
         tmp_path,
         config={"theme_color": theme_color},
         artifacts=artifacts,
@@ -904,7 +944,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_cover_top_block(self, tmp_path):
         """G1：封面页顶部色块为渐变填充。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -913,7 +953,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_content_title_bar(self, tmp_path):
         """G2：内容页标题栏为渐变填充。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -922,7 +962,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_content_footer_bar(self, tmp_path):
         """G3：内容页页脚栏为渐变填充。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -932,7 +972,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_angle_is_90(self, tmp_path):
         """G4：渐变角度为 90°（上→下）。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -946,7 +986,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_start_color_is_primary(self, tmp_path):
         """G5：渐变起始色 = 主色原值。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -963,7 +1003,7 @@ class TestSpec0026VisualEffects:
 
     def test_gradient_end_color_is_darkened(self, tmp_path):
         """G6：渐变结束色 = 主色暗化色。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -985,7 +1025,7 @@ class TestSpec0026VisualEffects:
     def test_rounded_left_column_shape_type(self, tmp_path):
         """R1：左栏背景形状类型为 ROUNDED_RECTANGLE。"""
         from pptx.enum.shapes import MSO_SHAPE
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -999,7 +1039,7 @@ class TestSpec0026VisualEffects:
 
     def test_rounded_corner_radius_005(self, tmp_path):
         """R2：圆角半径 adjustments[0] ≈ 0.05。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))
@@ -1016,7 +1056,7 @@ class TestSpec0026VisualEffects:
 
     def test_rounded_left_column_fill_is_auxiliary(self, tmp_path):
         """R3：左栏背景填充色 = 辅助色。"""
-        output_path = _render_ppt(
+        output_path = _render_ppt_fallback(
             tmp_path, config={"theme_color": "#2563eb"},
         )
         prs = Presentation(str(output_path))

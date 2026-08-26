@@ -18,6 +18,10 @@ dependencies = [
   "pypdf>=4.0.0",
   "openpyxl>=3.1.0",
   "easypptx>=0.5.0",
+  # SPEC 0030：pptxforge 主题系统 + 视觉原语 + Morph 转场（MIT，锁定 0.1.x）
+  "pptxforge>=0.1.2,<0.2",
+  # SPEC 0042：安全校验后的开放 SVG 转 Word/PPT 兼容 PNG；预编译跨平台 wheel
+  "resvg_py==0.3.3",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +46,9 @@ analysis = [
 [tool.setuptools.packages.find]
 include = ["app*"]
 exclude = ["alembic*", "data*", "tests*"]
+
+[tool.setuptools.package-data]
+"app" = ["assets/scientific/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -126,6 +126,8 @@ export interface PptConfig {
   theme_color?: string | null;
   /** 是否包含图表页，默认 true */
   include_charts?: boolean;
+  /** PPT 工作流模式（SPEC 0032） */
+  ppt_workflow?: "native_editable" | "academic" | "sjtu_academic" | null;
 }
 
 /** 触发 PPT 生成请求（SPEC 0011）。 */
@@ -142,6 +144,13 @@ export const PPT_THEME_COLORS: string[] = [
   "#ea580c", // 橙色
   "#475569", // 灰色
 ];
+
+/** PPT 工作流选项（SPEC 0032，ID 由后端合同校验）。 */
+export const PPT_WORKFLOWS = [
+  { id: "native_editable", label: "原生可编辑" },
+  { id: "academic", label: "学术实验汇报" },
+  { id: "sjtu_academic", label: "上海交大风格学术汇报" },
+] as const;
 
 /** Word 模板响应体（SPEC 0010）。 */
 export interface WordTemplate {

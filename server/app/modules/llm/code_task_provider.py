@@ -15,6 +15,11 @@ SPEC 0022：流式化改造。
 - LocalRuleCodeTaskProvider.stream_generate()：同步生成后拆分多 chunk yield 模拟流式。
 - DeepSeekCodeTaskProvider.stream_generate()：流式调用 LLM，首 chunk 前失败降级到
   fallback.stream_generate()（与 LocalRule 接口一致）。
+
+SPEC 0030：图表美化增强。
+- _HEADER 新增 NPG 期刊配色（Nature Publishing Group 风格 8 色离散色板）。
+- _build_chart_code 使用 plt.subplots + a/b/c 面板标签（多图场景）。
+- 移除所有 savefig(dpi=100) 覆盖，统一由 rcParams savefig.dpi=300 控制。
 """
 
 from abc import ABC, abstractmethod
@@ -101,13 +106,13 @@ import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Noto Sans CJK SC', 'Arial', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 import matplotlib.pyplot as plt
 # Nature 期刊风格 rcParams（nature-figure 设计规则，SPEC 0028）
 # 参考：https://github.com/Yuan1z0825/nature-skills (Apache-2.0)
 matplotlib.rcParams['font.family'] = 'sans-serif'
-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'Arial', 'DejaVu Sans']
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Noto Sans CJK SC', 'Arial', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 matplotlib.rcParams['font.size'] = 16
 matplotlib.rcParams['axes.spines.right'] = False       # 去右框（Nature 风格）
@@ -118,7 +123,11 @@ matplotlib.rcParams['figure.dpi'] = 100
 matplotlib.rcParams['savefig.dpi'] = 300               # 高分辨率输出
 matplotlib.rcParams['savefig.bbox'] = 'tight'
 import seaborn as sns
-sns.set_theme(style="whitegrid", palette="bright", font="Microsoft YaHei")
+# NPG 期刊配色（Nature Publishing Group 风格，SPEC 0030）
+# 8 色：红/天蓝/翠绿/深蓝/橙/灰蓝/浅绿/朱红，贴近 Nature 期刊视觉
+NPG_PALETTE = ["#E64B35", "#4DBBD5", "#00A087", "#3C5488",
+               "#F39B7F", "#8491B4", "#91D1C2", "#DC0000"]
+sns.set_theme(style="whitegrid", palette=sns.color_palette(NPG_PALETTE), font="Microsoft YaHei")
 from scipy import stats
 
 # 数据读取（根据扩展名自动选择 read_csv 或 read_excel）
@@ -239,12 +248,11 @@ def _build_analysis_code(analysis_plan: list[dict]) -> str:
             lines.append("    corr = numeric_df.corr()")
             lines.append("    corr.to_csv(OUTPUT_DIR + '/correlation.csv')")
             lines.append("    # SPEC 0027：生成相关性热图（seaborn heatmap）")
-            lines.append("    plt.figure(figsize=(8, 6))")
+            lines.append("    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')")
             lines.append("    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', square=True)")
-            lines.append("    plt.title('相关性热图')")
-            lines.append("    plt.tight_layout()")
-            lines.append("    plt.savefig(OUTPUT_DIR + '/correlation_heatmap.png', dpi=100, bbox_inches='tight')")
-            lines.append("    plt.close()")
+            lines.append("    ax.set_title('相关性热图', pad=12, fontsize=15, fontweight='bold')")
+            lines.append("    fig.savefig(OUTPUT_DIR + '/correlation_heatmap.png', bbox_inches='tight')")
+            lines.append("    plt.close(fig)")
             lines.append("    print('相关性分析完成')")
         elif analysis_type == "FREQUENCY":
             if target_fields and target_fields != "*":
@@ -264,11 +272,22 @@ def _build_analysis_code(analysis_plan: list[dict]) -> str:
 
 
 def _build_chart_code(chart_plan: list[dict]) -> str:
-    """基于图表方案生成可视化代码，图表保存到 OUTPUT_DIR。"""
+    """基于图表方案生成可视化代码，图表保存到 OUTPUT_DIR。
+
+    SPEC 0030 图表美化增强：
+    - 统一使用 plt.subplots（满足多面板布局要求）
+    - 多图场景（chart_plan 长度 > 1）添加 a/b/c 面板标签
+    - 移除 dpi=100 覆盖，统一由 rcParams savefig.dpi=300 控制
+    """
     if not chart_plan:
         return "# 无图表步骤\n"
 
     lines: list[str] = ["# === 数据可视化 ==="]
+
+    # SPEC 0030：a/b/c 面板标签（多图场景启用）
+    panel_labels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    use_panels = len(chart_plan) > 1
+
     for i, item in enumerate(chart_plan, 1):
         chart_type = item.get("chart_type", "")
         title = item.get("title", f"chart_{i}")
@@ -279,55 +298,89 @@ def _build_chart_code(chart_plan: list[dict]) -> str:
         safe_name = title.replace(" ", "_").replace("/", "_")[:50]
         lines.append(f"# 图表 {i}: {title}（{description}）")
 
+        # SPEC 0030：统一使用 plt.subplots（满足多面板布局要求）
+        label = panel_labels[i - 1] if i - 1 < len(panel_labels) else str(i)
+
         if chart_type == "HISTOGRAM":
             if data_fields:
-                for field in data_fields:
-                    lines.append(f"plt.figure(figsize=(8, 5))")
-                    lines.append(f"if '{field}' in df.columns:")
-                    lines.append(f"    sns.histplot(data=df, x='{field}', kde=True, bins=30)")
-                    lines.append(f"    plt.title('{title}')")
-                    lines.append(f"    plt.xlabel('{field}')")
-                    lines.append(f"    plt.ylabel('频次')")
-                    lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
-                    lines.append(f"    plt.close()")
+                field = data_fields[0]
+                lines.append("fig, ax = plt.subplots(figsize=(8, 5), layout='constrained')")
+                lines.append(f"if '{field}' in df.columns:")
+                lines.append(f"    sns.histplot(data=df, x='{field}', kde=True, bins=30, ax=ax)")
+                lines.append(f"    ax.set_xlabel('{field}')")
+                lines.append("    ax.set_ylabel('频次')")
+                lines.append("    ax.grid(axis='y', alpha=0.18)")
+                if use_panels:
+                    lines.append(f"    ax.set_title('({label}) {title}')")
+                    lines.append(f"    ax.text(-0.1, 1.05, '{label}', transform=ax.transAxes, "
+                                 f"fontsize=16, fontweight='bold', va='top')")
+                else:
+                    lines.append(f"    ax.set_title('{title}')")
+                lines.append(f"    fig.savefig(OUTPUT_DIR + '/{safe_name}.png', bbox_inches='tight')")
+                lines.append("plt.close(fig)")
             else:
                 lines.append("numeric_cols = df.select_dtypes(include=[np.number]).columns")
                 lines.append("if len(numeric_cols) > 0:")
-                lines.append("    plt.figure(figsize=(8, 5))")
-                lines.append("    sns.histplot(data=df, x=numeric_cols[0], kde=True, bins=30)")
-                lines.append(f"    plt.title('{title}')")
-                lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
-                lines.append("    plt.close()")
+                lines.append("    fig, ax = plt.subplots(figsize=(8, 5), layout='constrained')")
+                lines.append("    sns.histplot(data=df, x=numeric_cols[0], kde=True, bins=30, ax=ax)")
+                lines.append("    ax.set_ylabel('频次')")
+                lines.append("    ax.grid(axis='y', alpha=0.18)")
+                if use_panels:
+                    lines.append(f"    ax.set_title('({label}) {title}')")
+                    lines.append(f"    ax.text(-0.1, 1.05, '{label}', transform=ax.transAxes, "
+                                 f"fontsize=16, fontweight='bold', va='top')")
+                else:
+                    lines.append(f"    ax.set_title('{title}')")
+                lines.append(f"    fig.savefig(OUTPUT_DIR + '/{safe_name}.png', bbox_inches='tight')")
+                lines.append("    plt.close(fig)")
         elif chart_type == "BOXPLOT":
             lines.append("numeric_df = df.select_dtypes(include=[np.number])")
             lines.append("if len(numeric_df.columns) > 0:")
-            lines.append("    plt.figure(figsize=(10, 6))")
-            lines.append("    sns.boxplot(data=numeric_df)")
-            lines.append(f"    plt.title('{title}')")
-            lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
-            lines.append("    plt.close()")
+            lines.append("    fig, ax = plt.subplots(figsize=(10, 6), layout='constrained')")
+            lines.append("    sns.boxplot(data=numeric_df, ax=ax)")
+            lines.append("    ax.grid(axis='y', alpha=0.18)")
+            if use_panels:
+                lines.append(f"    ax.set_title('({label}) {title}')")
+                lines.append(f"    ax.text(-0.1, 1.05, '{label}', transform=ax.transAxes, "
+                             f"fontsize=16, fontweight='bold', va='top')")
+            else:
+                lines.append(f"    ax.set_title('{title}')")
+            lines.append(f"    fig.savefig(OUTPUT_DIR + '/{safe_name}.png', bbox_inches='tight')")
+            lines.append("    plt.close(fig)")
         elif chart_type == "BAR":
             if data_fields:
                 field = data_fields[0]
-                lines.append(f"plt.figure(figsize=(8, 5))")
+                lines.append("fig, ax = plt.subplots(figsize=(8, 5), layout='constrained')")
                 lines.append(f"if '{field}' in df.columns:")
-                lines.append(f"    sns.countplot(data=df, x='{field}')")
-                lines.append(f"    plt.title('{title}')")
-                lines.append(f"    plt.ylabel('频次')")
-                lines.append(f"    plt.xticks(rotation=45)")
-                lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
-                lines.append(f"    plt.close()")
+                lines.append(f"    sns.countplot(data=df, x='{field}', ax=ax)")
+                lines.append("    ax.set_ylabel('频次')")
+                lines.append("    ax.grid(axis='y', alpha=0.18)")
+                lines.append("    plt.setp(ax.get_xticklabels(), rotation=45)")
+                if use_panels:
+                    lines.append(f"    ax.set_title('({label}) {title}')")
+                    lines.append(f"    ax.text(-0.1, 1.05, '{label}', transform=ax.transAxes, "
+                                 f"fontsize=16, fontweight='bold', va='top')")
+                else:
+                    lines.append(f"    ax.set_title('{title}')")
+                lines.append(f"    fig.savefig(OUTPUT_DIR + '/{safe_name}.png', bbox_inches='tight')")
+                lines.append("plt.close(fig)")
         elif chart_type == "SCATTER":
             if len(data_fields) >= 2:
                 f1, f2 = data_fields[0], data_fields[1]
-                lines.append(f"plt.figure(figsize=(8, 5))")
+                lines.append("fig, ax = plt.subplots(figsize=(8, 5), layout='constrained')")
                 lines.append(f"if '{f1}' in df.columns and '{f2}' in df.columns:")
-                lines.append(f"    sns.scatterplot(data=df, x='{f1}', y='{f2}')")
-                lines.append(f"    plt.title('{title}')")
-                lines.append(f"    plt.xlabel('{f1}')")
-                lines.append(f"    plt.ylabel('{f2}')")
-                lines.append(f"    plt.savefig(OUTPUT_DIR + '/{safe_name}.png', dpi=100, bbox_inches='tight')")
-                lines.append(f"    plt.close()")
+                lines.append(f"    sns.scatterplot(data=df, x='{f1}', y='{f2}', ax=ax)")
+                lines.append(f"    ax.set_xlabel('{f1}')")
+                lines.append(f"    ax.set_ylabel('{f2}')")
+                lines.append("    ax.grid(alpha=0.16)")
+                if use_panels:
+                    lines.append(f"    ax.set_title('({label}) {title}')")
+                    lines.append(f"    ax.text(-0.1, 1.05, '{label}', transform=ax.transAxes, "
+                                 f"fontsize=16, fontweight='bold', va='top')")
+                else:
+                    lines.append(f"    ax.set_title('{title}')")
+                lines.append(f"    fig.savefig(OUTPUT_DIR + '/{safe_name}.png', bbox_inches='tight')")
+                lines.append("plt.close(fig)")
         else:
             lines.append(f"print('未知图表类型: {chart_type}')")
 

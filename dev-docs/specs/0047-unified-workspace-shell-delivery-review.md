@@ -256,7 +256,7 @@ npm.cmd run build
 - 如果 LibreOffice 不能在 portable bundle 内稳定执行 DOCX→PDF，停止 PDF 子阶段，不以 Microsoft Word 作为静默前置条件。
 - 如果 PDF 生成改变了已有 Word 排版或 Word/PPT 同源关系，停止并重新审查渲染 owner。
 - 如果投影接口只能通过前端猜测某个质量结论，返回 `NOT_RUN` 并停止质量门禁扩展。
-- 当前尚未完成 SPEC 0047 代码、数据库迁移、PDF 真实生成、浏览器视觉验收和干净 Windows 验收，均不得提前宣称通过。
+- SPEC 0047 代码、数据库迁移、PDF 真实生成、浏览器视觉验收和当前 PDF 栅格化视觉已在本环境完成；仍不得宣称完整发布收口，因独立干净 Windows x64 黑盒和当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性尚未完成。
 - 根目录 `AGENTS.md` 仍保留早期 SPEC 0002 阶段文字；本轮不直接改写项目宪法，作为治理漂移记录，后续需单独确认是否更新。
 
 ## 13. Git 规则
@@ -296,6 +296,23 @@ GET /api/projects/{project_id}/workspace-projection
 
 前端新增 `DeliverableReviewPanel` 和 `DeliverableReviewPanel.css`，保留现有下载、PDF 重试、完成项目 mutation/API；补充项目、交付物列表、版本列表和审阅投影的 loading、empty、error、STALE、失败恢复、disabled 和成功状态。没有真实预览时只显示不可用说明，不生成假缩略图。
 
-本轮代码验证：交付审阅服务/API/版本一致性 9 passed；交付物与生成链相关回归 97 passed；前端全量 35 个测试文件、550 passed；`npm.cmd run lint`、`npm.cmd run build`、`server` 目录 `alembic upgrade head` 通过。根目录后端全量为 1260 passed、1 failed，唯一失败为既有科研资产 `bioicons-cc0-cryo-vial` 的 SVG manifest SHA-256 漂移；该测试不经过本切片调用链。浏览器 Node helper 仍在初始化阶段退出，未取得 1280px/窄屏截图；LibreOffice runtime、portable 黑盒和真实 DOCX/PDF/PPT 视觉验收仍未完成。
+本轮代码验证：交付审阅服务/API/版本一致性 9 passed；交付物与生成链相关回归 97 passed；前端全量 35 个测试文件、550 passed；`npm.cmd run lint`、`npm.cmd run build`、`server` 目录 `alembic upgrade head` 通过。2026-08-25 补充复核：科研资产 registry/renderer 29 passed，后端全量 1266 passed，PDF 交付相关回归 94 passed，Windows portable 源合同 4 passed；`cryo_vial.svg` 与 `sequencer.svg` 已恢复为批准上游字节，manifest hash 漂移已关闭。系统 Chrome + Playwright 已完成 1280px/390px 浏览器视觉，portable LibreOffice 已完成真实 DOCX→PDF 和 10 页 PDF 栅格化视觉检查。
 
-因此，本节状态为“实现 checkpoint”，不是完整发布收口。停止条件仍包括真实浏览器视觉验收、LibreOffice portable runtime、干净 Windows x64 验收和既有科研资产 hash 风险单独处理。
+因此，本节状态为“实现 checkpoint”，不是完整发布收口。SVG 资产 hash、浏览器视觉和 LibreOffice/PDF 当前样例验收已关闭；停止条件仍包括独立干净 Windows x64 黑盒，以及当前项目同源 Word/PDF/PPT 重新生成后的视觉一致性。
+## 2026-08-25 LibreOffice portable runtime 验收补充
+
+portable runtime 合同现在由 `packaging/windows/build_windows_bundle.py` 统一拥有：构建必须提供 `program/soffice.exe` 和包含 `version`、`source`、`source_sha256`、`license_files` 的元数据；许可证路径必须位于 runtime 内且真实存在。
+发布 manifest 的 `pdf_converter` 记录 LibreOffice 版本、来源、源 MSI SHA-256、转换器路径和许可证列表；构建脚本不会自动下载或静默替换 runtime。
+独立 portable 构建已生成，包内 `soffice.com` headless 启动成功；生产 `DocxPdfExporter` 通过包内 `soffice.exe` 完成真实 DOCX→PDF，生成 10 页有效 PDF。
+本轮补充测试为 Windows packaging 合同 6 passed；PDF Poppler 栅格化退出码 0，但当前 PNG 因 Windows ACL helper 无法打开，视觉检查保持 `NOT_CHECKED` 边界。
+因此，LibreOffice runtime 阻断已关闭；浏览器、当前 PDF 逐页视觉、干净 Windows x64 和完整 Word/PDF/PPT 视觉一致性仍是 SPEC 0047 的停止条件。
+
+## 2026-08-25 验收状态修正
+
+本节修正第 12 节中已被后续真实证据更新的未验证项：
+
+- 浏览器：系统 Chrome + Playwright 已完成 1280×900 首页、项目详情、交付审阅台和 390×844 窄屏截图；页面级横向溢出已修复，favicon 404 已修复，result.json 的 events 为空。
+- PDF：portable LibreOffice 26.2.5.2 已完成真实 DOCX→PDF；Poppler 识别 10 页并生成 10 张 PNG，当前 PDF 已逐页检查，未发现裁切、重叠、空白页或异常黑块。
+- 产品边界：交付审阅台在演示项目上继续显示需处理，因为当前 PDF 缺失且 Word/PDF/PPT 尚未形成同源集合；这是后端 provenance 和质量门禁的正确投影。
+- 未闭合：独立无 Python/Node.js/Docker 的 Windows x64 黑盒，以及用当前项目同一份大纲重新生成后的 Word/PDF/PPT 同源视觉一致性仍未完成。
+- 当前状态：实现和本地视觉验收 checkpoint 已完成，不标记为完整发布收口；负责人确认产品视觉后再进入剩余黑盒/同源补验。

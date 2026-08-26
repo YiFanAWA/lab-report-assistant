@@ -401,7 +401,7 @@ describe("RequirementWorkspaceView - 任务单展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/\[待确认\]/)).toBeInTheDocument();
+    expect(document.querySelector(".requirement-plan-status")).toHaveTextContent("待确认");
   });
 
   it("CONFIRMED 状态显示已确认标签", () => {
@@ -409,7 +409,7 @@ describe("RequirementWorkspaceView - 任务单展示", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/\[已确认\]/)).toBeInTheDocument();
+    expect(document.querySelector(".requirement-plan-status")).toHaveTextContent("已确认");
   });
 
   it("显示任务单字段", () => {
@@ -431,12 +431,15 @@ describe("RequirementWorkspaceView - 任务单展示", () => {
     expect(screen.getByText("自定义对象")).toBeInTheDocument();
   });
 
-  it("显示候选来源标签", () => {
-    setupMocks({ plan: makePlan({ candidate_source: "LOCAL_RULE" }) });
+  it("显示面向学生的生成依据和实验范围说明", () => {
+    setupMocks({ plan: makePlan({ candidate_source: "DEEPSEEK" }) });
 
     renderWithRoute();
 
-    expect(screen.getByText(/\[LOCAL_RULE\]/)).toBeInTheDocument();
+    expect(screen.getByText("生成依据：实验要求与已整理资料")).toBeInTheDocument();
+    expect(screen.getByText("教学性数据分析（不进行原论文完整复现）")).toBeInTheDocument();
+    expect(screen.queryByText("DEEPSEEK")).not.toBeInTheDocument();
+    expect(screen.queryByText("L0")).not.toBeInTheDocument();
   });
 });
 
@@ -497,8 +500,8 @@ describe("RequirementWorkspaceView - 任务单按钮门控", () => {
 // 复刻层级展示
 // ============================================================
 
-describe("RequirementWorkspaceView - 复刻层级", () => {
-  it("显示复刻层级标签和原因", () => {
+describe("RequirementWorkspaceView - 实验范围", () => {
+  it("显示面向学生的实验范围标签和原因", () => {
     setupMocks({
       plan: makePlan({
         payload: {
@@ -516,7 +519,7 @@ describe("RequirementWorkspaceView - 复刻层级", () => {
 
     renderWithRoute();
 
-    expect(screen.getByText(/L1/)).toBeInTheDocument();
+    expect(screen.queryByText("L1")).not.toBeInTheDocument();
     expect(screen.getByText(/方法参考/)).toBeInTheDocument();
     expect(screen.getByText("仅参考方法")).toBeInTheDocument();
   });

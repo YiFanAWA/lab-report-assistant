@@ -1,3 +1,5 @@
+- 官方 LibreOffice 26.2.5 Windows x86-64 MSI 已在临时 runtime 中完成真实验收；MSI SHA-256 为 `F15BA07BFCB0186986CF3171063506F5D207C11F8CC051BA0D135209E9E915F9`，安装包、二进制和解压 runtime 仍不写入 Git。
+- 项目工作台和交付审阅 projection 不新增运行时依赖；它们只读取现有数据库事实，前端不得成为阶段、质量门禁或交付版本 owner。
 # 实验报告助手｜依赖版本与官方目录规范复核
 
 > 状态：已复核  
@@ -378,3 +380,89 @@ Docker 化实现过程中发现 `pyproject.toml` 遗漏了 3 个文档解析直�
 **根因：** 这些包在 SPEC 0003（公开资料与证据工作流）实现时手动 `pip install` 但未写入 `pyproject.toml`，本地开发环境能跑但 Docker 镜像构建时 `pip install -e ".[dev]"` 不会安装它们。
 
 **验证：** 本地 venv 重新 `pip install -e ".[dev]"` 后 `pytest -q` 结果 704 passed，0 warnings，无回归。Docker 镜像重新 build 后 Worker 容器正常启动。
+
+## 10. SPEC 0032 外部来源审查
+
+本切片不新增运行时 Python/NPM 依赖，不把外部仓库整包复制到项目中。
+
+| 来源 | 用途 | 许可/风险 | 决策 |
+| --- | --- | --- | --- |
+| `hugohe3/ppt-master` | 路由式 PPT 工作流、原生可编辑输出、模板复用和逐页质量门禁参考 | MIT；复制代码时需保留版权与许可证 | 只吸收工作流与验收思想，当前切片不复制完整 Skill 源码 |
+| `xhh678876/openclaw-sjtu` | 交大 PPT 生成入口、模板目录和本地文件提取能力参考 | 仓库许可证以当前 `LICENSE` 为准；模板/字体再分发权需逐项确认 | 不接入校园账号和校园业务；模板授权未确认时只登记来源，不复制资源 |
+| 当前项目 `pptxforge` | 现有 PPT 主渲染路径 | MIT，已在 SPEC 0030 审查 | 保留，不替换 |
+
+网络下载、校园凭证、外部图片和模型服务均不作为 SPEC 0032 的运行时依赖。
+
+## 11. SPEC 0033 论文级自适应版式审查
+
+- 不新增运行时依赖；规划器使用 Python 标准库，PPT/Word 继续复用已批准的 `pptxforge`、`python-docx` 和现有渲染工具。
+- 版式规划语义归属 `server/app/modules/outlines/layout_planner.py`，不下沉到前端、LLM prompt 或临时预览脚本。
+- 规划器只读取大纲文本和真实执行产物，不生成统计指标、不下载素材、不改变数据结论。
+- Word/PPT/PDF 视觉渲染属于验收工具链，不作为新的业务运行时依赖；本机缺少 LibreOffice/Word 时只记录视觉验收缺口，不伪装成通过。
+
+## 12. SPEC 0034 正式论文与高级答辩 PPT 审查
+
+- 不新增运行时依赖；正式论文结构规划使用 Python 标准库，Word/PDF/PPT 继续复用现有 `python-docx`、`pptxforge`、`python-pptx` 和渲染工具链。
+- 新增 `server/app/modules/outlines/document_planner.py` 属于交付物结构规划，不拥有数据、证据或实验结论；只读取已确认大纲和真实执行产物。
+- DOCX 仍是可编辑源，PDF 只允许从最终 DOCX 导出；当前机器缺少 LibreOffice/Word，因此本轮只完成 DOCX 结构验收和 PPT 视觉验收，未将 PDF 视觉转换标记为通过。
+- 未复制外部仓库、校园模板、字体或图片资源，不新增在线服务、模型调用或运行时包。
+
+## 13. SPEC 0035 大样本公开论文解读案例审查
+
+- 不新增运行时依赖；案例生成脚本复用现有 pandas、matplotlib、python-docx、pptxforge 和 python-pptx 能力。
+- 论文 PDF、全文 XML、原始 CSV 和来源清单属于 `server/dev-docs/e2e-screenshots/spec0035_paper_review/` 下的可复核演示资料，不进入应用运行时依赖和用户任意路径读取范围。
+- 数据集页面标注 CC BY 4.0，论文为开放获取；交付物保留论文 DOI、数据集 DOI、原始页面、全文 XML 地址和本地文件路径。
+- 本切片只做原论文结论解读与本地描述性复核，不新增医学诊断、治疗建议或论文原始回归模型自动复现能力。
+
+## 14. SPEC 0036 论文解读深度整改审查
+
+- 不新增运行时依赖；回归、置信区间和图表复用已有 `scikit-learn`、`scipy`、`pandas`、`matplotlib` 与交付物渲染链。
+- `statsmodels` 未安装，因此未新增该依赖；简化 Logistic 使用现有 `scikit-learn`，标准误由信息矩阵计算并在来源清单中标注为教学性复核。
+- 新增结果图表和 CSV 仍属于 `spec0035_paper_review` 可复核演示资料，不改变应用运行时依赖，不进入任意路径读取。
+- 统计结果不等同原论文模型复现，不扩展医学诊疗边界，不新增在线服务、模型调用或外部仓库代码。
+
+## 15. SPEC 0037 语义图表选择与 PPT 组件优化审查
+
+- 不新增运行时依赖；图表规划器只使用 Python 标准库，真实绘图继续复用现有 `pandas`、`matplotlib` 和 `scikit-learn`。
+- PPT 继续复用项目已经批准的 `pptxforge` 依赖及其 `StatRow`、`Callout`、`TwoColumn`、`IconRow`、`Grid` 和 `Stack` 组件。
+- 不复制 `ppt-master`、上海交大模板、字体或图片资源；外部仓库只作为此前已登记的工作流/风格参考。
+- 图表 artifact 增加的是追溯元数据，不改变 API、数据库 schema、沙箱白名单或 LLM 模型合同。
+
+## 16. SPEC 0038 正式学术论文规范化审查
+
+- 不新增运行时依赖；正式论文结构、引用映射和章节编号使用现有 Python 标准库、`python-docx` 与已有渲染链。
+- `formal_academic` 是 `WordRenderer` 的文档 profile，不改变 API、数据库 schema、LLM Gateway、Worker 或 PPT 组件合同。
+- 论文引用只消费案例脚本提供的已确认论文/数据集来源目录；不在 renderer 内生成虚构来源。
+- PDF 由最终 DOCX 通过当前机器的 Word 发布流程导出；PDF 仅作为交付物和视觉验收产物，不作为新的运行时依赖。
+- 本轮复用现有图表、`pptxforge` 组件和数据文件，不复制 `ppt-master`、上海交大模板、字体或图片资源。
+
+## 17. SPEC 0039 论文级多语义图形系统审查
+
+- 当前 SPEC 只登记设计合同和实施边界，不新增运行时依赖；规划器使用 Python 标准库，真实图形继续复用现有 `matplotlib`、`python-docx`、`python-pptx` 和已批准的 `pptxforge`。
+- `figure_planner.py` 作为图形语义唯一 owner；`chart_planner.py` 只保留数据图子适配，不在 Word/PDF/PPT renderer 中复制语义判断。
+- 计划复用 `pptxforge` 的 `Stack`、`TwoColumn`、`Grid`、`IconRow`、`Callout`，不复制 `ppt-master`、上海交大模板、字体或图片资源。
+- 不改变 API、数据库 schema、LLM Gateway、Worker、沙箱白名单或产品边界；是否需要任何新依赖必须在进入实现前重新审查。
+
+## 18. SPEC 0042 开放科研资产与 SVG 转换依赖审查
+
+| 项目 | 版本/来源 | 用途 | 决策与证据 |
+|---|---|---|---|
+| `resvg_py` | `==0.3.3` | 将已通过许可证、哈希与安全校验的静态 SVG 转换为 Word/PPT 兼容 PNG | 锁定精确版本；仅接收注册表路径；Windows venv 转换通过；`python:3.13-slim` manylinux wheel 安装并输出有效 PNG 签名 |
+| Bioicons CC0 资产 | 上游 commit `d29e766ea7580b8063c4f47b29e872db40a4d979` | 首批科研器材、仪器、算法和结果组件 | 只收录 `static/icons/cc-0/` 下逐项审计的 7 个 SVG；manifest 记录上游 URL、作者、许可和 SHA-256；不整仓 vendoring |
+| CC0 1.0 | Creative Commons | 资产许可 | 本地 `LICENSES/CC0-1.0.md` 提供离线审计入口；完整法律文本以官方 URL 为准 |
+
+安全边界：转换前拒绝脚本、事件、DTD、实体、动画、`foreignObject`、外部资源、外部 CSS URL、路径逃逸、哈希漂移、超 2 MiB、超 5,000 元素和超 64 层嵌套。运行时不联网，不接受任意文件路径，不收录 BioRender/Mind the Graph 受限或带水印素材。
+### SPEC 0042 验收工具链补充
+
+- 最终 PDF 样稿使用 Codex 文档/PDF运行时自带的 ReportLab、PyPDF 与 PDFium 生成/验收，不写入 `server/pyproject.toml`，不构成应用运行时依赖。
+- PDF 嵌入本机已有的开放许可 Noto Sans SC 字体子集，并附两张原始科研 PNG 与对应 JSON；不复制或打包受限商业字体。
+- Microsoft Word COM 在当前宿主连续出现无窗口自动化卡死，相关本轮/遗留 `/Automation -Embedding` 孤儿进程已按 PID 核验后清理；最终 PDF 改用独立 PDF 工具链，PowerPoint 原生导出仍成功。
+- 跨平台像素级确定性仍受字体可用性影响；当前合同保证画布、语义、资产真源和同一环境内渲染稳定。若要求跨平台 PNG 哈希完全一致，后续切片需审计并随应用分发固定开放许可 CJK 字体。
+
+## 19. SPEC 0047 PDF portable runtime 与投影审查
+
+- PDF 正式交付物不新增正文排版 owner；PDF 仅由最终 DOCX 通过 DocxPdfExporter 派生。
+- LibreOffice headless 作为 Windows portable bundle 的显式运行时输入，构建脚本不自动下载、不静默替换，并要求 runtime-metadata.json 记录版本、来源、source_sha256 和许可证文件。
+- 运行时通过 PDF_CONVERTER_PATH 注入 service/worker；转换适配器设置临时 profile、超时、输出大小上限和 PDF 魔数校验。
+- 官方 MSI 已完成临时解压 runtime、许可证路径和 SHA-256 验收；portable bundle 约 1.88 GB，完整包体仍只保留在临时/忽略目录，不作为仓库依赖文件提交。
+- 项目工作台和交付审阅 projection 不新增运行时依赖；它们只读取现有数据库事实，前端不得成为阶段、质量门禁或交付版本 owner。

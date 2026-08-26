@@ -221,6 +221,20 @@ def _resolve_manuscript_role(section: dict) -> ManuscriptRole:
     )
 
 
+def resolve_manuscript_role(section: dict) -> ManuscriptRole:
+    """公开正式论文角色解析，供审阅投影复用同一语义。"""
+    return _resolve_manuscript_role(section)
+def content_sufficiency_report(
+    outline_sections: list[dict],
+    execution_artifacts: list[dict],
+    reference_catalog: dict[str, str] | None,
+) -> ContentSufficiencyReport:
+    """公开内容充分性报告，避免交付审阅复制论文语义。"""
+    return _content_sufficiency_report(
+        outline_sections,
+        execution_artifacts,
+        reference_catalog,
+    )
 def _build_formal_chapters(outline_sections: list[dict]) -> list[ThesisChapterPlan]:
     groups = {role: [] for role, _ in _FORMAL_ROLE_TITLES}
     for raw_section in outline_sections:

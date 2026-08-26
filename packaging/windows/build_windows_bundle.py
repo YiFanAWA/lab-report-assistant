@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,7 @@ PYI_WORK = OUTPUT_ROOT / "pyinstaller-work"
 PYI_SPEC = OUTPUT_ROOT / "pyinstaller-spec"
 RELEASE_ROOT = OUTPUT_ROOT / "release"
 PYTHON = SERVER_DIR / ".venv" / "Scripts" / "python.exe"
+LIBREOFFICE_ROOT = Path(os.getenv("LIBREOFFICE_ROOT", str(PACKAGING_DIR / "runtime" / "libreoffice")))
 
 
 def run(command: list[str], cwd: Path) -> None:
@@ -192,6 +194,63 @@ def build_launcher() -> Path:
     return launcher
 
 
+def copy_libreoffice_runtime(release_dir: Path) -> Path:
+    """复制随包提供的 LibreOffice runtime，并校验发布元数据。"""
+    source = LIBREOFFICE_ROOT.resolve()
+    executable = source / "program" / "soffice.exe"
+    metadata_path = source / "runtime-metadata.json"
+    if not executable.is_file():
+        raise SystemExit(
+            "缺少 LibreOffice runtime："
+            f"{executable}；请设置 LIBREOFFICE_ROOT 指向已解压目录"
+        )
+    if not metadata_path.is_file():
+        raise SystemExit(
+            f"缺少 LibreOffice runtime 元数据：{metadata_path}"
+        )
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"LibreOffice runtime 元数据无效：{exc}") from exc
+    required = ("version", "source", "source_sha256", "license_files")
+    missing = [key for key in required if not metadata.get(key)]
+    if missing:
+        raise SystemExit(
+            "LibreOffice runtime 元数据缺少字段：" + ", ".join(missing)
+        )
+    source_sha256 = metadata["source_sha256"]
+    if not isinstance(source_sha256, str) or not re.fullmatch(
+        r"[0-9a-fA-F]{64}", source_sha256
+    ):
+        raise SystemExit(
+            "LibreOffice runtime 元数据中的 source_sha256 无效：需要 64 位十六进制 SHA-256"
+        )
+    license_files = metadata["license_files"]
+    if not isinstance(license_files, list) or not license_files:
+        raise SystemExit(
+            "LibreOffice runtime 元数据中的 license_files 无效：需要非空文件路径列表"
+        )
+    for relative_path in license_files:
+        if not isinstance(relative_path, str) or not relative_path:
+            raise SystemExit(
+                "LibreOffice runtime 元数据中的 license_files 包含无效路径"
+            )
+        license_path = (source / relative_path).resolve()
+        try:
+            license_path.relative_to(source)
+        except ValueError as exc:
+            raise SystemExit(
+                f"LibreOffice runtime 许可证路径越界：{relative_path}"
+            ) from exc
+        if not license_path.is_file():
+            raise SystemExit(
+                f"LibreOffice runtime 缺少许可证/归属文件：{license_path}"
+            )
+    target = release_dir / "libreoffice"
+    shutil.copytree(source, target)
+    return target
+
+
 def copy_release(service_dir: Path, launcher: Path) -> Path:
     release_dir = RELEASE_ROOT / "实验报告助手-win-x64"
     if release_dir.exists():
@@ -200,6 +259,7 @@ def copy_release(service_dir: Path, launcher: Path) -> Path:
     shutil.copytree(service_dir, release_dir / "service")
     shutil.copytree(WEB_DIR / "dist", release_dir / "web")
     shutil.copy2(launcher, release_dir / "实验报告助手.exe")
+    copy_libreoffice_runtime(release_dir)
     (release_dir / "README-使用说明.txt").write_text(
         "双击“实验报告助手.exe”启动。\n"
         "用户数据默认保存在 %LOCALAPPDATA%\\LabReportAssistant。\n"
@@ -228,12 +288,23 @@ def write_manifest(release_dir: Path) -> None:
                     "sha256": sha256(path),
                 }
             )
+    runtime_metadata = json.loads(
+        (release_dir / "libreoffice" / "runtime-metadata.json").read_text(encoding="utf-8")
+    )
     manifest = {
         "product": "实验报告助手",
         "platform": "windows-x64",
         "format": "portable-bundle",
         "entrypoint": "实验报告助手.exe",
         "runtime": "PyInstaller one-file launcher + one-directory service runtime",
+        "pdf_converter": {
+            "provider": "LibreOffice",
+            "executable": "libreoffice/program/soffice.exe",
+            "version": runtime_metadata["version"],
+            "source": runtime_metadata["source"],
+            "source_sha256": runtime_metadata["source_sha256"],
+            "license_files": runtime_metadata["license_files"],
+        },
         "files": files,
     }
     (release_dir / "release-manifest.json").write_text(

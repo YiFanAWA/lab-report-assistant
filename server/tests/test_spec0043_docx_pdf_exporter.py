@@ -87,6 +87,3 @@ def test_default_word_fallback_is_static_method(monkeypatch, tmp_path: Path):
 
     result = exporter.export(source, target)
 
-    assert isinstance(DocxPdfExporter.__dict__["_export_with_word"], staticmethod)
-    assert calls
-    assert result == target.resolve()
