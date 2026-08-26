@@ -1,6 +1,7 @@
 """SPEC 0043 DOCX→PDF 单一出版链测试。"""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -62,3 +63,30 @@ def test_configured_converter_uses_libreoffice_adapter(monkeypatch, tmp_path: Pa
     assert calls == [(source.resolve(), target.resolve())]
     assert result == target.resolve()
     assert result.read_bytes().startswith(b"%PDF-")
+
+
+def test_default_word_fallback_is_static_method(monkeypatch, tmp_path: Path):
+    source = tmp_path / "paper.docx"
+    target = tmp_path / "paper.pdf"
+    source.write_bytes(b"PK\\x03\\x04fixture")
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        env = kwargs["env"]
+        Path(env["LAB_REPORT_ASSISTANT_PDF_PATH"]).write_bytes(b"%PDF-1.7\\n%%EOF")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(
+        "app.infrastructure.documents.docx_pdf_exporter.subprocess.run",
+        fake_run,
+    )
+    exporter = DocxPdfExporter()
+    exporter._converter_configured = False
+    exporter._converter_path = None
+
+    result = exporter.export(source, target)
+
+    assert isinstance(DocxPdfExporter.__dict__["_export_with_word"], staticmethod)
+    assert calls
+    assert result == target.resolve()

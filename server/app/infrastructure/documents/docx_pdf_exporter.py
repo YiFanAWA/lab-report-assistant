@@ -175,6 +175,8 @@ class DocxPdfExporter:
                     field="target_pdf",
                 )
             shutil.copyfile(generated, target)
+
+    @staticmethod
     def _export_with_word(source: Path, target: Path) -> None:
         """通过 PowerShell COM 调用本机 Word；不引入 Python COM 依赖。"""
 

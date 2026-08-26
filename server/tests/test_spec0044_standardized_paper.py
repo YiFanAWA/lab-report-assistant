@@ -182,6 +182,24 @@ def test_reader_first_formal_render_hides_engineering_projection(tmp_path):
     assert not any(paragraph.text.strip() == "????" for paragraph in paragraphs)
     assert document.styles["Body Text"].font.size.pt == 10.5
     assert document.styles["Heading 1"].font.size.pt == 16.0
+    assert document.styles["Caption"].font.size.pt == 9.0
+    assert all(
+        run.font.size is not None and run.font.size.pt == 9.0
+        for table in document.tables
+        for row in table.rows
+        for cell in row.cells
+        for paragraph in cell.paragraphs
+        for run in paragraph.runs
+        if run.text.strip()
+    )
+    toc_entry = next(
+        paragraph for paragraph in paragraphs if paragraph.text.startswith("1.1 ")
+    )
+    assert all(
+        run.font.size is not None and run.font.size.pt == 10.5
+        for run in toc_entry.runs
+        if run.text.strip()
+    )
     assert document.styles["Heading 1"].font.color.rgb == RGBColor(0x22, 0x22, 0x22)
     assert len(document.sections) >= 3
 

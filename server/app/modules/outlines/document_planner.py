@@ -79,6 +79,8 @@ class PublicationProfile:
     heading2_size_pt: float = 12.0
     heading3_size_pt: float = 10.5
     caption_size_pt: float = 9.0
+    table_size_pt: float = 9.0
+    toc_size_pt: float = 10.5
     text_color_hex: str = "222222"
     muted_color_hex: str = "6B7280"
     formal_monochrome: bool = True

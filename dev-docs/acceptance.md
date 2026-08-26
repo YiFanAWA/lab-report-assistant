@@ -895,3 +895,18 @@
 | LibreOffice/portable/真实文件 | 当前未完成 LibreOffice runtime 注入、portable 黑盒、真实 DOCX→PDF 和 Word/PDF/PPT 逐页一致性验收 | ⚠️ 未完成 |
 
 当前结论：交付物审阅台已经通过代码合同和自动化测试门禁，形成实现 checkpoint；受既有科研资产 hash、真实浏览器、LibreOffice runtime、portable 和真实文件视觉验收影响，SPEC 0047 仍不能标记为完整发布收口。
+
+## SPEC 0044 字号统一与正式报告视觉复核（2026-08-26）
+
+| 验收项 | 证据/边界 | 结果 |
+|---|---|---|
+| Word 字号 token | 正文 10.5pt、表格 9pt、图注 9pt、目录 10.5pt；标题层级保留 16/12pt 等差异 | ✅ |
+| 封面表格分页 | 封面研究信息表统一为 9pt，并压缩仅表格单元格留白/行距；重新生成后完整留在第 1 页，不再出现表格尾部孤页 | ✅ |
+| PDF 适配器 | 修复 `DocxPdfExporter._export_with_word()` 漏失 `@staticmethod` 导致 `(source, target)` 调用多传 `self` 的阻断 | ✅ |
+| 定向回归 | `test_spec0044_standardized_paper.py`、`test_spec0043_docx_pdf_exporter.py`、`test_document_planner.py`、`test_renderers.py`：39 passed | ✅ |
+| DOCX 结构 | `spec0043_publication.docx` 实际包含 14 张内嵌图；run 字号统计以 9.0pt/10.5pt 为主，所有表格 run 为 9.0pt | ✅ |
+| DOCX/PDF manifest | `publication_manifest.json` 的 `source_docx_sha256` 与 `pdf_sha256` 均与实际文件匹配 | ✅ |
+| PDF 全页栅格化 | Poppler `pdftoppm` 渲染 `pdf_render_font_fix_v2/page-01.png` 至 `page-21.png`，仅有 `nameToUnicode` 映射警告，退出码为 0 | ✅ |
+| PDF 视觉检查 | 抽查封面、摘要/目录、正文图表与表格、森林图/趋势图、比较矩阵、关系图、参考文献末页；未发现封面表格孤页、图注脱离、裁切、重叠或图表丢失 | ✅ |
+
+当前结论：字号统一与正式 `spec0043_publication` DOCX/PDF 重生成已通过本轮定向测试、manifest、14 张图完整性和真实 PDF 栅格化视觉检查；不因此宣称项目整体发布收口，既有独立 Windows x64 黑盒和同源交付物全链路边界保持不变。

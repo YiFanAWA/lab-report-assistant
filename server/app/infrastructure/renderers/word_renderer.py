@@ -530,6 +530,15 @@ class WordRenderer:
             else ACCENT_HEX
         )
         body_size = float(getattr(profile, "body_size_pt", 10.5)) if is_formal else 12
+        self._body_size_pt = body_size
+        self._title_size_pt = float(getattr(profile, "title_size_pt", 22.0)) if is_formal else 26
+        self._subtitle_size_pt = float(getattr(profile, "subtitle_size_pt", 13.0)) if is_formal else 14
+        self._heading1_size_pt = float(getattr(profile, "heading1_size_pt", 16.0)) if is_formal else 18
+        self._heading2_size_pt = float(getattr(profile, "heading2_size_pt", 12.0)) if is_formal else 14.5
+        self._heading3_size_pt = float(getattr(profile, "heading3_size_pt", 10.5)) if is_formal else 12
+        self._caption_size_pt = float(getattr(profile, "caption_size_pt", 9.0)) if is_formal else 9
+        self._table_size_pt = float(getattr(profile, "table_size_pt", self._caption_size_pt)) if is_formal else 9
+        self._toc_size_pt = float(getattr(profile, "toc_size_pt", body_size)) if is_formal else body_size
         line_spacing = float(getattr(profile, "line_spacing", 1.5)) if is_formal else 1.45
         first_indent_cm = (
             float(getattr(profile, "first_line_indent_chars", 2.0)) * 0.37
@@ -560,8 +569,8 @@ class WordRenderer:
             styles["Body Text"].paragraph_format.first_line_indent = Cm(first_indent_cm)
             styles["Body Text"].paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
-        title_size = float(getattr(profile, "title_size_pt", 22.0)) if is_formal else 26
-        subtitle_size = float(getattr(profile, "subtitle_size_pt", 13.0)) if is_formal else 14
+        title_size = self._title_size_pt
+        subtitle_size = self._subtitle_size_pt
         self._configure_paragraph_style(
             styles["Title"], title_size, bold=True, color=self._paper_text_color,
             line_spacing=1.1, space_after=12,
@@ -573,9 +582,9 @@ class WordRenderer:
         )
         heading_sizes = (
             (
-                float(getattr(profile, "heading1_size_pt", 16.0)),
-                float(getattr(profile, "heading2_size_pt", 12.0)),
-                float(getattr(profile, "heading3_size_pt", 10.5)),
+                self._heading1_size_pt,
+                self._heading2_size_pt,
+                self._heading3_size_pt,
             )
             if is_formal
             else (18, 14.5, 12)
@@ -592,7 +601,7 @@ class WordRenderer:
             )
             styles[style_name].paragraph_format.keep_with_next = True
 
-        caption_size = float(getattr(profile, "caption_size_pt", 9.0)) if is_formal else 9
+        caption_size = self._caption_size_pt
         self._configure_paragraph_style(
             styles["Caption"], caption_size, bold=False, color=self._paper_text_color,
             line_spacing=1.1, space_before=3, space_after=3,
@@ -886,12 +895,15 @@ class WordRenderer:
             cells[1].text = str(value)
             for index, cell in enumerate(cells):
                 cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-                self._set_cell_margins(cell, top=90, start=120, bottom=90, end=120)
+                self._set_cell_margins(cell, top=60, start=120, bottom=60, end=120)
                 for paragraph in cell.paragraphs:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    paragraph.paragraph_format.space_before = Pt(0)
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    paragraph.paragraph_format.line_spacing = 1.0
                     for run in paragraph.runs:
                         self._set_run_font(
-                            run, 10, self._paper_accent_color if index == 0 else self._paper_text_color,
+                            run, self._table_size_pt, self._paper_accent_color if index == 0 else self._paper_text_color,
                             bold=index == 0,
                         )
         self._set_formal_table_borders(table)
@@ -956,7 +968,7 @@ class WordRenderer:
             pg_num_type.set(qn("w:start"), "1")
 
     @staticmethod
-    def _add_field(paragraph, instruction: str, result: str = "") -> None:
+    def _add_field(paragraph, instruction: str, result: str = ""):
         run = paragraph.add_run()
         begin = OxmlElement("w:fldChar")
         begin.set(qn("w:fldCharType"), "begin")
@@ -971,6 +983,7 @@ class WordRenderer:
         end = OxmlElement("w:fldChar")
         end.set(qn("w:fldCharType"), "end")
         run._r.extend((begin, instr, separate, result_node, end))
+        return run
 
     def _add_paragraph_bookmark(self, paragraph, bookmark_name: str) -> None:
         """给目录可回指的章节标题添加书签。"""
@@ -1062,9 +1075,9 @@ class WordRenderer:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             separator = ": " if english else "："
             label_run = paragraph.add_run(f"{label}{separator}")
-            self._set_run_font(label_run, 10.5, self._paper_text_color, bold=True)
+            self._set_run_font(label_run, self._body_size_pt, self._paper_text_color, bold=True)
             content_run = paragraph.add_run(content)
-            self._set_run_font(content_run, 10.5, self._paper_text_color)
+            self._set_run_font(content_run, self._body_size_pt, self._paper_text_color)
 
     def _render_formal_front_matter(self, doc: Document, plan) -> None:
         self._render_formal_front_heading(doc, "摘要", "front_abstract_cn")
@@ -1081,9 +1094,9 @@ class WordRenderer:
         keyword.paragraph_format.space_before = Pt(4)
         keyword.paragraph_format.keep_together = True
         keyword_run = keyword.add_run("关键词：")
-        self._set_run_font(keyword_run, 10.5, self._paper_text_color, bold=True)
+        self._set_run_font(keyword_run, self._body_size_pt, self._paper_text_color, bold=True)
         values_run = keyword.add_run("；".join(plan.keywords))
-        self._set_run_font(values_run, 10.5, self._paper_text_color)
+        self._set_run_font(values_run, self._body_size_pt, self._paper_text_color)
 
         doc.add_page_break()
         self._render_formal_front_heading(doc, "ABSTRACT", "front_abstract_en")
@@ -1099,9 +1112,9 @@ class WordRenderer:
         keywords_en.paragraph_format.space_before = Pt(4)
         keywords_en.paragraph_format.keep_together = True
         keyword_en_run = keywords_en.add_run("KEYWORDS: ")
-        self._set_run_font(keyword_en_run, 10.5, self._paper_text_color, bold=True)
+        self._set_run_font(keyword_en_run, self._body_size_pt, self._paper_text_color, bold=True)
         values_en_run = keywords_en.add_run("; ".join(plan.keywords))
-        self._set_run_font(values_en_run, 10.5, self._paper_text_color)
+        self._set_run_font(values_en_run, self._body_size_pt, self._paper_text_color)
 
         doc.add_page_break()
         self._render_formal_front_heading(doc, "目录", "front_toc")
@@ -1121,11 +1134,12 @@ class WordRenderer:
             )
             run = paragraph.add_run(f"{label}\t")
             self._set_run_font(
-                run, 10.5 if level == 1 else 9.5,
+                run, self._toc_size_pt,
                 self._paper_text_color,
                 bold=level == 1,
             )
-            self._add_field(paragraph, f"PAGEREF {bookmark}", "1")
+            page_run = self._add_field(paragraph, f"PAGEREF {bookmark}", "1")
+            self._set_run_font(page_run, self._toc_size_pt, self._paper_text_color)
 
         for label, bookmark in (
             ("摘要", "front_abstract_cn"),
@@ -1249,7 +1263,7 @@ class WordRenderer:
                     chapter_paragraph.paragraph_format.space_after = Pt(1)
                     chapter_run = chapter_paragraph.add_run(chapter_label)
                     self._set_run_font(
-                        chapter_run, 9.5, self._paper_muted_color, bold=True,
+                        chapter_run, self._toc_size_pt, self._paper_muted_color, bold=True,
                     )
                     last_chapter = chapter_label
                 paragraph = doc.add_paragraph(style="Body Text")
@@ -1261,10 +1275,12 @@ class WordRenderer:
                 paragraph.paragraph_format.tab_stops.add_tab_stop(
                     Inches(6.2), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS,
                 )
-                self._add_field(paragraph, f"REF {entry_bookmark}", f"{prefix} {number}")
+                ref_run = self._add_field(paragraph, f"REF {entry_bookmark}", f"{prefix} {number}")
+                self._set_run_font(ref_run, self._toc_size_pt, self._paper_text_color)
                 caption_run = paragraph.add_run(f"  {caption}\t")
-                self._set_run_font(caption_run, 9.5, self._paper_text_color)
-                self._add_field(paragraph, f"PAGEREF {entry_bookmark}", "1")
+                self._set_run_font(caption_run, self._toc_size_pt, self._paper_text_color)
+                page_run = self._add_field(paragraph, f"PAGEREF {entry_bookmark}", "1")
+                self._set_run_font(page_run, self._toc_size_pt, self._paper_text_color)
 
         if figure_entries:
             render_catalog("图目录", "front_figures", figure_entries)
@@ -1434,7 +1450,7 @@ class WordRenderer:
             paragraph.paragraph_format.left_indent = Cm(0.74)
             paragraph.paragraph_format.first_line_indent = Cm(-0.37)
             run = paragraph.add_run(step)
-            self._set_run_font(run, 10.5, TEXT_HEX)
+            self._set_run_font(run, getattr(self, "_body_size_pt", 12), TEXT_HEX)
         if source_ids:
             if getattr(self, "_reader_first_paper", False):
                 note = doc.add_paragraph(style="Body Text")
@@ -1502,7 +1518,7 @@ class WordRenderer:
                 for paragraph in cell.paragraphs:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT if index else WD_ALIGN_PARAGRAPH.CENTER
                     for run in paragraph.runs:
-                        self._set_run_font(run, 9, TEXT_HEX, bold=index == 0)
+                        self._set_run_font(run, getattr(self, "_table_size_pt", 9), TEXT_HEX, bold=index == 0)
         for row in table.rows:
             self._mark_table_row_no_split(row)
         if getattr(self, "_formal_paper", False):
@@ -1703,7 +1719,7 @@ class WordRenderer:
                 for paragraph in cell.paragraphs:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if i == 0 else WD_ALIGN_PARAGRAPH.LEFT
                     for run in paragraph.runs:
-                        self._set_run_font(run, 8.5, "FFFFFF" if i == 0 else TEXT_HEX,
+                        self._set_run_font(run, getattr(self, "_table_size_pt", 9), "FFFFFF" if i == 0 else TEXT_HEX,
                                            bold=i == 0)
         for row in table.rows:
             self._mark_table_row_no_split(row)
@@ -1824,7 +1840,7 @@ class WordRenderer:
             return
         citations = sorted(set(citations))
         run = paragraph.add_run(" " + "[" + ", ".join(str(number) for number in citations) + "]")
-        self._set_run_font(run, 10.5, MUTED_HEX)
+        self._set_run_font(run, getattr(self, "_body_size_pt", 12), MUTED_HEX)
 
     @staticmethod
     def _mark_table_row_no_split(row) -> None:
